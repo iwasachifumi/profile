@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Memoria MVP</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#mine" data-i18n-aria-label="brand.homeAria">
+        <span class="brand-mark">M</span>
+        <span>
+          <strong>Memoria</strong>
+          <small data-i18n="brand.tagline">Your book of people</small>
+        </span>
+      </a>
+
+      <nav class="topnav" data-i18n-aria-label="nav.aria">
+        <a href="#mine" data-nav="mine" data-i18n="nav.mine">my page</a>
+        <a href="#design" data-nav="design" data-i18n="nav.design">Design</a>
+        <a href="#stickers" data-nav="stickers" data-i18n="nav.stickers">Stickers</a>
+        <a href="#book" data-nav="book" data-i18n="nav.book">People</a>
+      </nav>
+
+      <div class="topbar-tools">
+        <a class="icon-button topbar-settings" href="#settings" data-i18n-aria-label="settings.iconAria" title="Settings">&#9881;</a>
+        <div class="lang-switch" role="group" data-i18n-aria-label="lang.aria">
+          <button type="button" class="lang-btn" data-action="set-language" data-language="ja">JA</button>
+          <button type="button" class="lang-btn" data-action="set-language" data-language="en">EN</button>
+        </div>
+        <div class="ops-notice" data-i18n="ops.notice">Notice from team</div>
+      </div>
+    </header>
+
+    <main id="app" class="app-shell" tabindex="-1"></main>
+    <div id="modal-root"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="stamp/manifest.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
