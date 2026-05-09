@@ -1,6 +1,19 @@
 const STORAGE_KEY = "memoria-mvp-state-v1";
 const PROFILE_BASE_URL = "https://profile.ac7.co.jp/p/";
-const FREE_PATTERN_LIMIT = 2;
+const PLAN_LIMITS = {
+  free: {
+    patterns: 2,
+    groups: 10,
+    fields: 100,
+    exchanges: 100
+  },
+  pro: {
+    patterns: 10,
+    groups: 50,
+    fields: 200,
+    exchanges: Number.POSITIVE_INFINITY
+  }
+};
 const LANGUAGES = ["ja", "en"];
 
 const I18N = {
@@ -477,6 +490,8 @@ let activeProfileTab = state.activeProfileTab || "general";
 let selectedExchangeId = state.selectedExchangeId || (state.exchanges[0] && state.exchanges[0].id);
 let activeBookView = state.activeBookView || "list";
 let stickerPage = state.stickerPage || 1;
+let selectedStickerPatternId = "";
+let selectedStickerIndex = -1;
 let toastTimer = 0;
 
 function currentLanguage() {
@@ -495,6 +510,92 @@ function translateForLanguage(key, language, vars = {}) {
 
 function t(key, vars = {}) {
   return translateForLanguage(key, currentLanguage(), vars);
+}
+
+function getCurrentPlan() {
+  return state.plan === "pro" ? "pro" : "free";
+}
+
+function getPlanLimit(limitKey, plan = getCurrentPlan()) {
+  const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+  return limits[limitKey];
+}
+
+function formatLimit(limitValue, language = currentLanguage()) {
+  if (Number.isFinite(limitValue)) return String(limitValue);
+  return language === "en" ? "Unlimited" : "無制限";
+}
+
+function countGroupTotal() {
+  return getFieldGroups().length;
+}
+
+function countFieldTotal() {
+  const fieldUids = new Set();
+  state.patterns.forEach((pattern) => {
+    pattern.fields.forEach((field) => {
+      if (!field || field.key === "displayName") return;
+      fieldUids.add(field.uid || `${field.group}:${field.label}`);
+    });
+  });
+  return fieldUids.size;
+}
+
+function countExchangeTotal() {
+  return Array.isArray(state.exchanges) ? state.exchanges.length : 0;
+}
+
+function getLimitUpgradeCopy(kind) {
+  const isEn = currentLanguage() === "en";
+  if (kind === "patterns") {
+    return {
+      title: isEn ? "Pattern limit reached" : "パターン上限に達しました",
+      body: isEn
+        ? `Free plan supports up to ${PLAN_LIMITS.free.patterns} patterns. Paid plan supports up to ${PLAN_LIMITS.pro.patterns}.`
+        : `無料版はパターン${PLAN_LIMITS.free.patterns}件までです。有料版は${PLAN_LIMITS.pro.patterns}件まで作成できます。`
+    };
+  }
+  if (kind === "groups") {
+    return {
+      title: isEn ? "Group limit reached" : "グループ上限に達しました",
+      body: isEn
+        ? `Free plan supports up to ${PLAN_LIMITS.free.groups} groups. Paid plan supports up to ${PLAN_LIMITS.pro.groups}.`
+        : `無料版はグループ${PLAN_LIMITS.free.groups}件までです。有料版は${PLAN_LIMITS.pro.groups}件まで作成できます。`
+    };
+  }
+  if (kind === "fields") {
+    return {
+      title: isEn ? "Field limit reached" : "項目上限に達しました",
+      body: isEn
+        ? `Free plan supports up to ${PLAN_LIMITS.free.fields} profile fields. Paid plan supports up to ${PLAN_LIMITS.pro.fields}.`
+        : `無料版は項目${PLAN_LIMITS.free.fields}件までです。有料版は${PLAN_LIMITS.pro.fields}件まで作成できます。`
+    };
+  }
+  if (kind === "exchanges") {
+    return {
+      title: isEn ? "Met-people limit reached" : "会った人の記録上限に達しました",
+      body: isEn
+        ? `Free plan stores up to ${PLAN_LIMITS.free.exchanges} records. Paid plan is ${formatLimit(PLAN_LIMITS.pro.exchanges, "en")}.`
+        : `無料版は会った人の記録を${PLAN_LIMITS.free.exchanges}件まで保持できます。有料版は${formatLimit(PLAN_LIMITS.pro.exchanges, "ja")}です。`
+    };
+  }
+  if (kind === "customSticker") {
+    return {
+      title: isEn ? "Custom sticker is paid feature" : "オリジナルシールは有料機能です",
+      body: isEn
+        ? "Free plan can use designated stickers only. Paid plan can upload your own images as stickers."
+        : "無料版は指定シールのみ利用できます。有料版では自分の画像をシールとして追加できます。"
+    };
+  }
+  return {
+    title: isEn ? "Paid feature" : "有料機能",
+    body: isEn ? "This feature is available on paid plans." : "この機能は有料プランで利用できます。"
+  };
+}
+
+function openLimitUpgradeModal(kind) {
+  const copy = getLimitUpgradeCopy(kind);
+  openUpgradeModal(copy.title, copy.body);
 }
 
 function getGroupLabel(group) {
@@ -609,6 +710,7 @@ function defaultState() {
     activeBookView: "list",
     stickerPage: 1,
     groups: FIELD_GROUPS.map((group) => ({ ...group })),
+    customStickers: [],
     patterns: [
       {
         id: studyId,
@@ -677,8 +779,21 @@ function normalizeState(nextState) {
     .map((group) => normalizeGroup(group, patternIds));
 
   nextState.groups = FIELD_GROUPS.map((group) => normalizeGroup(savedGroups.find((saved) => saved.id === group.id) || group, patternIds)).concat(customGroups);
+  nextState.plan = nextState.plan === "pro" ? "pro" : "free";
   nextState.language = LANGUAGES.includes(nextState.language) ? nextState.language : "ja";
   nextState.patterns = nextState.patterns.map((pattern) => normalizePattern(pattern, nextState.language));
+  const customStickers = Array.isArray(nextState.customStickers) ? nextState.customStickers : [];
+  nextState.customStickers = customStickers
+    .filter((sticker) => sticker && sticker.id && sticker.assetSrc)
+    .map((sticker) => ({
+      id: sticker.id,
+      label: sticker.label || "Custom",
+      assetSrc: sticker.assetSrc,
+      source: "custom",
+      className: sticker.className || "sticker-blue",
+      variant: "asset",
+      owned: true
+    }));
   nextState.activeBookView = nextState.activeBookView === "detail" ? "detail" : "list";
   nextState.stickerPage = Number.isFinite(Number(nextState.stickerPage)) && Number(nextState.stickerPage) > 0 ? Number(nextState.stickerPage) : 1;
   return nextState;
@@ -1103,11 +1218,12 @@ function renderDesign() {
 
 function renderStickers() {
   const pattern = getActivePattern();
-  const totalPages = Math.max(1, Math.ceil(STICKERS.length / STICKERS_PER_PAGE));
+  const stickerCatalog = getStickerPickerCatalog();
+  const totalPages = Math.max(1, Math.ceil(stickerCatalog.length / STICKERS_PER_PAGE));
   const currentPage = clamp(Number(stickerPage) || 1, 1, totalPages);
   if (currentPage !== stickerPage) stickerPage = currentPage;
   const start = (currentPage - 1) * STICKERS_PER_PAGE;
-  const pageItems = STICKERS.slice(start, start + STICKERS_PER_PAGE);
+  const pageItems = stickerCatalog.slice(start, start + STICKERS_PER_PAGE);
   return `
     <section class="section-title">
       <div>
@@ -1122,6 +1238,7 @@ function renderStickers() {
     <div class="split">
       <section class="panel pad stack">
         <h2>${t("stickers.panel")}</h2>
+        ${renderCustomStickerUploader()}
         <div class="sticker-grid">
           ${pageItems.map((sticker) => renderStickerChoice(sticker)).join("")}
         </div>
@@ -1271,7 +1388,7 @@ function renderGuide() {
   `;
 }
 
-function settingsCopy() {
+function settingsCopyLegacy() {
   const isEn = currentLanguage() === "en";
   return {
     title: isEn ? "Settings" : "設定",
@@ -1293,7 +1410,7 @@ function settingsCopy() {
   };
 }
 
-function renderSettings() {
+function renderSettingsLegacy() {
   const copy = settingsCopy();
   return `
     <section class="section-title">
@@ -1316,6 +1433,129 @@ function renderSettings() {
         <strong>${copy.csv} <span class="settings-badge">${copy.csvBadge}</span></strong>
         <span class="muted small">${copy.csvDesc}</span>
       </button>
+      <a class="settings-item" href="https://profile.ac7.co.jp/" target="_blank" rel="noreferrer">
+        <strong>${copy.web}</strong>
+        <span class="muted small">${copy.external}</span>
+      </a>
+      <a class="settings-item" href="https://profile.ac7.co.jp/terms" target="_blank" rel="noreferrer">
+        <strong>${copy.terms}</strong>
+        <span class="muted small">${copy.external}</span>
+      </a>
+      <a class="settings-item" href="https://profile.ac7.co.jp/privacy" target="_blank" rel="noreferrer">
+        <strong>${copy.privacy}</strong>
+        <span class="muted small">${copy.external}</span>
+      </a>
+      <a class="settings-item" href="https://profile.ac7.co.jp/about" target="_blank" rel="noreferrer">
+        <strong>${copy.company}</strong>
+        <span class="muted small">${copy.external}</span>
+      </a>
+    </section>
+  `;
+}
+
+function settingsCopy() {
+  const isEn = currentLanguage() === "en";
+  return {
+    title: isEn ? "Settings" : "設定",
+    subtitle: isEn ? "Plan, account, export, and policy links." : "プラン・アカウント・出力・規約情報をまとめています。",
+    usage: isEn ? "How It Works" : "サービスの使い方",
+    usageDesc: isEn ? "Open usage page" : "使い方ページを開く",
+    account: isEn ? "Account (email & auth logs)" : "登録情報（メールアドレス・認証ログ）",
+    accountDesc: isEn ? "sample@memoria.app / Password, Google (last login: 2026-05-09)" : "sample@memoria.app / パスワード・Google（最終ログイン: 2026-05-09）",
+    planCompare: isEn ? "Free vs Paid" : "無料版と有料版",
+    planCompareDesc: isEn ? "Compare limits and paid features." : "上限と有料機能の違いです。",
+    freePlanName: isEn ? "Free" : "無料版",
+    paidPlanName: isEn ? "Paid" : "有料版",
+    featurePatterns: isEn ? "Patterns" : "パターン",
+    featureGroups: isEn ? "Groups" : "グループ",
+    featureFields: isEn ? "Fields" : "項目",
+    featureStickers: isEn ? "Sticker use" : "シール",
+    featureCsv: isEn ? "CSV export" : "CSV出力",
+    featureExchanges: isEn ? "Met-people records" : "会った人の記録",
+    stickerFree: isEn ? "designated only" : "指定シールのみ",
+    stickerPaid: isEn ? "custom image upload" : "任意画像アップロード可",
+    csvFree: isEn ? "not available" : "利用不可",
+    csvPaid: isEn ? "available" : "利用可",
+    currentPlanLabel: isEn ? "Current plan" : "現在のプラン",
+    buyPaid: isEn ? "Purchase paid plan" : "有料版を購入",
+    paidEnabled: isEn ? "Paid plan enabled" : "有料版利用中",
+    csv: isEn ? "Export met-people CSV" : "会った人の記録CSV出力",
+    csvBadge: isEn ? "Pro" : "有料",
+    csvDesc: isEn ? "Available on paid plans" : "有料プランで利用可能",
+    orgTitle: isEn ? "For teams / organizations" : "団体・法人向け",
+    orgDesc: isEn
+      ? "We will provide bulk user pre-registration and QR code issuance."
+      : "先にまとめてユーザー登録し、QRコードを発行する仕組みを提供予定です。",
+    web: isEn ? "Memoria Website" : "MemoriaのWebページ",
+    terms: isEn ? "Terms of Service" : "会員規約",
+    privacy: isEn ? "Privacy Policy" : "プライバシーポリシー",
+    company: isEn ? "Operator Info" : "運営情報",
+    external: isEn ? "Open in new tab" : "別窓で開く",
+    proTitle: isEn ? "Paid feature" : "有料機能",
+    proBody: isEn ? "CSV export is available on paid plans." : "CSV出力は有料プランで利用できます。"
+  };
+}
+
+function renderPlanComparison(copy) {
+  const currentPlan = getCurrentPlan();
+  const rows = [
+    { label: copy.featurePatterns, free: String(PLAN_LIMITS.free.patterns), pro: String(PLAN_LIMITS.pro.patterns) },
+    { label: copy.featureGroups, free: String(PLAN_LIMITS.free.groups), pro: String(PLAN_LIMITS.pro.groups) },
+    { label: copy.featureFields, free: String(PLAN_LIMITS.free.fields), pro: String(PLAN_LIMITS.pro.fields) },
+    { label: copy.featureExchanges, free: String(PLAN_LIMITS.free.exchanges), pro: formatLimit(PLAN_LIMITS.pro.exchanges) },
+    { label: copy.featureStickers, free: copy.stickerFree, pro: copy.stickerPaid },
+    { label: copy.featureCsv, free: copy.csvFree, pro: copy.csvPaid }
+  ];
+  return `
+    <article class="settings-item settings-plan">
+      <strong>${copy.planCompare}</strong>
+      <span class="muted small">${copy.planCompareDesc}</span>
+      <div class="plan-compare">
+        <div class="plan-col">
+          <h4>${copy.freePlanName}</h4>
+          ${rows.map((row) => `<div class="plan-row"><span>${escapeHtml(row.label)}</span><strong>${escapeHtml(row.free)}</strong></div>`).join("")}
+        </div>
+        <div class="plan-col">
+          <h4>${copy.paidPlanName}</h4>
+          ${rows.map((row) => `<div class="plan-row"><span>${escapeHtml(row.label)}</span><strong>${escapeHtml(row.pro)}</strong></div>`).join("")}
+        </div>
+      </div>
+      <div class="plan-actions">
+        <span class="muted small">${copy.currentPlanLabel}: ${currentPlan === "pro" ? copy.paidPlanName : copy.freePlanName}</span>
+        <button type="button" class="secondary" data-action="open-plan-upgrade" ${currentPlan === "pro" ? "disabled" : ""}>${currentPlan === "pro" ? copy.paidEnabled : copy.buyPaid}</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderSettings() {
+  const copy = settingsCopy();
+  return `
+    <section class="section-title">
+      <div>
+        <h1>${copy.title}</h1>
+        <p class="muted">${copy.subtitle}</p>
+      </div>
+      <a class="button secondary" href="#mine">${t("mine.title")}</a>
+    </section>
+    <section class="panel pad settings-menu">
+      <a class="settings-item" href="#guide">
+        <strong>${copy.usage}</strong>
+        <span class="muted small">${copy.usageDesc}</span>
+      </a>
+      ${renderPlanComparison(copy)}
+      <article class="settings-item">
+        <strong>${copy.account}</strong>
+        <span class="muted small">${copy.accountDesc}</span>
+      </article>
+      <button type="button" class="settings-item settings-action" data-action="open-csv-upgrade">
+        <strong>${copy.csv} <span class="settings-badge">${copy.csvBadge}</span></strong>
+        <span class="muted small">${copy.csvDesc}</span>
+      </button>
+      <article class="settings-item">
+        <strong>${copy.orgTitle}</strong>
+        <span class="muted small">${copy.orgDesc}</span>
+      </article>
       <a class="settings-item" href="https://profile.ac7.co.jp/" target="_blank" rel="noreferrer">
         <strong>${copy.web}</strong>
         <span class="muted small">${copy.external}</span>
@@ -1405,9 +1645,9 @@ function renderProfilePaper(profile, options) {
   const visibleLinks = (profile.links || []).filter((link) => link.visible && link.url);
   const themeClass = `theme-${profile.themeId === "pink" ? "friends" : profile.themeId}`;
   return `
-    <article class="profile-paper ${themeClass}" data-profile-paper="${profile.id}">
+    <article class="profile-paper ${themeClass}" data-profile-paper="${profile.id}" ${options.editable ? "data-action=\"clear-sticker-selection\"" : ""}>
       <div class="paper-lines"></div>
-      ${profile.stickers.map((sticker, index) => renderPlacedSticker(sticker, index, options.editable)).join("")}
+      ${profile.stickers.map((sticker, index) => renderPlacedSticker(sticker, index, options.editable, profile.id)).join("")}
       <div class="profile-content">
         <header class="profile-head">
           ${renderProfileAvatar(profile)}
@@ -1423,18 +1663,21 @@ function renderProfilePaper(profile, options) {
   `;
 }
 
-function renderPlacedSticker(stickerPlacement, index, editable) {
+function renderPlacedSticker(stickerPlacement, index, editable, patternId) {
   const sticker = getSticker(stickerPlacement.id);
   if (!sticker) return "";
   const size = clamp(Number(stickerPlacement.size || 116), 64, 220);
+  const selected = editable && selectedStickerPatternId === patternId && selectedStickerIndex === index;
   return `
     <div
-      class="placed-sticker ${sticker.className}"
+      class="placed-sticker ${sticker.className}${selected ? " selected" : ""}"
       style="left: ${Number(stickerPlacement.x).toFixed(1)}%; top: ${Number(stickerPlacement.y).toFixed(1)}%; width: ${size}px; transform: rotate(${Number(stickerPlacement.rotation || 0).toFixed(1)}deg);"
       data-sticker-index="${index}"
+      data-pattern-id="${patternId}"
+      ${editable ? "data-action=\"select-placed-sticker\"" : ""}
       ${editable ? "data-draggable-sticker=\"true\"" : ""}
     >
-      ${editable ? `
+      ${editable && selected ? `
         <div class="placed-sticker-controls" data-sticker-control="true">
           <button type="button" class="sticker-ctl" data-sticker-control="true" data-action="resize-placed-sticker" data-sticker-index="${index}" data-delta="-12" aria-label="${t("sticker.decrease")}">−</button>
           <button type="button" class="sticker-ctl" data-sticker-control="true" data-action="resize-placed-sticker" data-sticker-index="${index}" data-delta="12" aria-label="${t("sticker.increase")}">＋</button>
@@ -1598,8 +1841,32 @@ function renderStickerChoice(sticker) {
   return `
     <button type="button" class="sticker-choice" data-action="add-sticker" data-sticker-id="${sticker.id}">
       ${renderStickerImage(sticker)}
-      <span class="muted small">${t("stickers.free")}</span>
+      <span class="muted small">${getStickerSourceText(sticker.source)}</span>
     </button>
+  `;
+}
+
+function renderCustomStickerUploader() {
+  const isEn = currentLanguage() === "en";
+  const isPro = getCurrentPlan() === "pro";
+  const title = isEn ? "Custom Sticker" : "オリジナルシール";
+  if (isPro) {
+    return `
+      <div class="sticker-upload-box">
+        <strong>${title}</strong>
+        <label class="file-button">
+          <span>${isEn ? "Upload image" : "画像をアップロード"}</span>
+          <input type="file" accept="image/*" data-custom-sticker-upload>
+        </label>
+      </div>
+    `;
+  }
+  return `
+    <div class="sticker-upload-box">
+      <strong>${title}</strong>
+      <p class="muted small">${isEn ? "Paid plan can upload any image as a sticker." : "有料版では任意の画像をシールとして追加できます。"}</p>
+      <button type="button" class="secondary" data-action="open-plan-upgrade">${isEn ? "See paid plan" : "有料版をみる"}</button>
+    </div>
   `;
 }
 
@@ -1621,7 +1888,7 @@ function renderStickerPagination(currentPage, totalPages) {
 }
 
 function getStickerSourceText(source) {
-  void source;
+  if (source === "custom") return currentLanguage() === "en" ? "Custom" : "オリジナル";
   return t("stickers.free");
 }
 
@@ -1669,6 +1936,28 @@ async function handleChange(event) {
     if (!pattern) return;
     try {
       pattern.avatarDataUrl = await readFileAsDataUrl(file);
+      saveState();
+      render();
+    } catch {
+      showToast(t("toast.imageLoadFail"));
+    } finally {
+      target.value = "";
+    }
+  }
+
+  if (target.dataset.customStickerUpload !== undefined && target instanceof HTMLInputElement) {
+    const file = target.files && target.files[0];
+    if (!file) return;
+    if (getCurrentPlan() !== "pro") {
+      openLimitUpgradeModal("customSticker");
+      target.value = "";
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      addCustomSticker(file.name || "custom", dataUrl);
+      const totalPages = Math.max(1, Math.ceil(getStickerPickerCatalog().length / STICKERS_PER_PAGE));
+      stickerPage = totalPages;
       saveState();
       render();
     } catch {
@@ -1799,8 +2088,25 @@ function handleClick(event) {
   }
 
   if (action === "open-csv-upgrade") {
+    if (getCurrentPlan() === "pro") {
+      const isEn = currentLanguage() === "en";
+      openUpgradeModal(
+        isEn ? "CSV export (coming soon)" : "CSV出力（準備中）",
+        isEn ? "CSV export UI will be added in a future update." : "CSV出力UIは今後のアップデートで追加します。",
+        { showPlanButton: false }
+      );
+      return;
+    }
     const copy = settingsCopy();
     openUpgradeModal(copy.proTitle, copy.proBody);
+  }
+
+  if (action === "open-plan-upgrade") {
+    openPlanUpgradeModal();
+  }
+
+  if (action === "activate-pro-plan") {
+    activateProPlan();
   }
 
   if (action === "open-theme-preview") {
@@ -1827,11 +2133,39 @@ function handleClick(event) {
     addSticker(actionTarget.dataset.stickerId);
   }
 
+  if (action === "select-placed-sticker") {
+    const index = Number(actionTarget.dataset.stickerIndex);
+    const patternId = actionTarget.dataset.patternId || "";
+    if (!Number.isInteger(index) || !patternId) return;
+    if (selectedStickerPatternId === patternId && selectedStickerIndex === index) return;
+    selectedStickerPatternId = patternId;
+    selectedStickerIndex = index;
+    render();
+    return;
+  }
+
+  if (action === "clear-sticker-selection") {
+    if (selectedStickerIndex !== -1 || selectedStickerPatternId) {
+      selectedStickerPatternId = "";
+      selectedStickerIndex = -1;
+      render();
+    }
+    return;
+  }
+
   if (action === "remove-placed-sticker") {
     const pattern = getActivePattern();
     const index = Number(actionTarget.dataset.stickerIndex);
     if (!Number.isInteger(index) || index < 0 || index >= pattern.stickers.length) return;
     pattern.stickers.splice(index, 1);
+    if (selectedStickerPatternId === pattern.id) {
+      if (selectedStickerIndex === index) {
+        selectedStickerIndex = -1;
+        selectedStickerPatternId = "";
+      } else if (selectedStickerIndex > index) {
+        selectedStickerIndex -= 1;
+      }
+    }
     saveState();
     render();
   }
@@ -1935,8 +2269,9 @@ function softRenderMine() {
 }
 
 function addPattern() {
-  if (state.plan === "free" && state.patterns.length >= FREE_PATTERN_LIMIT) {
-    openUpgradeModal(t("upgrade.pattern.title"), t("upgrade.pattern.body", { limit: FREE_PATTERN_LIMIT }));
+  const patternLimit = getPlanLimit("patterns");
+  if (state.patterns.length >= patternLimit) {
+    openLimitUpgradeModal("patterns");
     return;
   }
 
@@ -2032,6 +2367,10 @@ function saveNewGroup() {
   const name = document.querySelector("[data-modal-new-group-name]")?.value.trim() || "";
   if (!name) {
     showToast(t("toast.groupNameRequired"));
+    return;
+  }
+  if (countGroupTotal() >= getPlanLimit("groups")) {
+    openLimitUpgradeModal("groups");
     return;
   }
 
@@ -2147,6 +2486,10 @@ function openAddGeneralFieldEditor(groupId) {
 }
 
 function saveNewGeneralField(groupId) {
+  if (countFieldTotal() >= getPlanLimit("fields")) {
+    openLimitUpgradeModal("fields");
+    return;
+  }
   const label = document.querySelector("[data-modal-general-field-label]")?.value.trim() || t("field.newLabel");
   const value = document.querySelector("[data-modal-general-field-value]")?.value.trim() || "";
   const uid = makeId("fuid");
@@ -2265,6 +2608,10 @@ function openAddFieldEditor(patternId, groupId) {
 function saveNewField(patternId, groupId) {
   const pattern = findPattern(patternId);
   if (!pattern) return;
+  if (countFieldTotal() >= getPlanLimit("fields")) {
+    openLimitUpgradeModal("fields");
+    return;
+  }
 
   const label = document.querySelector("[data-modal-field-label]")?.value.trim() || t("field.newLabel");
   const value = document.querySelector("[data-modal-field-value]")?.value.trim() || "";
@@ -2502,20 +2849,75 @@ function addSticker(stickerId) {
     rotation: (pattern.stickers.length % 2 === 0 ? 5 : -6),
     size: 116
   });
+  selectedStickerPatternId = pattern.id;
+  selectedStickerIndex = pattern.stickers.length - 1;
   saveState();
   render();
 }
 
-function openUpgradeModal(title, body) {
+function addCustomSticker(fileName, assetSrc) {
+  const label = formatStampLabel(fileName);
+  if (!Array.isArray(state.customStickers)) state.customStickers = [];
+  state.customStickers.unshift({
+    id: makeId("custom_stamp"),
+    label,
+    assetSrc,
+    source: "custom",
+    className: "sticker-blue",
+    variant: "asset",
+    owned: true
+  });
+}
+
+function openUpgradeModal(title, body, options = {}) {
+  const showPlanButton = options.showPlanButton !== false && getCurrentPlan() !== "pro";
+  const planButtonLabel = currentLanguage() === "en" ? "See paid plan" : "有料版をみる";
   openModal(`
     <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="upgrade-title">
       <h2 id="upgrade-title">${escapeHtml(title)}</h2>
       <p>${escapeHtml(body)}</p>
       <div class="modal-actions">
+        ${showPlanButton ? `<button type="button" class="secondary" data-action="open-plan-upgrade">${planButtonLabel}</button>` : ""}
         <button type="button" data-action="close-modal">${t("modal.close")}</button>
       </div>
     </section>
   `);
+}
+
+function openPlanUpgradeModal() {
+  const isEn = currentLanguage() === "en";
+  const lines = [
+    `${isEn ? "Patterns" : "パターン"}: ${PLAN_LIMITS.free.patterns} / ${PLAN_LIMITS.pro.patterns}`,
+    `${isEn ? "Groups" : "グループ"}: ${PLAN_LIMITS.free.groups} / ${PLAN_LIMITS.pro.groups}`,
+    `${isEn ? "Fields" : "項目"}: ${PLAN_LIMITS.free.fields} / ${PLAN_LIMITS.pro.fields}`,
+    `${isEn ? "Met-people records" : "会った人の記録"}: ${PLAN_LIMITS.free.exchanges} / ${formatLimit(PLAN_LIMITS.pro.exchanges, currentLanguage())}`,
+    `${isEn ? "Stickers" : "シール"}: ${isEn ? "designated only" : "指定のみ"} / ${isEn ? "custom image upload" : "画像アップロード可"}`,
+    `${isEn ? "CSV export" : "CSV出力"}: ${isEn ? "paid only" : "有料のみ"}`
+  ];
+  openModal(`
+    <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="plan-upgrade-title">
+      <h2 id="plan-upgrade-title">${isEn ? "Paid Plan" : "有料プラン"}</h2>
+      <div class="stack">
+        ${lines.map((line) => `<p class="muted small">${escapeHtml(line)}</p>`).join("")}
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="secondary" data-action="close-modal">${t("modal.close")}</button>
+        <button type="button" data-action="activate-pro-plan" ${getCurrentPlan() === "pro" ? "disabled" : ""}>${isEn ? "Purchase (MVP)" : "購入する（MVP）"}</button>
+      </div>
+    </section>
+  `);
+}
+
+function activateProPlan() {
+  if (getCurrentPlan() === "pro") {
+    closeModal();
+    return;
+  }
+  state.plan = "pro";
+  saveState();
+  closeModal();
+  render();
+  showToast(currentLanguage() === "en" ? "Paid plan enabled." : "有料プランを有効化しました。");
 }
 
 function openModal(content) {
@@ -2531,6 +2933,11 @@ function saveExchange(profileId) {
   const profile = findProfile(profileId);
   if (!profile) {
     showToast(t("toast.profileNotFound"));
+    return;
+  }
+  const exchangeLimit = getPlanLimit("exchanges");
+  if (Number.isFinite(exchangeLimit) && countExchangeTotal() >= exchangeLimit) {
+    openLimitUpgradeModal("exchanges");
     return;
   }
   const rawEventName = document.querySelector("[data-exchange-event]")?.value || t("public.eventDefault");
@@ -2591,8 +2998,33 @@ function getTheme(id) {
   return THEMES.find((theme) => theme.id === id) || THEMES[0];
 }
 
+function getCustomStickers() {
+  if (!Array.isArray(state.customStickers)) return [];
+  return state.customStickers.map((sticker, index) => ({
+    id: sticker.id || `custom_${index + 1}`,
+    label: sticker.label || "Custom",
+    className: sticker.className || "sticker-blue",
+    color: sticker.color || "#dcecff",
+    source: "custom",
+    owned: true,
+    variant: "asset",
+    assetSrc: sticker.assetSrc
+  }));
+}
+
+function getStickerCatalog(options = {}) {
+  const includeCustom = options.includeCustom !== false;
+  if (!includeCustom) return STICKERS;
+  return STICKERS.concat(getCustomStickers());
+}
+
+function getStickerPickerCatalog() {
+  if (getCurrentPlan() !== "pro") return STICKERS;
+  return getStickerCatalog({ includeCustom: true });
+}
+
 function getSticker(id) {
-  return STICKERS.find((sticker) => sticker.id === id);
+  return getStickerCatalog({ includeCustom: true }).find((sticker) => sticker.id === id);
 }
 
 function loadStampStickers(manifest) {

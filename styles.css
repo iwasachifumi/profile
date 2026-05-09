@@ -692,6 +692,48 @@ textarea {
   font-weight: 700;
 }
 
+.settings-plan {
+  gap: 8px;
+}
+
+.plan-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.plan-col {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fffdf9;
+  display: grid;
+  gap: 6px;
+}
+
+.plan-col h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.plan-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.plan-row span {
+  color: var(--muted);
+}
+
+.plan-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .target-picker {
   display: flex;
   flex-wrap: wrap;
@@ -741,6 +783,19 @@ textarea {
   display: grid;
   gap: 6px;
   justify-items: start;
+}
+
+.sticker-upload-box {
+  display: grid;
+  gap: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fffdf8;
+}
+
+.sticker-upload-box strong {
+  font-size: 14px;
 }
 
 .sticker-pager {
@@ -940,6 +995,10 @@ textarea {
 
 .placed-sticker:active {
   cursor: grabbing;
+}
+
+.placed-sticker.selected {
+  filter: drop-shadow(0 7px 12px rgba(0, 0, 0, 0.2));
 }
 
 .placed-sticker-controls {
@@ -1248,5 +1307,14 @@ textarea {
   .group-items {
     padding: 9px;
     gap: 8px;
+  }
+
+  .plan-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
