@@ -47,6 +47,7 @@ main への push で GitHub Actions が自動実行される。
 |---------|------|
 | `SSH_PRIVATE_KEY` | サーバへの SSH 秘密鍵 |
 | `SSH_KNOWN_HOSTS` | `ssh-keyscan 163.43.131.43` の出力 |
+| `SSH_PASSPHRASE` | SSH 秘密鍵のパスフレーズ |
 
 ## 将来 build が増えたとき
 
