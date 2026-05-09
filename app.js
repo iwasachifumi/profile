@@ -1,4 +1,9 @@
 const STORAGE_KEY = "memoria-mvp-state-v1";
+const AUTH_USERS_KEY = "memoria-mvp-auth-users-v1";
+const AUTH_SESSION_KEY = "memoria-mvp-auth-session-v1";
+const AUTH_PREFS_KEY = "memoria-mvp-prefs-v1";
+const USER_STATE_KEY_PREFIX = `${STORAGE_KEY}:user:`;
+const GUEST_STATE_KEY = `${STORAGE_KEY}:guest`;
 const PROFILE_BASE_URL = "https://profile.ac7.co.jp/p/";
 const PLAN_LIMITS = {
   free: {
@@ -378,6 +383,57 @@ const THEMES = [
   { id: "pink", name: "ピンク台紙", description: "かわいく飾るための有料台紙。", free: false }
 ];
 
+const PAPER_FRAMES = [
+  {
+    id: "none",
+    nameJa: "標準",
+    nameEn: "Default",
+    descriptionJa: "枠なし",
+    descriptionEn: "No frame",
+    src: "",
+    slice: { top: 0, right: 0, bottom: 0, left: 0 },
+    width: 0,
+    repeat: "stretch",
+    free: true
+  },
+  {
+    id: "ribbon_top_red",
+    nameJa: "リボン枠",
+    nameEn: "Ribbon Top",
+    descriptionJa: "上部リボン付き",
+    descriptionEn: "Top ribbon frame",
+    src: "frame/f1165_2.png",
+    slice: { top: 120, right: 18, bottom: 18, left: 18 },
+    width: 18,
+    repeat: "stretch",
+    free: true
+  },
+  {
+    id: "ribbon_corner_gold",
+    nameJa: "コーナーリボン",
+    nameEn: "Corner Ribbon",
+    descriptionJa: "四隅リボン",
+    descriptionEn: "Ribbon corners",
+    src: "frame/f0385_1.png",
+    slice: { top: 24, right: 24, bottom: 24, left: 24 },
+    width: 20,
+    repeat: "stretch",
+    free: true
+  },
+  {
+    id: "pink_kira_frame",
+    nameJa: "きらきらピンク",
+    nameEn: "Pink Sparkle",
+    descriptionJa: "ピンク星飾り",
+    descriptionEn: "Pink sparkle frame",
+    src: "frame/okumonof_kiraf523-1536x864.png",
+    slice: { top: 84, right: 84, bottom: 84, left: 84 },
+    width: 22,
+    repeat: "stretch",
+    free: true
+  }
+];
+
 const STICKERS = [
   { id: "hello", label: "SMILE", className: "sticker-blue", color: "#dcecff", source: "free", owned: true, variant: "smile" },
   { id: "met", label: "HEART", className: "sticker-green", color: "#ffd7e7", source: "free", owned: true, variant: "heart" },
@@ -445,6 +501,7 @@ const DEMO_PROFILES = [
     audience: "勉強会",
     description: "勉強会で話しかけてもらうための公開内容。",
     themeId: "study",
+    frameId: "none",
     fields: [
       { key: "displayName", group: "basic", label: "表示名", value: "佐藤あかり", visible: true },
       { key: "handle", group: "basic", label: "呼ばれ方", value: "あかりさん", visible: true },
@@ -467,6 +524,7 @@ const DEMO_PROFILES = [
     audience: "展示会",
     description: "展示会や商談で渡すための公開内容。",
     themeId: "business",
+    frameId: "none",
     fields: [
       { key: "displayName", group: "basic", label: "表示名", value: "高橋レン", visible: true },
       { key: "handle", group: "basic", label: "呼ばれ方", value: "レン", visible: true },
@@ -484,7 +542,9 @@ const DEMO_PROFILES = [
   }
 ];
 
-let state = loadState();
+let authSession = loadAuthSession();
+let authModeTab = "register";
+let state = loadState(authSession);
 let activePatternId = state.activePatternId || state.patterns[0].id;
 let activeProfileTab = state.activeProfileTab || "general";
 let selectedExchangeId = state.selectedExchangeId || (state.exchanges[0] && state.exchanges[0].id);
@@ -493,6 +553,113 @@ let stickerPage = state.stickerPage || 1;
 let selectedStickerPatternId = "";
 let selectedStickerIndex = -1;
 let toastTimer = 0;
+
+function hasActiveSession() {
+  return authSession.mode === "guest" || authSession.mode === "user";
+}
+
+function stateStorageKey(session = authSession) {
+  if (session.mode === "guest") return GUEST_STATE_KEY;
+  if (session.mode === "user" && session.userId) return `${USER_STATE_KEY_PREFIX}${session.userId}`;
+  return "";
+}
+
+function loadPreferredLanguage() {
+  try {
+    const raw = localStorage.getItem(AUTH_PREFS_KEY);
+    if (!raw) return "ja";
+    const parsed = JSON.parse(raw);
+    return LANGUAGES.includes(parsed.language) ? parsed.language : "ja";
+  } catch {
+    return "ja";
+  }
+}
+
+function savePreferredLanguage(language) {
+  if (!LANGUAGES.includes(language)) return;
+  try {
+    localStorage.setItem(AUTH_PREFS_KEY, JSON.stringify({ language }));
+  } catch {
+    // ignore preference persistence errors
+  }
+}
+
+function loadAuthUsers() {
+  try {
+    const raw = localStorage.getItem(AUTH_USERS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((user) => user && user.id && user.email && typeof user.password === "string")
+      .map((user) => ({
+        id: user.id,
+        email: sanitizeEmail(user.email),
+        password: user.password,
+        createdAt: user.createdAt || "",
+        lastLoginAt: user.lastLoginAt || ""
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function saveAuthUsers(users) {
+  localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(users));
+}
+
+function findAuthUser(userId) {
+  return loadAuthUsers().find((user) => user.id === userId);
+}
+
+function loadAuthSession() {
+  try {
+    const raw = sessionStorage.getItem(AUTH_SESSION_KEY);
+    if (!raw) return { mode: "none" };
+    const parsed = JSON.parse(raw);
+    if (parsed.mode === "guest") {
+      return {
+        mode: "guest",
+        startedAt: parsed.startedAt || ""
+      };
+    }
+    if (parsed.mode === "user" && parsed.userId) {
+      const user = findAuthUser(parsed.userId);
+      if (!user) return { mode: "none" };
+      return {
+        mode: "user",
+        userId: user.id,
+        email: user.email,
+        lastLoginAt: user.lastLoginAt || parsed.lastLoginAt || ""
+      };
+    }
+    return { mode: "none" };
+  } catch {
+    return { mode: "none" };
+  }
+}
+
+function saveAuthSession(session) {
+  authSession = session;
+  if (!session || session.mode === "none") {
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
+    return;
+  }
+  sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+}
+
+function applyState(nextState) {
+  state = normalizeState(nextState);
+  activePatternId = state.activePatternId || (state.patterns[0] && state.patterns[0].id) || "";
+  if (!findPattern(activePatternId) && state.patterns[0]) activePatternId = state.patterns[0].id;
+  activeProfileTab = state.activeProfileTab || "general";
+  if (activeProfileTab !== "general" && !findPattern(activeProfileTab)) activeProfileTab = activePatternId;
+  selectedExchangeId = state.selectedExchangeId || (state.exchanges[0] && state.exchanges[0].id) || "";
+  activeBookView = state.activeBookView === "detail" ? "detail" : "list";
+  stickerPage = Number.isFinite(Number(state.stickerPage)) && Number(state.stickerPage) > 0 ? Number(state.stickerPage) : 1;
+  selectedStickerPatternId = "";
+  selectedStickerIndex = -1;
+}
 
 function currentLanguage() {
   return LANGUAGES.includes(state.language) ? state.language : "ja";
@@ -685,7 +852,8 @@ function updateLanguageSwitch() {
 function setLanguage(language) {
   if (!LANGUAGES.includes(language) || state.language === language) return;
   state.language = language;
-  saveState();
+  savePreferredLanguage(language);
+  if (hasActiveSession()) saveState();
   render();
 }
 
@@ -703,7 +871,7 @@ function defaultState() {
 
   return {
     plan: "free",
-    language: "ja",
+    language: loadPreferredLanguage(),
     activePatternId: studyId,
     activeProfileTab: "general",
     selectedExchangeId: "",
@@ -718,6 +886,7 @@ function defaultState() {
         audience: "勉強会",
         description: "技術イベントやコミュニティで渡すプロフィール。",
         themeId: "friends",
+        frameId: "none",
         fields: [
           { key: "displayName", group: "basic", label: "表示名", value: "なまえ", visible: true },
           { key: "handle", group: "basic", label: "呼ばれ方", value: "呼ばれたい名前", visible: true },
@@ -739,6 +908,7 @@ function defaultState() {
         audience: "ビジネス",
         description: "仕事や展示会で渡すプロフィール。",
         themeId: "business",
+        frameId: "none",
         fields: [
           { key: "displayName", group: "basic", label: "表示名", value: "氏名", visible: true },
           { key: "handle", group: "basic", label: "呼ばれ方", value: "名字", visible: true },
@@ -758,15 +928,28 @@ function defaultState() {
   };
 }
 
-function loadState() {
+function loadState(session = authSession) {
+  const preferredLanguage = loadPreferredLanguage();
+  const baseState = normalizeState(defaultState());
+  baseState.language = preferredLanguage;
+
+  const key = stateStorageKey(session);
+  if (!key) return baseState;
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return normalizeState(defaultState());
+    const storage = session.mode === "guest" ? sessionStorage : localStorage;
+    let raw = storage.getItem(key);
+    if (!raw && session.mode === "guest") {
+      raw = localStorage.getItem(STORAGE_KEY);
+    }
+    if (!raw) return baseState;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed.patterns) || parsed.patterns.length === 0) return normalizeState(defaultState());
-    return normalizeState({ ...defaultState(), ...parsed });
+    if (!Array.isArray(parsed.patterns) || parsed.patterns.length === 0) return baseState;
+    const merged = normalizeState({ ...baseState, ...parsed });
+    merged.language = LANGUAGES.includes(merged.language) ? merged.language : preferredLanguage;
+    return merged;
   } catch {
-    return normalizeState(defaultState());
+    return baseState;
   }
 }
 
@@ -840,6 +1023,7 @@ function normalizePattern(pattern, language = "ja") {
   return {
     ...pattern,
     description: pattern.description || `${pattern.audience || audienceFallback}${descriptionSuffix}`,
+    frameId: getPaperFrame(pattern.frameId).id,
     fields,
     links: links.map((link) => ({
       id: link.id || makeId("link"),
@@ -865,7 +1049,11 @@ function saveState() {
   state.selectedExchangeId = selectedExchangeId || "";
   state.activeBookView = activeBookView;
   state.stickerPage = stickerPage;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  savePreferredLanguage(currentLanguage());
+  const key = stateStorageKey(authSession);
+  if (!key) return;
+  const storage = authSession.mode === "guest" ? sessionStorage : localStorage;
+  storage.setItem(key, JSON.stringify(state));
 }
 
 function render() {
@@ -876,6 +1064,11 @@ function render() {
 
   if (route.name === "profile") {
     app.innerHTML = renderPublicProfile(route.id);
+    return;
+  }
+
+  if (!hasActiveSession()) {
+    app.innerHTML = renderAuthGate();
     return;
   }
 
@@ -923,6 +1116,70 @@ function updateNav(name) {
   document.querySelectorAll("[data-nav]").forEach((node) => {
     node.classList.toggle("active", node.dataset.nav === name);
   });
+}
+
+function authCopy() {
+  const isEn = currentLanguage() === "en";
+  return {
+    title: isEn ? "Start Memoria" : "Memoria をはじめる",
+    subtitle: isEn
+      ? "Sign up with email, or try first without registration."
+      : "メール登録で使い始めるか、登録せずにおためし利用できます。",
+    registerTab: isEn ? "Register" : "新規登録",
+    loginTab: isEn ? "Login" : "ログイン",
+    email: isEn ? "Email" : "メールアドレス",
+    password: isEn ? "Password" : "パスワード",
+    passwordConfirm: isEn ? "Confirm password" : "パスワード確認",
+    registerButton: isEn ? "Create account" : "アカウント作成",
+    loginButton: isEn ? "Login" : "ログイン",
+    trialTitle: isEn ? "Use without registration" : "登録せずに利用する",
+    trialDesc: isEn
+      ? "Trial mode stores data only in this browser session on this device."
+      : "おためし利用では、この端末の現在セッションにのみデータが保存されます。",
+    trialButton: isEn ? "Start trial" : "おためし開始",
+    soon: isEn ? "Google / Apple login will be added later." : "Google / Apple ログインは今後追加予定です。",
+    localOnly: isEn ? "MVP note: account data is stored only in your browser." : "MVP注記: アカウント情報はブラウザ内保存です。"
+  };
+}
+
+function renderAuthGate() {
+  const copy = authCopy();
+  const registerActive = authModeTab !== "login";
+  return `
+    <section class="auth-shell">
+      <article class="panel pad auth-card stack">
+        <div>
+          <h1>${copy.title}</h1>
+          <p class="muted">${copy.subtitle}</p>
+        </div>
+        <div class="auth-mode-tabs" role="tablist" aria-label="auth mode">
+          <button type="button" class="auth-mode-btn ${registerActive ? "active" : ""}" data-action="auth-set-mode" data-auth-mode="register">${copy.registerTab}</button>
+          <button type="button" class="auth-mode-btn ${registerActive ? "" : "active"}" data-action="auth-set-mode" data-auth-mode="login">${copy.loginTab}</button>
+        </div>
+        ${registerActive ? `
+          <div class="auth-form stack">
+            <label>${copy.email}<input type="email" data-auth-register-email autocomplete="email"></label>
+            <label>${copy.password}<input type="password" data-auth-register-password autocomplete="new-password"></label>
+            <label>${copy.passwordConfirm}<input type="password" data-auth-register-password-confirm autocomplete="new-password"></label>
+            <button type="button" data-action="auth-register">${copy.registerButton}</button>
+          </div>
+        ` : `
+          <div class="auth-form stack">
+            <label>${copy.email}<input type="email" data-auth-login-email autocomplete="username"></label>
+            <label>${copy.password}<input type="password" data-auth-login-password autocomplete="current-password"></label>
+            <button type="button" data-action="auth-login">${copy.loginButton}</button>
+          </div>
+        `}
+        <div class="auth-guest stack">
+          <strong>${copy.trialTitle}</strong>
+          <p class="muted small">${copy.trialDesc}</p>
+          <button type="button" class="secondary" data-action="auth-start-guest">${copy.trialButton}</button>
+        </div>
+        <p class="muted small">${copy.soon}</p>
+        <p class="muted small">${copy.localOnly}</p>
+      </article>
+    </section>
+  `;
 }
 
 function renderMine() {
@@ -1185,8 +1442,23 @@ function renderThemeChoice(pattern, theme) {
   `;
 }
 
+function renderFrameChoice(pattern, frame) {
+  const active = (pattern.frameId || "none") === frame.id ? " active" : "";
+  const thumb = frame.src
+    ? `<div class="frame-thumb"><img src="${escapeAttribute(frame.src)}" alt="${escapeAttribute(getPaperFrameName(frame))}"></div>`
+    : `<div class="frame-thumb frame-thumb-none"><span>${currentLanguage() === "en" ? "No frame" : "枠なし"}</span></div>`;
+  return `
+    <button type="button" class="frame-choice${active}" data-action="open-frame-preview" data-frame-id="${frame.id}">
+      ${thumb}
+      <strong>${escapeHtml(getPaperFrameName(frame))}</strong>
+      <span class="muted small">${escapeHtml(getPaperFrameDescription(frame))}</span>
+    </button>
+  `;
+}
+
 function renderDesign() {
   const pattern = getActivePattern();
+  const frameSectionTitle = currentLanguage() === "en" ? "Frame" : "フレーム";
   return `
     <section class="section-title">
       <div>
@@ -1198,13 +1470,17 @@ function renderDesign() {
     <section class="panel pad pattern-toolbar">
       ${renderProfileTabs({ includeGeneral: false })}
     </section>
-    <div class="split">
-      <section class="panel pad stack">
-        <h2>${t("design.paper")}</h2>
-        <div class="theme-grid">
-          ${THEMES.map((theme) => renderThemeChoice(pattern, theme)).join("")}
-        </div>
-      </section>
+      <div class="split">
+        <section class="panel pad stack">
+          <h2>${t("design.paper")}</h2>
+          <div class="theme-grid">
+            ${THEMES.map((theme) => renderThemeChoice(pattern, theme)).join("")}
+          </div>
+          <h2>${frameSectionTitle}</h2>
+          <div class="frame-grid">
+            ${PAPER_FRAMES.map((frame) => renderFrameChoice(pattern, frame)).join("")}
+          </div>
+        </section>
       <section class="stack">
         <div class="section-title">
           <h2>${t("design.preview")}</h2>
@@ -1528,8 +1804,44 @@ function renderPlanComparison(copy) {
   `;
 }
 
+function formatAuthTimestamp(value) {
+  if (!value) return "-";
+  try {
+    return formatDate(value);
+  } catch {
+    return "-";
+  }
+}
+
+function renderAccountStatus() {
+  const isEn = currentLanguage() === "en";
+  if (authSession.mode === "user") {
+    const email = authSession.email || "-";
+    const lastLogin = formatAuthTimestamp(authSession.lastLoginAt);
+    return {
+      description: isEn
+        ? `${email} / Email login (last login: ${lastLogin})`
+        : `${email} / メールログイン（最終ログイン: ${lastLogin}）`,
+      action: `<button type="button" class="secondary settings-account-action" data-action="auth-logout">${isEn ? "Sign out" : "ログアウト"}</button>`
+    };
+  }
+  if (authSession.mode === "guest") {
+    return {
+      description: isEn
+        ? "Trial mode (session only on this device). Register to keep data."
+        : "おためし利用中（この端末のセッションのみ）。データを残すには登録してください。",
+      action: `<button type="button" class="secondary settings-account-action" data-action="auth-logout">${isEn ? "Back to auth" : "認証選択へ戻る"}</button>`
+    };
+  }
+  return {
+    description: isEn ? "Not authenticated" : "未認証",
+    action: ""
+  };
+}
+
 function renderSettings() {
   const copy = settingsCopy();
+  const account = renderAccountStatus();
   return `
     <section class="section-title">
       <div>
@@ -1546,7 +1858,8 @@ function renderSettings() {
       ${renderPlanComparison(copy)}
       <article class="settings-item">
         <strong>${copy.account}</strong>
-        <span class="muted small">${copy.accountDesc}</span>
+        <span class="muted small">${account.description}</span>
+        ${account.action}
       </article>
       <button type="button" class="settings-item settings-action" data-action="open-csv-upgrade">
         <strong>${copy.csv} <span class="settings-badge">${copy.csvBadge}</span></strong>
@@ -1644,8 +1957,10 @@ function renderProfilePaper(profile, options) {
   const visibleFields = profile.fields.filter((field) => field.visible && field.key !== "displayName");
   const visibleLinks = (profile.links || []).filter((link) => link.visible && link.url);
   const themeClass = `theme-${profile.themeId === "pink" ? "friends" : profile.themeId}`;
+  const frame = getPaperFrame(profile.frameId);
+  const frameStyle = getPaperFrameStyle(frame);
   return `
-    <article class="profile-paper ${themeClass}" data-profile-paper="${profile.id}" ${options.editable ? "data-action=\"clear-sticker-selection\"" : ""}>
+    <article class="profile-paper ${themeClass}${frame.id !== "none" ? " has-image-frame" : ""}" data-profile-paper="${profile.id}" ${frameStyle ? `style="${escapeAttribute(frameStyle)}"` : ""} ${options.editable ? "data-action=\"clear-sticker-selection\"" : ""}>
       <div class="paper-lines"></div>
       ${profile.stickers.map((sticker, index) => renderPlacedSticker(sticker, index, options.editable, profile.id)).join("")}
       <div class="profile-content">
@@ -1979,6 +2294,37 @@ function handleClick(event) {
     return;
   }
 
+  if (action === "auth-set-mode") {
+    authModeTab = actionTarget.dataset.authMode === "login" ? "login" : "register";
+    render();
+    return;
+  }
+
+  if (action === "auth-register") {
+    registerWithEmail();
+    return;
+  }
+
+  if (action === "auth-login") {
+    loginWithEmail();
+    return;
+  }
+
+  if (action === "auth-start-guest") {
+    openGuestStartModal();
+    return;
+  }
+
+  if (action === "auth-confirm-guest") {
+    startGuestSession();
+    return;
+  }
+
+  if (action === "auth-logout") {
+    logoutSession();
+    return;
+  }
+
   if (action === "select-pattern") {
     activePatternId = actionTarget.dataset.patternId;
     activeProfileTab = activePatternId;
@@ -2111,6 +2457,15 @@ function handleClick(event) {
 
   if (action === "open-theme-preview") {
     openThemePreview(actionTarget.dataset.themeId);
+  }
+
+  if (action === "open-frame-preview") {
+    openFramePreview(actionTarget.dataset.frameId);
+  }
+
+  if (action === "apply-frame") {
+    applyFrame(actionTarget.dataset.frameId);
+    return;
   }
 
   if (action === "apply-theme") {
@@ -2837,6 +3192,42 @@ function openThemePreview(themeId) {
   applyTheme(themeId);
 }
 
+function openFramePreview(frameId) {
+  const frame = getPaperFrame(frameId);
+  const pattern = getActivePattern();
+  if (!pattern) return;
+  const isEn = currentLanguage() === "en";
+  const previewProfile = { ...pattern, frameId: frame.id };
+  openModal(`
+    <section class="modal-dialog frame-preview-modal" role="dialog" aria-modal="true" aria-labelledby="frame-preview-title">
+      <div class="section-title">
+        <div>
+          <h2 id="frame-preview-title">${escapeHtml(getPaperFrameName(frame))}</h2>
+          <span class="muted small">${escapeHtml(getPaperFrameDescription(frame))}</span>
+        </div>
+        <button type="button" class="icon-button" data-action="close-modal" aria-label="${t("modal.close")}" title="${t("modal.close")}">×</button>
+      </div>
+      <div class="frame-preview-wrap">
+        ${renderProfilePaper(previewProfile, { editable: false })}
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="secondary" data-action="close-modal">${t("modal.close")}</button>
+        <button type="button" data-action="apply-frame" data-frame-id="${frame.id}" ${pattern.frameId === frame.id ? "disabled" : ""}>${isEn ? "Apply" : "このデザインに決定"}</button>
+      </div>
+    </section>
+  `);
+}
+
+function applyFrame(frameId) {
+  const frame = getPaperFrame(frameId);
+  const pattern = getActivePattern();
+  if (!pattern) return;
+  pattern.frameId = frame.id;
+  saveState();
+  closeModal();
+  render();
+}
+
 function addSticker(stickerId) {
   const sticker = getSticker(stickerId);
   if (!sticker) return;
@@ -2929,6 +3320,149 @@ function closeModal() {
   document.querySelector("#modal-root").innerHTML = "";
 }
 
+function sanitizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function getInputValue(selector) {
+  const node = document.querySelector(selector);
+  if (!(node instanceof HTMLInputElement)) return "";
+  return node.value.trim();
+}
+
+function startUserSession(user) {
+  const users = loadAuthUsers();
+  const target = users.find((item) => item.id === user.id);
+  const now = new Date().toISOString();
+  if (target) {
+    target.lastLoginAt = now;
+    saveAuthUsers(users);
+  }
+  saveAuthSession({
+    mode: "user",
+    userId: user.id,
+    email: user.email,
+    lastLoginAt: now
+  });
+  applyState(loadState(authSession));
+  saveState();
+  closeModal();
+  if (window.location.hash.startsWith("#profile/")) {
+    window.location.hash = "#mine";
+  }
+  render();
+}
+
+function registerWithEmail() {
+  const isEn = currentLanguage() === "en";
+  const email = sanitizeEmail(getInputValue("[data-auth-register-email]"));
+  const password = getInputValue("[data-auth-register-password]");
+  const confirm = getInputValue("[data-auth-register-password-confirm]");
+
+  if (!email || !password || !confirm) {
+    showToast(isEn ? "Please fill in all fields." : "すべて入力してください。");
+    return;
+  }
+  if (!isValidEmail(email)) {
+    showToast(isEn ? "Please enter a valid email." : "有効なメールアドレスを入力してください。");
+    return;
+  }
+  if (password.length < 8) {
+    showToast(isEn ? "Password must be at least 8 characters." : "パスワードは8文字以上にしてください。");
+    return;
+  }
+  if (password !== confirm) {
+    showToast(isEn ? "Passwords do not match." : "パスワードが一致しません。");
+    return;
+  }
+
+  const users = loadAuthUsers();
+  if (users.some((user) => user.email === email)) {
+    showToast(isEn ? "This email is already registered." : "このメールアドレスは登録済みです。");
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const user = {
+    id: makeId("usr"),
+    email,
+    password,
+    createdAt: now,
+    lastLoginAt: now
+  };
+  users.unshift(user);
+  saveAuthUsers(users);
+  startUserSession(user);
+  showToast(isEn ? "Account created and logged in." : "アカウントを作成してログインしました。");
+}
+
+function loginWithEmail() {
+  const isEn = currentLanguage() === "en";
+  const email = sanitizeEmail(getInputValue("[data-auth-login-email]"));
+  const password = getInputValue("[data-auth-login-password]");
+  if (!email || !password) {
+    showToast(isEn ? "Please enter email and password." : "メールアドレスとパスワードを入力してください。");
+    return;
+  }
+  const users = loadAuthUsers();
+  const user = users.find((item) => item.email === email);
+  if (!user || user.password !== password) {
+    showToast(isEn ? "Invalid email or password." : "メールアドレスまたはパスワードが正しくありません。");
+    return;
+  }
+  startUserSession(user);
+  showToast(isEn ? "Logged in." : "ログインしました。");
+}
+
+function openGuestStartModal() {
+  const isEn = currentLanguage() === "en";
+  openModal(`
+    <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="guest-start-title">
+      <h2 id="guest-start-title">${isEn ? "Start trial without registration" : "登録せずにおためし開始"}</h2>
+      <p>${isEn
+        ? "Trial mode stores data only in this browser session on this device. If you close the session before registering, data cannot be authenticated or recovered."
+        : "おためし利用のデータは、この端末の現在セッションにのみ保存されます。登録前にセッションが終了すると、データの認証・復元はできません。"}
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="secondary" data-action="close-modal">${t("modal.close")}</button>
+        <button type="button" data-action="auth-confirm-guest">${isEn ? "Continue trial" : "このまま開始"}</button>
+      </div>
+    </section>
+  `);
+}
+
+function startGuestSession() {
+  const isEn = currentLanguage() === "en";
+  saveAuthSession({
+    mode: "guest",
+    startedAt: new Date().toISOString()
+  });
+  applyState(loadState(authSession));
+  saveState();
+  closeModal();
+  if (window.location.hash.startsWith("#profile/")) {
+    window.location.hash = "#mine";
+  }
+  render();
+  showToast(isEn ? "Trial mode started." : "おためし利用を開始しました。");
+}
+
+function logoutSession() {
+  const isEn = currentLanguage() === "en";
+  savePreferredLanguage(currentLanguage());
+  saveAuthSession({ mode: "none" });
+  applyState(loadState(authSession));
+  authModeTab = "register";
+  closeModal();
+  window.location.hash = "#mine";
+  render();
+  showToast(isEn ? "Signed out." : "ログアウトしました。");
+}
+
 function saveExchange(profileId) {
   const profile = findProfile(profileId);
   if (!profile) {
@@ -2996,6 +3530,39 @@ function findExchange(id) {
 
 function getTheme(id) {
   return THEMES.find((theme) => theme.id === id) || THEMES[0];
+}
+
+function getPaperFrame(id) {
+  return PAPER_FRAMES.find((frame) => frame.id === id) || PAPER_FRAMES[0];
+}
+
+function getPaperFrameName(frame) {
+  if (currentLanguage() === "en") return frame.nameEn || frame.nameJa || frame.id;
+  return frame.nameJa || frame.nameEn || frame.id;
+}
+
+function getPaperFrameDescription(frame) {
+  if (currentLanguage() === "en") return frame.descriptionEn || frame.descriptionJa || "";
+  return frame.descriptionJa || frame.descriptionEn || "";
+}
+
+function getPaperFrameStyle(frame) {
+  if (!frame || frame.id === "none" || !frame.src || !frame.width) return "";
+  const slice = frame.slice || {};
+  const top = Number(slice.top) || 0;
+  const right = Number(slice.right) || 0;
+  const bottom = Number(slice.bottom) || 0;
+  const left = Number(slice.left) || 0;
+  const width = Number(frame.width) || 0;
+  const repeat = frame.repeat || "stretch";
+  return [
+    `border:${width}px solid transparent`,
+    `border-image-source:url('${frame.src}')`,
+    `border-image-slice:${top} ${right} ${bottom} ${left}`,
+    `border-image-width:${width}px`,
+    `border-image-repeat:${repeat}`,
+    "border-radius:0"
+  ].join(";");
 }
 
 function getCustomStickers() {

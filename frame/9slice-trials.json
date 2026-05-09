@@ -1,0 +1,43 @@
+{
+  "trials": [
+    {
+      "id": "ribbon_top_red",
+      "file": "f1165_2.png",
+      "description": "Top ribbon, rounded frame",
+      "slice": {
+        "top": 120,
+        "right": 18,
+        "bottom": 18,
+        "left": 18
+      },
+      "width": 18,
+      "repeat": "stretch"
+    },
+    {
+      "id": "ribbon_corner_gold",
+      "file": "f0385_1.png",
+      "description": "Ribbon corners, soft gold line",
+      "slice": {
+        "top": 24,
+        "right": 24,
+        "bottom": 24,
+        "left": 24
+      },
+      "width": 20,
+      "repeat": "stretch"
+    },
+    {
+      "id": "pink_kira_frame",
+      "file": "okumonof_kiraf523-1536x864.png",
+      "description": "Pink frame with sparkle accents",
+      "slice": {
+        "top": 84,
+        "right": 84,
+        "bottom": 84,
+        "left": 84
+      },
+      "width": 22,
+      "repeat": "stretch"
+    }
+  ]
+}

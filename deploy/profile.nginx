@@ -1,0 +1,27 @@
+server {
+    listen 80;
+    server_name profile.ac7.co.jp;
+
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name profile.ac7.co.jp;
+
+    ssl_certificate /etc/letsencrypt/live/profile.ac7.co.jp/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/profile.ac7.co.jp/privkey.pem;
+
+    root /var/www/profile;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~* \.(?:css|js|png|jpg|jpeg|gif|svg|ico|webp)$ {
+        try_files $uri =404;
+        expires 7d;
+        add_header Cache-Control public;
+    }
+}
