@@ -1,0 +1,28 @@
+# Claude Code local settings
+.claude/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 環境変数(将来サーバ実装が入ったとき用)
+.env
+.env.*
+!.env.example
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build output(将来 vite build 等を入れたとき用)
+dist/
+build/
