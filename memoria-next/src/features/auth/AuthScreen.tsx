@@ -408,7 +408,10 @@ const styles: Record<string, CSSProperties> = {
   },
   modalOverlay: {
     position: "fixed",
-    inset: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     background: "rgba(15, 23, 42, 0.5)",
     display: "grid",
     placeItems: "center",
