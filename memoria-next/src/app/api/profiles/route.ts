@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getProfilesByUser, insertProfile } from "@/lib/db";
 import { ok, err, unauthorized, serverError } from "@/lib/response";
@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
 
     return ok(profiles);
   } catch (e) {
-    return serverError(e);
+    console.error("GET /api/profiles error:", e);
+    return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });
   }
 }
 
