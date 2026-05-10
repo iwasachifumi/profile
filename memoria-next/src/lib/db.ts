@@ -99,27 +99,7 @@ export async function getProfileByHandle(handle: string): Promise<Profile | null
   return rows[0] ? rowToProfile(rows[0]) : null;
 }
 
-// migration 0001 が auth.users への FK を作った場合に備えたワンタイム修正フラグ
-const globalFix = global as typeof global & { _memoriaFkFixed?: boolean };
-
-/** auth.users を参照している旧 FK 制約をアプリ側から削除（冪等） */
-async function dropLegacyAuthFk() {
-  if (globalFix._memoriaFkFixed) return;
-  const sql = getSql();
-  try {
-    await sql`ALTER TABLE memoria.profiles  DROP CONSTRAINT IF EXISTS profiles_owner_id_fkey`;
-    await sql`ALTER TABLE memoria.exchanges  DROP CONSTRAINT IF EXISTS exchanges_owner_id_fkey`;
-    await sql`ALTER TABLE memoria.user_settings DROP CONSTRAINT IF EXISTS user_settings_user_id_fkey`;
-    console.log("[db] legacy auth.users FK constraints removed (or were already absent)");
-  } catch (e) {
-    console.warn("[db] dropLegacyAuthFk warning:", e);
-  }
-  globalFix._memoriaFkFixed = true;
-}
-
 export async function insertProfile(userId: string, profile: Profile) {
-  // 初回 INSERT 前に旧 auth.users FK 制約を確実に除去する
-  await dropLegacyAuthFk();
   const sql = getSql();
   await sql`
     INSERT INTO memoria.profiles
