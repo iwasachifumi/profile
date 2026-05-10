@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, FormEvent } from "react";
+import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/store/session";
@@ -21,7 +21,7 @@ export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
   const router = useRouter();
   const { session, startGuest, login, register, logout } = useSession();
   const { ui, dispatch } = useUi();
-  const { lang, toggle, t } = useLang();
+  const { t } = useLang();
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -32,7 +32,6 @@ export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
   const [busy, setBusy] = useState<BusyKind>(null);
   const [showGuestWarning, setShowGuestWarning] = useState(false);
 
-  // ログイン済み（ゲスト含む）なら redirectOnAuth へ
   useEffect(() => {
     if (session.status === "user" && redirectOnAuth) {
       router.replace(redirectOnAuth);
@@ -106,12 +105,11 @@ export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
   // ── ローディング ──────────────────────────────────────────────────────────────
   if (session.status === "loading") {
     return (
-      <main style={styles.shell}>
-        <section style={styles.card}>
-          <h1 style={styles.title}>Memoria</h1>
-          <p style={styles.muted}>{t("確認中...", "Checking your session...")}</p>
-        </section>
-      </main>
+      <div className="auth-shell">
+        <article className="panel pad auth-card stack">
+          <p className="muted">{t("確認中...", "Checking your session...")}</p>
+        </article>
+      </div>
     );
   }
 
@@ -121,20 +119,24 @@ export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
       ? t("ゲスト", "Guest")
       : session.user.email;
     return (
-      <main style={styles.shell}>
-        <section style={styles.card}>
-          <h1 style={styles.title}>Memoria</h1>
-          <p style={styles.muted}>{displayName} {t("でログイン中", "signed in")}</p>
+      <div className="auth-shell">
+        <article className="panel pad auth-card stack">
+          <p className="muted">{displayName} {t("でログイン中", "signed in")}</p>
           {redirectOnAuth && (
-            <button type="button" onClick={() => router.push(redirectOnAuth)} style={styles.primaryButton}>
+            <button type="button" onClick={() => router.push(redirectOnAuth)}>
               {t("続ける", "Continue")}
             </button>
           )}
-          <button type="button" onClick={() => void handleLogout()} disabled={busy === "logout"} style={styles.secondaryButton}>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => void handleLogout()}
+            disabled={busy === "logout"}
+          >
             {busy === "logout" ? t("ログアウト中...", "Signing out...") : t("ログアウト", "Sign out")}
           </button>
-        </section>
-      </main>
+        </article>
+      </div>
     );
   }
 
@@ -142,108 +144,135 @@ export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
 
   // ── 認証フォーム ──────────────────────────────────────────────────────────────
   return (
-    <main style={styles.shell}>
-      <section style={styles.card}>
+    <>
+      <div className="auth-shell">
+        <article className="panel pad auth-card stack">
+          <div>
+            <h1>{t("Memoriaをはじめる", "Start Memoria")}</h1>
+            <p className="muted">
+              {t(
+                "メール登録で使い始めるか、登録せずにおためし利用できます。",
+                "Sign up with email, or try first without registration."
+              )}
+            </p>
+          </div>
 
-        {/* ヘッダー：タイトル＋言語切替 */}
-        <div style={styles.headerRow}>
-          <h1 style={styles.title}>Memoria</h1>
-          <button type="button" onClick={toggle} style={styles.langButton}>
-            {lang === "ja" ? "EN" : "日本語"}
-          </button>
-        </div>
-
-        <p style={styles.muted}>
-          {t("サインインまたは新規登録してください。", "Sign in or create your account to continue.")}
-        </p>
-
-        {/* ログイン / 新規登録 タブ */}
-        <div style={styles.tabs} role="tablist">
-          <button
-            type="button"
-            onClick={() => { dispatch({ type: "SET_AUTH_TAB", payload: "login" }); setError(null); }}
-            style={isRegister ? styles.tabButton : styles.tabButtonActive}
-          >
-            {t("ログイン", "Login")}
-          </button>
-          <button
-            type="button"
-            onClick={() => { dispatch({ type: "SET_AUTH_TAB", payload: "register" }); setError(null); }}
-            style={isRegister ? styles.tabButtonActive : styles.tabButton}
-          >
-            {t("新規登録", "Register")}
-          </button>
-        </div>
-
-        {/* フォーム */}
-        {isRegister ? (
-          <form onSubmit={handleRegisterSubmit} style={styles.form}>
-            <label style={styles.label}>
-              {t("メールアドレス", "Email")}
-              <input type="email" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)}
-                autoComplete="email" style={styles.input} />
-            </label>
-            <label style={styles.label}>
-              {t("パスワード", "Password")}
-              <input type="password" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)}
-                autoComplete="new-password" style={styles.input} />
-            </label>
-            <label style={styles.label}>
-              {t("パスワード（確認）", "Confirm password")}
-              <input type="password" value={registerPasswordConfirm} onChange={(e) => setRegisterPasswordConfirm(e.target.value)}
-                autoComplete="new-password" style={styles.input} />
-            </label>
-            <button type="submit" disabled={busy === "register"} style={styles.primaryButton}>
-              {busy === "register" ? t("作成中...", "Creating...") : t("アカウントを作成", "Create account")}
+          {/* ログイン / 新規登録 タブ */}
+          <div className="auth-mode-tabs" role="tablist">
+            <button
+              type="button"
+              className={`auth-mode-btn${isRegister ? " active" : ""}`}
+              onClick={() => { dispatch({ type: "SET_AUTH_TAB", payload: "register" }); setError(null); }}
+            >
+              {t("新規登録", "Register")}
             </button>
-          </form>
-        ) : (
-          <form onSubmit={handleLoginSubmit} style={styles.form}>
-            <label style={styles.label}>
-              {t("メールアドレス", "Email")}
-              <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)}
-                autoComplete="username" style={styles.input} />
-            </label>
-            <label style={styles.label}>
-              {t("パスワード", "Password")}
-              <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
-                autoComplete="current-password" style={styles.input} />
-            </label>
-            <button type="submit" disabled={busy === "login"} style={styles.primaryButton}>
-              {busy === "login" ? t("ログイン中...", "Signing in...") : t("ログイン", "Login")}
+            <button
+              type="button"
+              className={`auth-mode-btn${!isRegister ? " active" : ""}`}
+              onClick={() => { dispatch({ type: "SET_AUTH_TAB", payload: "login" }); setError(null); }}
+            >
+              {t("ログイン", "Login")}
             </button>
-          </form>
-        )}
+          </div>
 
-        {error && <p style={styles.errorText}>{error}</p>}
+          {/* フォーム */}
+          {isRegister ? (
+            <form onSubmit={handleRegisterSubmit} className="auth-form stack">
+              <label>
+                {t("メールアドレス", "Email")}
+                <input
+                  type="email"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  autoComplete="email"
+                />
+              </label>
+              <label>
+                {t("パスワード", "Password")}
+                <input
+                  type="password"
+                  value={registerPassword}
+                  onChange={(e) => setRegisterPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+              </label>
+              <label>
+                {t("パスワード（確認）", "Confirm password")}
+                <input
+                  type="password"
+                  value={registerPasswordConfirm}
+                  onChange={(e) => setRegisterPasswordConfirm(e.target.value)}
+                  autoComplete="new-password"
+                />
+              </label>
+              <button type="submit" disabled={busy === "register"}>
+                {busy === "register" ? t("作成中...", "Creating...") : t("アカウント作成", "Create account")}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleLoginSubmit} className="auth-form stack">
+              <label>
+                {t("メールアドレス", "Email")}
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  autoComplete="username"
+                />
+              </label>
+              <label>
+                {t("パスワード", "Password")}
+                <input
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </label>
+              <button type="submit" disabled={busy === "login"}>
+                {busy === "login" ? t("ログイン中...", "Signing in...") : t("ログイン", "Login")}
+              </button>
+            </form>
+          )}
 
-        {/* 区切り */}
-        <div style={styles.divider}>
-          <span style={styles.dividerText}>{t("または", "or")}</span>
-        </div>
+          {error && <p className="error-text">{error}</p>}
 
-        {/* お試し利用 */}
-        <button type="button" onClick={handleStartGuest} style={styles.guestButton}>
-          {t("お試し利用（ゲスト）", "Try without account")}
-        </button>
-      </section>
+          {/* お試し利用 */}
+          <div className="auth-guest stack">
+            <strong>{t("登録せずに利用する", "Use without registration")}</strong>
+            <p className="muted small">
+              {t(
+                "おためし利用では、この端末の現在セッションにのみデータが保存されます。",
+                "Trial mode stores data only in this browser session on this device."
+              )}
+            </p>
+            <button type="button" className="secondary" onClick={handleStartGuest}>
+              {t("おためし開始", "Start trial")}
+            </button>
+          </div>
+
+          <p className="muted small">
+            {t("Google / Apple ログインは今後追加予定です。", "Google / Apple login will be added later.")}
+          </p>
+        </article>
+      </div>
 
       {/* ゲスト利用 警告モーダル */}
       {showGuestWarning && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalCard}>
-            <h2 style={styles.modalTitle}>{t("お試し利用について", "About guest mode")}</h2>
-            <p style={styles.modalBody}>
+        <div className="modal-backdrop">
+          <div className="modal-dialog stack">
+            <h2>{t("お試し利用について", "About guest mode")}</h2>
+            <p className="muted">
               {t(
                 "メールアドレス、パスワードやGoogle認証などをしないとデータへのアクセスができなくなる恐れがありますので、お試しの後、継続して使う時は設定メニューよりユーザログイン情報の設定をするようお願いします。",
                 "Without registering an email, password, or Google sign-in, you may lose access to your data. After trying the app, please set up your login credentials from the settings menu if you wish to continue using it."
               )}
             </p>
-            <div style={styles.modalActions}>
+            <div className="modal-actions" style={{ gap: "10px" }}>
               <button
                 type="button"
+                className="secondary"
                 onClick={() => setShowGuestWarning(false)}
-                style={styles.secondaryButton}
                 disabled={busy === "guest"}
               >
                 {t("キャンセル", "Cancel")}
@@ -251,7 +280,6 @@ export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
               <button
                 type="button"
                 onClick={() => void handleGuestConfirm()}
-                style={styles.primaryButton}
                 disabled={busy === "guest"}
               >
                 {busy === "guest"
@@ -262,181 +290,6 @@ export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
           </div>
         </div>
       )}
-    </main>
+    </>
   );
 }
-
-const styles: Record<string, CSSProperties> = {
-  shell: {
-    minHeight: "100vh",
-    display: "grid",
-    placeItems: "center",
-    padding: "24px",
-    background: "linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%)",
-  },
-  card: {
-    width: "100%",
-    maxWidth: "420px",
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "10px",
-    padding: "24px",
-    boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
-    display: "grid",
-    gap: "14px",
-  },
-  headerRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  title: {
-    margin: 0,
-    fontSize: "24px",
-    lineHeight: 1.2,
-  },
-  langButton: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "6px",
-    background: "#f8fafc",
-    color: "#475569",
-    padding: "4px 10px",
-    fontSize: "12px",
-    cursor: "pointer",
-  },
-  muted: {
-    margin: 0,
-    color: "#475569",
-    fontSize: "14px",
-    lineHeight: 1.4,
-  },
-  tabs: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "8px",
-  },
-  tabButton: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
-    background: "#ffffff",
-    color: "#334155",
-    padding: "8px 10px",
-    cursor: "pointer",
-    fontSize: "14px",
-  },
-  tabButtonActive: {
-    border: "1px solid #0f172a",
-    borderRadius: "8px",
-    background: "#0f172a",
-    color: "#ffffff",
-    padding: "8px 10px",
-    cursor: "pointer",
-    fontSize: "14px",
-  },
-  form: {
-    display: "grid",
-    gap: "12px",
-  },
-  label: {
-    display: "grid",
-    gap: "6px",
-    fontSize: "14px",
-    color: "#0f172a",
-  },
-  input: {
-    width: "100%",
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
-    padding: "10px 12px",
-    fontSize: "14px",
-    boxSizing: "border-box",
-  },
-  primaryButton: {
-    border: "1px solid #0f172a",
-    borderRadius: "8px",
-    background: "#0f172a",
-    color: "#ffffff",
-    padding: "10px 14px",
-    fontSize: "14px",
-    cursor: "pointer",
-    width: "100%",
-  },
-  secondaryButton: {
-    border: "1px solid #475569",
-    borderRadius: "8px",
-    background: "#ffffff",
-    color: "#0f172a",
-    padding: "10px 14px",
-    fontSize: "14px",
-    cursor: "pointer",
-    width: "100%",
-  },
-  errorText: {
-    margin: 0,
-    color: "#b91c1c",
-    fontSize: "13px",
-    lineHeight: 1.4,
-  },
-  divider: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    color: "#94a3b8",
-    fontSize: "12px",
-  },
-  dividerText: {
-    flexShrink: 0,
-    color: "#94a3b8",
-    fontSize: "12px",
-    margin: "0 auto",
-  },
-  guestButton: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
-    background: "#f8fafc",
-    color: "#475569",
-    padding: "10px 14px",
-    fontSize: "14px",
-    cursor: "pointer",
-    width: "100%",
-  },
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    background: "rgba(15, 23, 42, 0.5)",
-    display: "grid",
-    placeItems: "center",
-    padding: "24px",
-    zIndex: 50,
-  },
-  modalCard: {
-    width: "100%",
-    maxWidth: "420px",
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "10px",
-    padding: "24px",
-    boxShadow: "0 16px 40px rgba(15, 23, 42, 0.16)",
-    display: "grid",
-    gap: "16px",
-  },
-  modalTitle: {
-    margin: 0,
-    fontSize: "18px",
-    color: "#0f172a",
-  },
-  modalBody: {
-    margin: 0,
-    fontSize: "14px",
-    color: "#334155",
-    lineHeight: 1.6,
-  },
-  modalActions: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "10px",
-  },
-};
