@@ -24,6 +24,8 @@ jobs:
             # DB マイグレーション (冪等なので毎回実行しても安全)
             docker exec -i supabase-db psql -U postgres \
               < /var/www/profile/memoria-next/db/migrations/0004_fix_auth_fk.sql
+            docker exec -i supabase-db psql -U postgres \
+              < /var/www/profile/memoria-next/db/migrations/0005_drop_auth_fk_direct.sql
             cd /var/www/profile/memoria-next
             npm install --prefer-offline
             rm -rf .next
