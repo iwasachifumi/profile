@@ -1061,6 +1061,7 @@ function render() {
   const route = parseRoute();
   updateNav(route.name);
   updateChromeCopy();
+  document.querySelector('.topnav').style.display = hasActiveSession() ? '' : 'none';
 
   if (route.name === "profile") {
     app.innerHTML = renderPublicProfile(route.id);

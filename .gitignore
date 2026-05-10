@@ -7,10 +7,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# 環境変数(将来サーバ実装が入ったとき用)
+# 環境変数
 .env
 .env.*
 !.env.example
+!.env.local.example   # memoria-next のテンプレートは commit する
+
+# Next.js ビルド成果物
+.next/
 
 # Editor
 .vscode/
