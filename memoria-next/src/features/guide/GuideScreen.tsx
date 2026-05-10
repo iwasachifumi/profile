@@ -1,154 +1,85 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import AuthScreen from "@/features/auth/AuthScreen";
 import { useSession } from "@/store/session";
-
-const steps = [
-  {
-    title: "Create profile patterns",
-    description:
-      "Prepare multiple profile patterns for different contexts such as friends, business, and communities.",
-  },
-  {
-    title: "Share a public URL",
-    description:
-      "Publish a profile with slug or handle, then share it by URL or QR during in-person meetings.",
-  },
-  {
-    title: "Save exchange history",
-    description:
-      "Record when and where you exchanged profiles so you can recall people with context later.",
-  },
-  {
-    title: "Maintain profile quality",
-    description:
-      "Keep fields and links current so your public profile stays useful after each event.",
-  },
-];
+import { useLang } from "@/store/language";
 
 export default function GuideScreen() {
   const { session } = useSession();
+  const { t } = useLang();
 
   if (session.status === "loading") {
-    return (
-      <main style={styles.page}>
-        <p style={styles.muted}>Loading session...</p>
-      </main>
-    );
+    return <main className="app-shell"><p className="muted">{t("読み込み中...", "Loading...")}</p></main>;
   }
-
   if (session.status === "guest") {
     return <AuthScreen redirectOnAuth="/guide" />;
   }
 
-  return (
-    <main style={styles.page}>
-      <header style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Guide</h1>
-          <p style={styles.muted}>How to use Memoria effectively</p>
-        </div>
-        <div style={styles.nav}>
-          <Link href="/mine" style={styles.linkButton}>
-            Mine
-          </Link>
-          <Link href="/book" style={styles.linkButton}>
-            Book
-          </Link>
-          <Link href="/settings" style={styles.linkButton}>
-            Settings
-          </Link>
-        </div>
-      </header>
+  const steps = [
+    {
+      badge: t("Step 1", "Step 1"),
+      title: t("プロフィールを作る", "Create your profiles"),
+      desc: t(
+        "友人・仕事・コミュニティなど、相手によって見せる情報を変えた複数のパターンを作れます。",
+        "Create multiple profile patterns for different contexts — friends, business, communities — showing only what's relevant."
+      ),
+    },
+    {
+      badge: t("Step 2", "Step 2"),
+      title: t("URLやQRで共有する", "Share by URL or QR"),
+      desc: t(
+        "公開スラッグまたはハンドルを設定してURLを作り、対面のときにQRで共有します。",
+        "Set a public slug or handle to create a URL, then share it in person via QR code."
+      ),
+    },
+    {
+      badge: t("Step 3", "Step 3"),
+      title: t("名刺交換を記録する", "Record exchanges"),
+      desc: t(
+        "相手のプロフィールを見てから「交換する」ボタンを押すと、人脈帳に履歴が残ります。",
+        "View someone's profile and press 'Exchange' to save it in your people book."
+      ),
+    },
+    {
+      badge: t("Step 4", "Step 4"),
+      title: t("プロフィールを最新に保つ", "Keep profiles up to date"),
+      desc: t(
+        "仕事や趣味が変わったら、パターンの情報を更新しましょう。URLは変わらないので相手には常に最新が届きます。",
+        "Update your pattern info when things change — the URL stays the same so others always see the latest."
+      ),
+    },
+  ];
 
-      <section style={styles.grid}>
-        {steps.map((step, index) => (
-          <article key={step.title} style={styles.card}>
-            <span style={styles.badge}>Step {index + 1}</span>
-            <h2 style={styles.cardTitle}>{step.title}</h2>
-            <p style={styles.cardText}>{step.description}</p>
+  return (
+    <main className="app-shell">
+      <section className="section-title">
+        <div>
+          <h1>{t("使い方", "How it works")}</h1>
+          <p className="muted">{t("Memoriaを使いこなすための4ステップ", "4 steps to get the most out of Memoria")}</p>
+        </div>
+        <Link className="button secondary" href="/mine">{t("マイページへ", "Go to mine")}</Link>
+      </section>
+
+      <section className="guide-grid">
+        {steps.map((step) => (
+          <article key={step.badge} className="panel pad guide-card">
+            <div className="guide-card-head">
+              <span className="guide-badge">{step.badge}</span>
+              <h2>{step.title}</h2>
+            </div>
+            <div className="guide-illust">
+              <svg viewBox="0 0 320 120" role="img" aria-hidden="true">
+                <rect x="20" y="20" width="280" height="80" rx="12" fill="var(--green-soft)" stroke="var(--line)" />
+                <rect x="40" y="40" width="120" height="12" rx="6" fill="var(--green)" opacity="0.4" />
+                <rect x="40" y="60" width="180" height="10" rx="5" fill="var(--line)" />
+                <rect x="40" y="76" width="140" height="10" rx="5" fill="var(--line)" />
+              </svg>
+            </div>
+            <p className="muted">{step.desc}</p>
           </article>
         ))}
       </section>
     </main>
   );
 }
-
-const styles: Record<string, CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    padding: "20px",
-    background: "linear-gradient(120deg, #f8fafc 0%, #e2e8f0 100%)",
-    display: "grid",
-    gap: "16px",
-  },
-  header: {
-    background: "#ffffff",
-    border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    padding: "14px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "12px",
-  },
-  nav: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap",
-  },
-  title: {
-    margin: 0,
-    fontSize: "24px",
-  },
-  muted: {
-    margin: 0,
-    color: "#475569",
-    fontSize: "13px",
-  },
-  grid: {
-    display: "grid",
-    gap: "10px",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-  },
-  card: {
-    background: "#ffffff",
-    border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    padding: "14px",
-    display: "grid",
-    gap: "8px",
-  },
-  badge: {
-    display: "inline-flex",
-    width: "fit-content",
-    border: "1px solid #334155",
-    borderRadius: "999px",
-    padding: "2px 8px",
-    fontSize: "12px",
-  },
-  cardTitle: {
-    margin: 0,
-    fontSize: "18px",
-  },
-  cardText: {
-    margin: 0,
-    color: "#334155",
-    lineHeight: 1.5,
-    fontSize: "14px",
-  },
-  linkButton: {
-    border: "1px solid #475569",
-    borderRadius: "8px",
-    background: "#ffffff",
-    color: "#0f172a",
-    padding: "8px 10px",
-    textDecoration: "none",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-};
-
