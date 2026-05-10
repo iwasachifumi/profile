@@ -10,6 +10,10 @@ export const authApi = {
   login: (email: string, password: string) =>
     apiCall<User>("POST", "/auth/login", { email, password }),
 
+  /** ゲストユーザー作成。DB に is_guest=true で登録し Cookie を発行する */
+  startGuest: () =>
+    apiCall<User>("POST", "/auth/guest"),
+
   /** ログアウト */
   logout: () =>
     apiCall<null>("POST", "/auth/logout"),

@@ -27,8 +27,12 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 // ── JWT ───────────────────────────────────────────────────────────────────────
 
-export async function createSessionToken(userId: string, email: string): Promise<string> {
-  return new SignJWT({ userId, email })
+export async function createSessionToken(
+  userId: string,
+  email: string,
+  isGuest = false
+): Promise<string> {
+  return new SignJWT({ userId, email, isGuest })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("30d")
@@ -37,11 +41,13 @@ export async function createSessionToken(userId: string, email: string): Promise
 
 export async function verifySessionToken(
   token: string
-): Promise<{ userId: string; email: string } | null> {
+): Promise<{ userId: string; email: string; isGuest: boolean } | null> {
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    if (typeof payload.userId !== "string" || typeof payload.email !== "string") return null;
-    return { userId: payload.userId, email: payload.email };
+    if (typeof payload.userId !== "string") return null;
+    const email = typeof payload.email === "string" ? payload.email : "";
+    const isGuest = payload.isGuest === true;
+    return { userId: payload.userId, email, isGuest };
   } catch {
     return null;
   }
@@ -51,7 +57,7 @@ export async function verifySessionToken(
 
 export async function getSession(
   request: NextRequest
-): Promise<{ userId: string; email: string } | null> {
+): Promise<{ userId: string; email: string; isGuest: boolean } | null> {
   const token = request.cookies.get(COOKIE_NAME)?.value;
   if (!token) return null;
   return verifySessionToken(token);

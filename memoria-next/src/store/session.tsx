@@ -18,8 +18,8 @@ type SessionState =
 
 interface SessionContext {
   session: SessionState;
-  isGuestActive: boolean;           // お試し利用中フラグ
-  startGuest: () => void;           // お試し利用開始
+  isGuestActive: boolean;                             // お試し利用中フラグ
+  startGuest: () => Promise<string | null>;           // お試し利用開始（エラー時はメッセージを返す）
   login: (email: string, password: string) => Promise<string | null>;
   register: (email: string, password: string) => Promise<string | null>;
   logout: () => Promise<void>;
@@ -29,34 +29,39 @@ interface SessionContext {
 
 const Ctx = createContext<SessionContext | null>(null);
 
-const GUEST_KEY = "memoria_guest_active";
-
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<SessionState>({ status: "loading" });
   const [isGuestActive, setIsGuestActive] = useState(false);
 
-  // 初期ロード: Cookie が有効か確認。未ログインならゲスト継続フラグを見る
+  // 初期ロード: Cookie が有効か確認
   useEffect(() => {
     authApi.me().then((result) => {
       if (result.ok) {
-        setSession({ status: "user", user: result.data });
-        localStorage.removeItem(GUEST_KEY);
+        if (result.data.isGuest) {
+          // ゲストセッションが残っている
+          setSession({ status: "guest" });
+          setIsGuestActive(true);
+        } else {
+          setSession({ status: "user", user: result.data });
+        }
       } else {
         setSession({ status: "guest" });
-        setIsGuestActive(localStorage.getItem(GUEST_KEY) === "1");
+        setIsGuestActive(false);
       }
     });
   }, []);
 
-  const startGuest = useCallback(() => {
-    localStorage.setItem(GUEST_KEY, "1");
+  const startGuest = useCallback(async (): Promise<string | null> => {
+    const result = await authApi.startGuest();
+    if (!result.ok) return result.error;
+    setSession({ status: "guest" });
     setIsGuestActive(true);
+    return null;
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<string | null> => {
     const result = await authApi.login(email, password);
     if (!result.ok) return result.error;
-    localStorage.removeItem(GUEST_KEY);
     setIsGuestActive(false);
     setSession({ status: "user", user: result.data });
     return null;
@@ -65,7 +70,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (email: string, password: string): Promise<string | null> => {
     const result = await authApi.register(email, password);
     if (!result.ok) return result.error;
-    localStorage.removeItem(GUEST_KEY);
     setIsGuestActive(false);
     setSession({ status: "user", user: result.data });
     return null;
@@ -73,7 +77,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await authApi.logout();
-    localStorage.removeItem(GUEST_KEY);
     setIsGuestActive(false);
     setSession({ status: "guest" });
   }, []);

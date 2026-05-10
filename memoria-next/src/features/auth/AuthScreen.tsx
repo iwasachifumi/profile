@@ -11,7 +11,7 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-type BusyKind = "login" | "register" | "logout" | null;
+type BusyKind = "login" | "register" | "logout" | "guest" | null;
 
 interface AuthScreenProps {
   redirectOnAuth?: string;
@@ -31,6 +31,7 @@ export default function AuthScreen({ redirectOnAuth, redirectOnGuest }: AuthScre
   const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<BusyKind>(null);
+  const [showGuestWarning, setShowGuestWarning] = useState(false);
 
   useEffect(() => {
     if (session.status === "user" && redirectOnAuth) {
@@ -93,7 +94,15 @@ export default function AuthScreen({ redirectOnAuth, redirectOnGuest }: AuthScre
   }
 
   function handleStartGuest() {
-    startGuest();
+    setShowGuestWarning(true);
+  }
+
+  async function handleGuestConfirm() {
+    setBusy("guest");
+    const guestErr = await startGuest();
+    setBusy(null);
+    setShowGuestWarning(false);
+    if (guestErr) { setError(guestErr); return; }
     if (redirectOnGuest) router.push(redirectOnGuest);
   }
 
@@ -217,13 +226,42 @@ export default function AuthScreen({ redirectOnAuth, redirectOnGuest }: AuthScre
         <button type="button" onClick={handleStartGuest} style={styles.guestButton}>
           {t("お試し利用（ゲスト）", "Try without account")}
         </button>
-        <p style={styles.guestNote}>
-          {t(
-            "※ データはこのブラウザにのみ保存されます。",
-            "※ Data is stored in this browser only."
-          )}
-        </p>
       </section>
+
+      {/* ゲスト利用 警告モーダル */}
+      {showGuestWarning && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalCard}>
+            <h2 style={styles.modalTitle}>{t("お試し利用について", "About guest mode")}</h2>
+            <p style={styles.modalBody}>
+              {t(
+                "メールアドレス、パスワードやGoogle認証などをしないとデータへのアクセスができなくなる恐れがありますので、お試しの後、継続して使う時は設定メニューよりユーザログイン情報の設定をするようお願いします。",
+                "Without registering an email, password, or Google sign-in, you may lose access to your data. After trying the app, please set up your login credentials from the settings menu if you wish to continue using it."
+              )}
+            </p>
+            <div style={styles.modalActions}>
+              <button
+                type="button"
+                onClick={() => setShowGuestWarning(false)}
+                style={styles.secondaryButton}
+                disabled={busy === "guest"}
+              >
+                {t("キャンセル", "Cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleGuestConfirm()}
+                style={styles.primaryButton}
+                disabled={busy === "guest"}
+              >
+                {busy === "guest"
+                  ? t("作成中...", "Creating...")
+                  : t("確認しました", "I understand")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -367,5 +405,41 @@ const styles: Record<string, CSSProperties> = {
     color: "#94a3b8",
     fontSize: "11px",
     textAlign: "center",
+  },
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(15, 23, 42, 0.5)",
+    display: "grid",
+    placeItems: "center",
+    padding: "24px",
+    zIndex: 50,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: "420px",
+    background: "#ffffff",
+    border: "1px solid #e2e8f0",
+    borderRadius: "10px",
+    padding: "24px",
+    boxShadow: "0 16px 40px rgba(15, 23, 42, 0.16)",
+    display: "grid",
+    gap: "16px",
+  },
+  modalTitle: {
+    margin: 0,
+    fontSize: "18px",
+    color: "#0f172a",
+  },
+  modalBody: {
+    margin: 0,
+    fontSize: "14px",
+    color: "#334155",
+    lineHeight: 1.6,
+  },
+  modalActions: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "10px",
   },
 };

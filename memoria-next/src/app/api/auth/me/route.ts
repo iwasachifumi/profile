@@ -7,5 +7,5 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest) {
   const session = await getSession(request);
   if (!session) return unauthorized();
-  return ok({ id: session.userId, email: session.email });
+  return ok({ id: session.userId, email: session.email, isGuest: session.isGuest });
 }
