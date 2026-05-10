@@ -1,5 +1,5 @@
 import AuthScreen from "@/features/auth/AuthScreen";
 
 export default function Home() {
-  return <AuthScreen redirectOnAuth="/mine" />;
+  return <AuthScreen redirectOnAuth="/mine" redirectOnGuest="/mine" />;
 }

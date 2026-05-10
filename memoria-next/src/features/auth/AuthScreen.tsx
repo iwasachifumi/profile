@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/store/session";
 import { useUi } from "@/store/ui";
+import { useLang } from "@/store/language";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -14,12 +15,14 @@ type BusyKind = "login" | "register" | "logout" | null;
 
 interface AuthScreenProps {
   redirectOnAuth?: string;
+  redirectOnGuest?: string;
 }
 
-export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
+export default function AuthScreen({ redirectOnAuth, redirectOnGuest }: AuthScreenProps) {
   const router = useRouter();
-  const { session, login, register, logout } = useSession();
+  const { session, isGuestActive, startGuest, login, register, logout } = useSession();
   const { ui, dispatch } = useUi();
+  const { lang, toggle, t } = useLang();
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -30,62 +33,55 @@ export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
   const [busy, setBusy] = useState<BusyKind>(null);
 
   useEffect(() => {
-    if (!redirectOnAuth) return;
-    if (session.status !== "user") return;
-    router.replace(redirectOnAuth);
-  }, [redirectOnAuth, router, session.status]);
+    if (session.status === "user" && redirectOnAuth) {
+      router.replace(redirectOnAuth);
+    }
+    if (session.status === "guest" && isGuestActive && redirectOnGuest) {
+      router.replace(redirectOnGuest);
+    }
+  }, [session.status, isGuestActive, redirectOnAuth, redirectOnGuest, router]);
 
   async function handleLoginSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-
     if (!loginEmail || !loginPassword) {
-      setError("Please enter email and password.");
+      setError(t("メールアドレスとパスワードを入力してください。", "Please enter email and password."));
       return;
     }
     if (!isValidEmail(loginEmail)) {
-      setError("Please enter a valid email.");
+      setError(t("有効なメールアドレスを入力してください。", "Please enter a valid email."));
       return;
     }
-
     setBusy("login");
     const result = await login(loginEmail.trim(), loginPassword);
     setBusy(null);
-    if (result) {
-      setError(result);
-      return;
-    }
+    if (result) { setError(result); return; }
     if (redirectOnAuth) router.push(redirectOnAuth);
   }
 
   async function handleRegisterSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-
     if (!registerEmail || !registerPassword || !registerPasswordConfirm) {
-      setError("Please fill in all fields.");
+      setError(t("すべて入力してください。", "Please fill in all fields."));
       return;
     }
     if (!isValidEmail(registerEmail)) {
-      setError("Please enter a valid email.");
+      setError(t("有効なメールアドレスを入力してください。", "Please enter a valid email."));
       return;
     }
     if (registerPassword.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t("パスワードは8文字以上にしてください。", "Password must be at least 8 characters."));
       return;
     }
     if (registerPassword !== registerPasswordConfirm) {
-      setError("Passwords do not match.");
+      setError(t("パスワードが一致しません。", "Passwords do not match."));
       return;
     }
-
     setBusy("register");
     const result = await register(registerEmail.trim(), registerPassword);
     setBusy(null);
-    if (result) {
-      setError(result);
-      return;
-    }
+    if (result) { setError(result); return; }
     if (redirectOnAuth) router.push(redirectOnAuth);
   }
 
@@ -96,39 +92,37 @@ export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
     setBusy(null);
   }
 
+  function handleStartGuest() {
+    startGuest();
+    if (redirectOnGuest) router.push(redirectOnGuest);
+  }
+
+  // ── ローディング ──────────────────────────────────────────────────────────────
   if (session.status === "loading") {
     return (
       <main style={styles.shell}>
         <section style={styles.card}>
           <h1 style={styles.title}>Memoria</h1>
-          <p style={styles.muted}>Checking your session...</p>
+          <p style={styles.muted}>{t("確認中...", "Checking your session...")}</p>
         </section>
       </main>
     );
   }
 
+  // ── ログイン済み ──────────────────────────────────────────────────────────────
   if (session.status === "user") {
     return (
       <main style={styles.shell}>
         <section style={styles.card}>
           <h1 style={styles.title}>Memoria</h1>
-          <p style={styles.muted}>Signed in as {session.user.email}</p>
-          {redirectOnAuth ? (
-            <button
-              type="button"
-              onClick={() => router.push(redirectOnAuth)}
-              style={styles.secondaryButton}
-            >
-              Continue
+          <p style={styles.muted}>{session.user.email} {t("でログイン中", "signed in")}</p>
+          {redirectOnAuth && (
+            <button type="button" onClick={() => router.push(redirectOnAuth)} style={styles.primaryButton}>
+              {t("続ける", "Continue")}
             </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => void handleLogout()}
-            disabled={busy === "logout"}
-            style={styles.primaryButton}
-          >
-            {busy === "logout" ? "Signing out..." : "Sign out"}
+          )}
+          <button type="button" onClick={() => void handleLogout()} disabled={busy === "logout"} style={styles.secondaryButton}>
+            {busy === "logout" ? t("ログアウト中...", "Signing out...") : t("ログアウト", "Sign out")}
           </button>
         </section>
       </main>
@@ -137,96 +131,98 @@ export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
 
   const isRegister = ui.authTab === "register";
 
+  // ── 認証フォーム ──────────────────────────────────────────────────────────────
   return (
     <main style={styles.shell}>
       <section style={styles.card}>
-        <h1 style={styles.title}>Memoria</h1>
-        <p style={styles.muted}>Sign in or create your account to continue.</p>
 
-        <div style={styles.tabs} role="tablist" aria-label="auth mode">
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "SET_AUTH_TAB", payload: "login" })}
-            style={isRegister ? styles.tabButton : styles.tabButtonActive}
-            aria-pressed={!isRegister}
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "SET_AUTH_TAB", payload: "register" })}
-            style={isRegister ? styles.tabButtonActive : styles.tabButton}
-            aria-pressed={isRegister}
-          >
-            Register
+        {/* ヘッダー：タイトル＋言語切替 */}
+        <div style={styles.headerRow}>
+          <h1 style={styles.title}>Memoria</h1>
+          <button type="button" onClick={toggle} style={styles.langButton}>
+            {lang === "ja" ? "EN" : "日本語"}
           </button>
         </div>
 
+        <p style={styles.muted}>
+          {t("サインインまたは新規登録してください。", "Sign in or create your account to continue.")}
+        </p>
+
+        {/* ログイン / 新規登録 タブ */}
+        <div style={styles.tabs} role="tablist">
+          <button
+            type="button"
+            onClick={() => { dispatch({ type: "SET_AUTH_TAB", payload: "login" }); setError(null); }}
+            style={isRegister ? styles.tabButton : styles.tabButtonActive}
+          >
+            {t("ログイン", "Login")}
+          </button>
+          <button
+            type="button"
+            onClick={() => { dispatch({ type: "SET_AUTH_TAB", payload: "register" }); setError(null); }}
+            style={isRegister ? styles.tabButtonActive : styles.tabButton}
+          >
+            {t("新規登録", "Register")}
+          </button>
+        </div>
+
+        {/* フォーム */}
         {isRegister ? (
           <form onSubmit={handleRegisterSubmit} style={styles.form}>
             <label style={styles.label}>
-              Email
-              <input
-                type="email"
-                value={registerEmail}
-                onChange={(e) => setRegisterEmail(e.target.value)}
-                autoComplete="email"
-                style={styles.input}
-              />
+              {t("メールアドレス", "Email")}
+              <input type="email" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)}
+                autoComplete="email" style={styles.input} />
             </label>
             <label style={styles.label}>
-              Password
-              <input
-                type="password"
-                value={registerPassword}
-                onChange={(e) => setRegisterPassword(e.target.value)}
-                autoComplete="new-password"
-                style={styles.input}
-              />
+              {t("パスワード", "Password")}
+              <input type="password" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)}
+                autoComplete="new-password" style={styles.input} />
             </label>
             <label style={styles.label}>
-              Confirm password
-              <input
-                type="password"
-                value={registerPasswordConfirm}
-                onChange={(e) => setRegisterPasswordConfirm(e.target.value)}
-                autoComplete="new-password"
-                style={styles.input}
-              />
+              {t("パスワード（確認）", "Confirm password")}
+              <input type="password" value={registerPasswordConfirm} onChange={(e) => setRegisterPasswordConfirm(e.target.value)}
+                autoComplete="new-password" style={styles.input} />
             </label>
             <button type="submit" disabled={busy === "register"} style={styles.primaryButton}>
-              {busy === "register" ? "Creating..." : "Create account"}
+              {busy === "register" ? t("作成中...", "Creating...") : t("アカウントを作成", "Create account")}
             </button>
           </form>
         ) : (
           <form onSubmit={handleLoginSubmit} style={styles.form}>
             <label style={styles.label}>
-              Email
-              <input
-                type="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                autoComplete="username"
-                style={styles.input}
-              />
+              {t("メールアドレス", "Email")}
+              <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)}
+                autoComplete="username" style={styles.input} />
             </label>
             <label style={styles.label}>
-              Password
-              <input
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                autoComplete="current-password"
-                style={styles.input}
-              />
+              {t("パスワード", "Password")}
+              <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
+                autoComplete="current-password" style={styles.input} />
             </label>
             <button type="submit" disabled={busy === "login"} style={styles.primaryButton}>
-              {busy === "login" ? "Signing in..." : "Login"}
+              {busy === "login" ? t("ログイン中...", "Signing in...") : t("ログイン", "Login")}
             </button>
           </form>
         )}
 
-        {error ? <p style={styles.errorText}>{error}</p> : null}
+        {error && <p style={styles.errorText}>{error}</p>}
+
+        {/* 区切り */}
+        <div style={styles.divider}>
+          <span style={styles.dividerText}>{t("または", "or")}</span>
+        </div>
+
+        {/* お試し利用 */}
+        <button type="button" onClick={handleStartGuest} style={styles.guestButton}>
+          {t("お試し利用（ゲスト）", "Try without account")}
+        </button>
+        <p style={styles.guestNote}>
+          {t(
+            "※ データはこのブラウザにのみ保存されます。",
+            "※ Data is stored in this browser only."
+          )}
+        </p>
       </section>
     </main>
   );
@@ -251,10 +247,24 @@ const styles: Record<string, CSSProperties> = {
     display: "grid",
     gap: "14px",
   },
+  headerRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   title: {
     margin: 0,
     fontSize: "24px",
     lineHeight: 1.2,
+  },
+  langButton: {
+    border: "1px solid #cbd5e1",
+    borderRadius: "6px",
+    background: "#f8fafc",
+    color: "#475569",
+    padding: "4px 10px",
+    fontSize: "12px",
+    cursor: "pointer",
   },
   muted: {
     margin: 0,
@@ -274,6 +284,7 @@ const styles: Record<string, CSSProperties> = {
     color: "#334155",
     padding: "8px 10px",
     cursor: "pointer",
+    fontSize: "14px",
   },
   tabButtonActive: {
     border: "1px solid #0f172a",
@@ -282,6 +293,7 @@ const styles: Record<string, CSSProperties> = {
     color: "#ffffff",
     padding: "8px 10px",
     cursor: "pointer",
+    fontSize: "14px",
   },
   form: {
     display: "grid",
@@ -299,6 +311,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: "8px",
     padding: "10px 12px",
     fontSize: "14px",
+    boxSizing: "border-box",
   },
   primaryButton: {
     border: "1px solid #0f172a",
@@ -308,6 +321,7 @@ const styles: Record<string, CSSProperties> = {
     padding: "10px 14px",
     fontSize: "14px",
     cursor: "pointer",
+    width: "100%",
   },
   secondaryButton: {
     border: "1px solid #475569",
@@ -317,11 +331,41 @@ const styles: Record<string, CSSProperties> = {
     padding: "10px 14px",
     fontSize: "14px",
     cursor: "pointer",
+    width: "100%",
   },
   errorText: {
     margin: 0,
     color: "#b91c1c",
     fontSize: "13px",
     lineHeight: 1.4,
+  },
+  divider: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    color: "#94a3b8",
+    fontSize: "12px",
+  },
+  dividerText: {
+    flexShrink: 0,
+    color: "#94a3b8",
+    fontSize: "12px",
+    margin: "0 auto",
+  },
+  guestButton: {
+    border: "1px solid #cbd5e1",
+    borderRadius: "8px",
+    background: "#f8fafc",
+    color: "#475569",
+    padding: "10px 14px",
+    fontSize: "14px",
+    cursor: "pointer",
+    width: "100%",
+  },
+  guestNote: {
+    margin: 0,
+    color: "#94a3b8",
+    fontSize: "11px",
+    textAlign: "center",
   },
 };
