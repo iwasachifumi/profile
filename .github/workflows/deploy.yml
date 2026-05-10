@@ -20,8 +20,8 @@ jobs:
           script: |
             cd /var/www/profile
             git pull origin main
-            cd memoria-next
+            cd /var/www/profile/memoria-next
             npm install --prefer-offline
             npm run build
-            pm2 startOrReload pm2.config.js --env production
+            pm2 startOrRestart pm2.config.js --env production
             pm2 save
