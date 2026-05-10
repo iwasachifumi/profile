@@ -1,8 +1,9 @@
 "use client";
 
 // ログインセッションの管理。
-// - 初期表示時に GET /api/auth/me で状態を確定する
-// - 以降は login / logout 関数を呼ぶだけで全コンポーネントに伝播する
+// - status: "loading" → 初期確認中
+// - status: "guest"   → 未ログイン（Cookie なし）
+// - status: "user"    → ログイン済み。user.isGuest=true ならゲストセッション
 
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import type { ReactNode } from "react";
@@ -13,13 +14,12 @@ import type { User } from "@/types";
 
 type SessionState =
   | { status: "loading" }
-  | { status: "guest" }
-  | { status: "user"; user: User };
+  | { status: "guest" }                   // 未ログイン（Cookie なし）
+  | { status: "user"; user: User };       // ログイン済み（is_guest 含む）
 
 interface SessionContext {
   session: SessionState;
-  isGuestActive: boolean;                             // お試し利用中フラグ
-  startGuest: () => Promise<string | null>;           // お試し利用開始（エラー時はメッセージを返す）
+  startGuest: () => Promise<string | null>;
   login: (email: string, password: string) => Promise<string | null>;
   register: (email: string, password: string) => Promise<string | null>;
   logout: () => Promise<void>;
@@ -31,38 +31,29 @@ const Ctx = createContext<SessionContext | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<SessionState>({ status: "loading" });
-  const [isGuestActive, setIsGuestActive] = useState(false);
 
   // 初期ロード: Cookie が有効か確認
   useEffect(() => {
     authApi.me().then((result) => {
       if (result.ok) {
-        if (result.data.isGuest) {
-          // ゲストセッションが残っている
-          setSession({ status: "guest" });
-          setIsGuestActive(true);
-        } else {
-          setSession({ status: "user", user: result.data });
-        }
+        setSession({ status: "user", user: result.data });
       } else {
         setSession({ status: "guest" });
-        setIsGuestActive(false);
       }
     });
   }, []);
 
+  // ゲストセッションを DB に作成して Cookie を受け取る
   const startGuest = useCallback(async (): Promise<string | null> => {
     const result = await authApi.startGuest();
     if (!result.ok) return result.error;
-    setSession({ status: "guest" });
-    setIsGuestActive(true);
+    setSession({ status: "user", user: result.data });
     return null;
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<string | null> => {
     const result = await authApi.login(email, password);
     if (!result.ok) return result.error;
-    setIsGuestActive(false);
     setSession({ status: "user", user: result.data });
     return null;
   }, []);
@@ -70,19 +61,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (email: string, password: string): Promise<string | null> => {
     const result = await authApi.register(email, password);
     if (!result.ok) return result.error;
-    setIsGuestActive(false);
     setSession({ status: "user", user: result.data });
     return null;
   }, []);
 
   const logout = useCallback(async () => {
     await authApi.logout();
-    setIsGuestActive(false);
     setSession({ status: "guest" });
   }, []);
 
   return (
-    <Ctx.Provider value={{ session, isGuestActive, startGuest, login, register, logout }}>
+    <Ctx.Provider value={{ session, startGuest, login, register, logout }}>
       {children}
     </Ctx.Provider>
   );

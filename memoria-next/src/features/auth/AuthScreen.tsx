@@ -15,12 +15,11 @@ type BusyKind = "login" | "register" | "logout" | "guest" | null;
 
 interface AuthScreenProps {
   redirectOnAuth?: string;
-  redirectOnGuest?: string;
 }
 
-export default function AuthScreen({ redirectOnAuth, redirectOnGuest }: AuthScreenProps) {
+export default function AuthScreen({ redirectOnAuth }: AuthScreenProps) {
   const router = useRouter();
-  const { session, isGuestActive, startGuest, login, register, logout } = useSession();
+  const { session, startGuest, login, register, logout } = useSession();
   const { ui, dispatch } = useUi();
   const { lang, toggle, t } = useLang();
 
@@ -33,14 +32,12 @@ export default function AuthScreen({ redirectOnAuth, redirectOnGuest }: AuthScre
   const [busy, setBusy] = useState<BusyKind>(null);
   const [showGuestWarning, setShowGuestWarning] = useState(false);
 
+  // ログイン済み（ゲスト含む）なら redirectOnAuth へ
   useEffect(() => {
     if (session.status === "user" && redirectOnAuth) {
       router.replace(redirectOnAuth);
     }
-    if (session.status === "guest" && isGuestActive && redirectOnGuest) {
-      router.replace(redirectOnGuest);
-    }
-  }, [session.status, isGuestActive, redirectOnAuth, redirectOnGuest, router]);
+  }, [session.status, redirectOnAuth, router]);
 
   async function handleLoginSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -103,7 +100,7 @@ export default function AuthScreen({ redirectOnAuth, redirectOnGuest }: AuthScre
     setBusy(null);
     setShowGuestWarning(false);
     if (guestErr) { setError(guestErr); return; }
-    if (redirectOnGuest) router.push(redirectOnGuest);
+    if (redirectOnAuth) router.push(redirectOnAuth);
   }
 
   // ── ローディング ──────────────────────────────────────────────────────────────
@@ -120,11 +117,14 @@ export default function AuthScreen({ redirectOnAuth, redirectOnGuest }: AuthScre
 
   // ── ログイン済み ──────────────────────────────────────────────────────────────
   if (session.status === "user") {
+    const displayName = session.user.isGuest
+      ? t("ゲスト", "Guest")
+      : session.user.email;
     return (
       <main style={styles.shell}>
         <section style={styles.card}>
           <h1 style={styles.title}>Memoria</h1>
-          <p style={styles.muted}>{session.user.email} {t("でログイン中", "signed in")}</p>
+          <p style={styles.muted}>{displayName} {t("でログイン中", "signed in")}</p>
           {redirectOnAuth && (
             <button type="button" onClick={() => router.push(redirectOnAuth)} style={styles.primaryButton}>
               {t("続ける", "Continue")}
@@ -399,12 +399,6 @@ const styles: Record<string, CSSProperties> = {
     fontSize: "14px",
     cursor: "pointer",
     width: "100%",
-  },
-  guestNote: {
-    margin: 0,
-    color: "#94a3b8",
-    fontSize: "11px",
-    textAlign: "center",
   },
   modalOverlay: {
     position: "fixed",

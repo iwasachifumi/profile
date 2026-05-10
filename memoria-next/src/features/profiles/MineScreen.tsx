@@ -119,8 +119,7 @@ export default function MineScreen() {
   }, []);
 
   useEffect(() => {
-    if (session.status !== "user") return;
-    void loadProfiles();
+    if (session.status === "user") void loadProfiles();
   }, [loadProfiles, session.status]);
 
   async function handleCreate() {
@@ -261,7 +260,14 @@ export default function MineScreen() {
       <header style={styles.header}>
         <div>
           <h1 style={styles.title}>Mine</h1>
-          <p style={styles.muted}>Signed in as {session.user.email}</p>
+          <p style={styles.muted}>
+            {session.user.isGuest ? "ゲスト利用中" : `Signed in as ${session.user.email}`}
+          </p>
+          {session.user.isGuest && (
+            <p style={{ margin: 0, fontSize: "11px", color: "#b45309" }}>
+              ⚠ 設定メニューよりログイン情報を登録するとデータを保持できます
+            </p>
+          )}
         </div>
         <div style={styles.headerActions}>
           <Link href="/book" style={styles.linkButton}>
