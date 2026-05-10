@@ -54,7 +54,17 @@ export async function createUser(email: string, passwordHash: string) {
   const rows = await sql`
     INSERT INTO memoria.users (email, password_hash)
     VALUES (${email}, ${passwordHash})
-    RETURNING id, email, created_at
+    RETURNING id, email, is_guest, created_at
+  `;
+  return rows[0];
+}
+
+export async function createGuestUser() {
+  const sql = getSql();
+  const rows = await sql`
+    INSERT INTO memoria.users (is_guest)
+    VALUES (true)
+    RETURNING id, is_guest, created_at
   `;
   return rows[0];
 }

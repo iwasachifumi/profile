@@ -4,7 +4,8 @@
 export interface User {
   id: string;
   email: string;
-  createdAt: string;
+  isGuest: boolean;
+  createdAt?: string;
 }
 
 export interface Profile {
