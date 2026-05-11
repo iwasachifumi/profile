@@ -1308,6 +1308,170 @@ textarea {
   margin: 0;
 }
 
+/* ── WYSIWYG Editor ─────────────────────────────────────────────────────── */
+
+.editor-root {
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-pattern-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 250, 243, 0.95);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.editor-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-card-area {
+  padding: 14px 12px 6px;
+  display: flex;
+  justify-content: center;
+}
+
+.editor-card-wrap {
+  width: min(480px, 100%);
+}
+
+.editor-panel-area {
+  border-top: 1px solid var(--line);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.editor-panel-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-height: 48px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 8px 4px 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.editor-panel-tab.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
+
+.editor-panel-content {
+  padding: 14px;
+  overflow-y: auto;
+  max-height: 44vh;
+}
+
+.editor-tabs-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  border-top: 1px solid var(--line);
+  background: rgba(255, 250, 243, 0.96);
+  backdrop-filter: blur(12px);
+}
+
+.editor-tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 58px;
+  border: 0;
+  border-radius: 0;
+  padding: 6px 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.editor-tab-btn.active {
+  color: var(--green);
+}
+
+.editor-tab-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.editor-bottom-pad {
+  height: 66px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .editor-workspace {
+    flex-direction: row;
+    align-items: stretch;
+    min-height: calc(100vh - 110px);
+  }
+
+  .editor-card-area {
+    flex: 1;
+    padding: 24px;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .editor-panel-area {
+    width: 380px;
+    flex: 0 0 380px;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+    height: calc(100vh - 110px);
+    overflow: hidden;
+    position: sticky;
+    top: 56px;
+  }
+
+  .editor-panel-content {
+    max-height: none;
+    flex: 1;
+  }
+
+  .editor-tabs-bar {
+    display: none;
+  }
+
+  .editor-bottom-pad {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .editor-panel-tabs {
+    display: none;
+  }
+}
+
 @media (max-width: 880px) {
   .workspace,
   .split,

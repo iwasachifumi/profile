@@ -1,5 +1,5 @@
-import MineScreen from "@/features/profiles/MineScreen";
+import EditorScreen from "@/features/editor/EditorScreen";
 
 export default function MinePage() {
-  return <MineScreen />;
+  return <EditorScreen />;
 }
