@@ -12,11 +12,16 @@ import type { Field, Link as ProfileLink, Profile } from "@/types";
 // ── 定数 ─────────────────────────────────────────────────────────────────────
 
 const GROUP_LABELS: Record<string, [string, string]> = {
-  basic:        ["基本",       "Basic"],
-  work:         ["仕事",       "Work"],
-  favorite:     ["趣味",       "Interests"],
-  conversation: ["話題",       "Topics"],
-  free:         ["フリー",     "Free"],
+  basic:        ["基本",              "Basic"],
+  life:         ["生活",              "Life"],
+  work:         ["仕事・学び",         "Work & Learning"],
+  favorite:     ["趣味・エンタメ",     "Interests"],
+  food:         ["食・好み",           "Food & Taste"],
+  conversation: ["人間関係",           "Relationships"],
+  digital:      ["ネット・デジタル",    "Digital"],
+  values:       ["価値観・内面",        "Values"],
+  whatif:       ["もしも系",           "What if"],
+  free:         ["フリー",             "Free"],
 };
 
 const LINK_TYPE_LABELS: Record<string, string> = {
@@ -259,7 +264,7 @@ export default function MineScreen() {
       fieldsByGroup[gid].push(field);
     }
   }
-  const groupOrder = ["basic", "work", "favorite", "conversation", "free"];
+  const groupOrder = ["basic", "life", "work", "favorite", "food", "conversation", "digital", "values", "whatif", "free"];
   const activeGroups = [
     ...groupOrder.filter((g) => fieldsByGroup[g]?.length),
     ...Object.keys(fieldsByGroup).filter((g) => !groupOrder.includes(g)),
