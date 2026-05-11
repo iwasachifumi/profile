@@ -699,7 +699,7 @@ export default function EditorScreen() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={`/frame/${draft.frameId}`} alt=""
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
-                      objectFit: "cover", pointerEvents: "none", zIndex: 10 }} />
+                      objectFit: "cover", pointerEvents: "none", zIndex: 1 }} />
                 )}
 
                 {/* プロフィール内容 */}

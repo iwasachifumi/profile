@@ -290,7 +290,7 @@ export default function StickersScreen() {
                     height: "100%",
                     objectFit: "cover",
                     pointerEvents: "none",
-                    zIndex: 10,
+                    zIndex: 1,
                   }}
                 />
               )}
