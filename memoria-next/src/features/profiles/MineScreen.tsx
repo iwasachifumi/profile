@@ -281,8 +281,8 @@ export default function MineScreen() {
           </p>
         </div>
         <div className="row">
-          {draft && (
-            <Link className="button secondary" href={`/profile/${draft.id}`}>
+          {draft && draft.isPublic && draft.publicSlug && (
+            <Link className="button secondary" href={`/profile/${draft.publicSlug}`}>
               {t("公開ページを見る", "View public page")}
             </Link>
           )}
@@ -606,7 +606,7 @@ export default function MineScreen() {
               >
                 {busy === "save" ? t("保存中...", "Saving...") : t("保存", "Save")}
               </button>
-              <Link className="button secondary" href={`/profile/${draft.id}`}>
+              <Link className="button secondary" href={`/preview/${draft.id}`}>
                 {t("プレビュー", "Preview")}
               </Link>
               <Link className="button secondary" href="/design">

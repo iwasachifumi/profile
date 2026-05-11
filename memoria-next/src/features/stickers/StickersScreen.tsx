@@ -121,6 +121,8 @@ export default function StickersScreen() {
   // ── ドラッグ（Pointer Events） ────────────────────────────────────────────
 
   function onPointerDown(e: React.PointerEvent, idx: number) {
+    // コントロールボタン（拡大縮小・削除）内のクリックはドラッグ開始しない
+    if ((e.target as HTMLElement).closest("[data-sticker-control]")) return;
     e.preventDefault();
     e.stopPropagation();
     setSelectedIdx(idx);
@@ -274,6 +276,24 @@ export default function StickersScreen() {
                   </div>
                 );
               })}
+
+              {/* フレーム画像 */}
+              {activeProfile.frameId && activeProfile.frameId !== "none" && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`/frame/${activeProfile.frameId}`}
+                  alt=""
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    pointerEvents: "none",
+                    zIndex: 10,
+                  }}
+                />
+              )}
 
               {/* プロフィール内容 */}
               <div className="profile-content">

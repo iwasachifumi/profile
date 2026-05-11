@@ -5,6 +5,9 @@ export const profilesApi = {
   list: () =>
     apiCall<Profile[]>("GET", "/profiles"),
 
+  getById: (id: string) =>
+    apiCall<Profile>("GET", `/profiles/${id}`),
+
   create: (profile: Profile) =>
     apiCall<{ id: string }>("POST", "/profiles", profile),
 

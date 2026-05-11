@@ -16,10 +16,16 @@ const THEMES = [
 ];
 
 const FRAMES = [
-  { id: "none",          labelJa: "枠なし",       labelEn: "No frame" },
-  { id: "top-ribbon",    labelJa: "リボン（上）",   labelEn: "Top ribbon" },
-  { id: "corner-ribbon", labelJa: "コーナーリボン", labelEn: "Corner ribbon" },
-  { id: "pink-stars",    labelJa: "ピンクスター",   labelEn: "Pink stars" },
+  { id: "none",                           labelJa: "枠なし",    labelEn: "No frame",  file: null },
+  { id: "f0385_1.png",                    labelJa: "リボン",    labelEn: "Ribbon",    file: "f0385_1.png" },
+  { id: "f0716_1.png",                    labelJa: "スター",    labelEn: "Stars",     file: "f0716_1.png" },
+  { id: "f0658_1.png",                    labelJa: "フラワー",  labelEn: "Flower",    file: "f0658_1.png" },
+  { id: "f1165_2.png",                    labelJa: "クラシック", labelEn: "Classic",  file: "f1165_2.png" },
+  { id: "kawahu106-1536x864.png",         labelJa: "花わく",    labelEn: "Floral",    file: "kawahu106-1536x864.png" },
+  { id: "kirahoshi-1536x864.png",         labelJa: "キラ星",    labelEn: "Sparkle",   file: "kirahoshi-1536x864.png" },
+  { id: "kirakiraandf116-1536x864.png",   labelJa: "キラキラ",  labelEn: "Glitter",   file: "kirakiraandf116-1536x864.png" },
+  { id: "neon057-1536x864.png",           labelJa: "ネオン",    labelEn: "Neon",      file: "neon057-1536x864.png" },
+  { id: "okumonof_mangaf41-1536x864.png", labelJa: "マンガ",    labelEn: "Manga",     file: "okumonof_mangaf41-1536x864.png" },
 ];
 
 export default function DesignScreen() {
@@ -133,8 +139,15 @@ export default function DesignScreen() {
                   disabled={busy}
                 >
                   <div className={`frame-thumb${frame.id === "none" ? " frame-thumb-none" : ""}`}>
-                    {frame.id === "none" && (
+                    {frame.id === "none" ? (
                       <span>{t("枠なし", "No frame")}</span>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`/frame/${frame.file ?? ""}`}
+                        alt={t(frame.labelJa, frame.labelEn)}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
                     )}
                   </div>
                   <strong>{t(frame.labelJa, frame.labelEn)}</strong>
