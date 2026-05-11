@@ -1,7 +1,6 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { profilesApi } from "@/api/profiles";
 import AuthScreen from "@/features/auth/AuthScreen";
@@ -113,6 +112,9 @@ export default function MineScreen() {
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   // 基本情報（patternName / audience）の編集
   const [editingBasic, setEditingBasic] = useState(false);
+  // 自動保存
+  const [savedRecently, setSavedRecently] = useState(false);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── データ読み込み ──────────────────────────────────────────────────────────
 
@@ -163,30 +165,41 @@ export default function MineScreen() {
     setEditingBasic(true);
   }
 
-  async function handleSave(event?: FormEvent) {
-    event?.preventDefault();
-    if (!draft) return;
+  // 実際の保存処理（draft を引数で受け取ってステール閉包を回避）
+  async function doSave(target: Profile) {
+    if (autoSaveTimer.current) { clearTimeout(autoSaveTimer.current); autoSaveTimer.current = null; }
     setBusy("save");
     setError(null);
-    const result = await profilesApi.update(draft.id, {
-      publicSlug: draft.publicSlug,
-      handle: draft.handle,
-      isPublic: draft.isPublic,
-      patternName: draft.patternName,
-      audience: draft.audience,
-      description: draft.description,
-      themeId: draft.themeId,
-      frameId: draft.frameId,
-      fields: draft.fields,
-      links: draft.links,
-      stickers: draft.stickers,
+    const result = await profilesApi.update(target.id, {
+      publicSlug: target.publicSlug,
+      handle: target.handle,
+      isPublic: target.isPublic,
+      patternName: target.patternName,
+      audience: target.audience,
+      description: target.description,
+      themeId: target.themeId,
+      frameId: target.frameId,
+      fields: target.fields,
+      links: target.links,
+      stickers: target.stickers,
     });
     setBusy(null);
     if (!result.ok) { setError(result.error); return; }
-    setProfiles((current) => current.map((p) => (p.id === draft.id ? { ...draft } : p)));
-    setEditingBasic(false);
-    setEditingFieldId(null);
-    setEditingLinkId(null);
+    setProfiles((current) => current.map((p) => (p.id === target.id ? { ...target } : p)));
+    setSavedRecently(true);
+    setTimeout(() => setSavedRecently(false), 2000);
+  }
+
+  // 変更から 700ms 後に自動保存
+  function scheduleAutoSave(next: Profile) {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => void doSave(next), 700);
+  }
+
+  // 手動保存ボタン用
+  function handleSave() {
+    if (!draft) return;
+    void doSave(draft);
   }
 
   async function handleDelete() {
@@ -209,35 +222,42 @@ export default function MineScreen() {
   // フィールド操作
   function updateField(id: string, patch: Partial<Field>) {
     if (!draft) return;
-    setDraft({ ...draft, fields: draft.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)) });
+    const next = { ...draft, fields: draft.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)) };
+    setDraft(next); scheduleAutoSave(next);
   }
   function addFieldToGroup(groupId: string) {
     if (!draft) return;
     const newField = { ...createDefaultField(), groupId };
-    setDraft({ ...draft, fields: [...draft.fields, newField] });
-    setEditingFieldId(newField.id);
+    const next = { ...draft, fields: [...draft.fields, newField] };
+    setDraft(next); setEditingFieldId(newField.id); scheduleAutoSave(next);
   }
   function removeField(id: string) {
     if (!draft) return;
-    setDraft({ ...draft, fields: draft.fields.filter((f) => f.id !== id) });
-    if (editingFieldId === id) setEditingFieldId(null);
+    const next = { ...draft, fields: draft.fields.filter((f) => f.id !== id) };
+    setDraft(next); if (editingFieldId === id) setEditingFieldId(null); scheduleAutoSave(next);
+  }
+  function removeGroup(groupId: string) {
+    if (!draft) return;
+    const next = { ...draft, fields: draft.fields.filter((f) => f.groupId !== groupId) };
+    setDraft(next); scheduleAutoSave(next);
   }
 
   // リンク操作
   function updateLink(id: string, patch: Partial<ProfileLink>) {
     if (!draft) return;
-    setDraft({ ...draft, links: draft.links.map((l) => (l.id === id ? { ...l, ...patch } : l)) });
+    const next = { ...draft, links: draft.links.map((l) => (l.id === id ? { ...l, ...patch } : l)) };
+    setDraft(next); scheduleAutoSave(next);
   }
   function addLink() {
     if (!draft) return;
     const newLink = createDefaultLink();
-    setDraft({ ...draft, links: [...draft.links, newLink] });
-    setEditingLinkId(newLink.id);
+    const next = { ...draft, links: [...draft.links, newLink] };
+    setDraft(next); setEditingLinkId(newLink.id); scheduleAutoSave(next);
   }
   function removeLink(id: string) {
     if (!draft) return;
-    setDraft({ ...draft, links: draft.links.filter((l) => l.id !== id) });
-    if (editingLinkId === id) setEditingLinkId(null);
+    const next = { ...draft, links: draft.links.filter((l) => l.id !== id) };
+    setDraft(next); if (editingLinkId === id) setEditingLinkId(null); scheduleAutoSave(next);
   }
 
   // ── ガード ──────────────────────────────────────────────────────────────────
@@ -269,7 +289,11 @@ export default function MineScreen() {
     ...groupOrder.filter((g) => fieldsByGroup[g]?.length),
     ...Object.keys(fieldsByGroup).filter((g) => !groupOrder.includes(g)),
   ];
-  const allGroups = [...new Set([...groupOrder, ...Object.keys(fieldsByGroup)])];
+  // 項目が1件以上あるグループのみ表示（× で削除すると消える）
+  const allGroups = [...new Set([...groupOrder, ...Object.keys(fieldsByGroup)])]
+    .filter((g) => (fieldsByGroup[g]?.length ?? 0) > 0);
+  // 削除済み（空）の標準グループ — 復元ボタンに使う
+  const hiddenGroups = groupOrder.filter((g) => !fieldsByGroup[g]?.length);
 
   // ── レンダリング ─────────────────────────────────────────────────────────────
 
@@ -351,14 +375,14 @@ export default function MineScreen() {
                   <div className="stack" style={{ gap: "6px" }}>
                     <input
                       value={draft.patternName}
-                      onChange={(e) => setDraft({ ...draft, patternName: e.target.value })}
+                      onChange={(e) => { const n = { ...draft, patternName: e.target.value }; setDraft(n); scheduleAutoSave(n); }}
                       placeholder={t("パターン名", "Pattern name")}
                       style={{ fontSize: "18px", fontWeight: "800" }}
                       autoFocus
                     />
                     <input
                       value={draft.audience}
-                      onChange={(e) => setDraft({ ...draft, audience: e.target.value })}
+                      onChange={(e) => { const n = { ...draft, audience: e.target.value }; setDraft(n); scheduleAutoSave(n); }}
                       placeholder={t("対象（例：仕事、友人）", "Audience (e.g. work, friends)")}
                     />
                   </div>
@@ -403,7 +427,7 @@ export default function MineScreen() {
                     {t("テーマ", "Theme")}
                     <select
                       value={draft.themeId}
-                      onChange={(e) => setDraft({ ...draft, themeId: e.target.value })}
+                      onChange={(e) => { const n = { ...draft, themeId: e.target.value }; setDraft(n); scheduleAutoSave(n); }}
                     >
                       {THEME_OPTIONS.map((opt) => (
                         <option key={opt.id} value={opt.id}>{opt.label}</option>
@@ -431,15 +455,27 @@ export default function MineScreen() {
                         {t(labelJa, labelEn)}{" "}
                         <span className="muted small">{t(`${fields.length}件`, `${fields.length} items`)}</span>
                       </span>
-                      <button
-                        type="button"
-                        className="icon-button mini-button"
-                        onClick={(e) => { e.preventDefault(); addFieldToGroup(groupId); }}
-                        aria-label={t("項目を追加", "Add item")}
-                        title={t("項目を追加", "Add item")}
-                      >
-                        +
-                      </button>
+                      <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                        <button
+                          type="button"
+                          className="icon-button mini-button"
+                          onClick={(e) => { e.preventDefault(); addFieldToGroup(groupId); }}
+                          aria-label={t("項目を追加", "Add item")}
+                          title={t("項目を追加", "Add item")}
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-button mini-button"
+                          onClick={(e) => { e.preventDefault(); removeGroup(groupId); }}
+                          aria-label={t("グループを削除", "Remove group")}
+                          title={t("グループごと削除", "Remove all items in this group")}
+                          style={{ color: "var(--pink)" }}
+                        >
+                          ×
+                        </button>
+                      </span>
                     </summary>
                     <div className="field-list">
                       {fields.length === 0 ? (
@@ -506,6 +542,29 @@ export default function MineScreen() {
                   </details>
                 );
               })}
+
+              {/* 削除済みグループの復元ボタン */}
+              {hiddenGroups.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", paddingTop: "4px" }}>
+                  <span className="muted small" style={{ width: "100%", fontSize: "11px" }}>
+                    {t("非表示のグループ（クリックで復元）:", "Hidden groups (click to restore):")}
+                  </span>
+                  {hiddenGroups.map((gid) => {
+                    const [lJa, lEn] = GROUP_LABELS[gid] ?? [gid, gid];
+                    return (
+                      <button
+                        key={gid}
+                        type="button"
+                        className="button secondary"
+                        style={{ fontSize: "12px", padding: "3px 10px", minHeight: "auto" }}
+                        onClick={() => addFieldToGroup(gid)}
+                      >
+                        + {t(lJa, lEn)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* ── リンク ─────────────────────────────────────────────────────── */}
@@ -602,14 +661,19 @@ export default function MineScreen() {
             {/* ── エラー表示 ────────────────────────────────────────────────── */}
             {error && <p className="error-text">{error}</p>}
 
-            {/* ── 保存ボタン + 遷移リンク ───────────────────────────────────── */}
+            {/* ── 保存ステータス + 遷移リンク ──────────────────────────────── */}
             <div className="row">
               <button
                 type="button"
-                onClick={() => void handleSave()}
+                onClick={handleSave}
                 disabled={busy === "save"}
+                style={savedRecently ? { background: "var(--green, #22c55e)", color: "#fff", borderColor: "transparent" } : undefined}
               >
-                {busy === "save" ? t("保存中...", "Saving...") : t("保存", "Save")}
+                {busy === "save"
+                  ? t("保存中...", "Saving...")
+                  : savedRecently
+                  ? t("✓ 保存済み", "✓ Saved")
+                  : t("保存", "Save")}
               </button>
               <Link className="button secondary" href={`/preview/${draft.id}`}>
                 {t("プレビュー", "Preview")}
