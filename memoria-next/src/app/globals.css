@@ -23,6 +23,7 @@
 html {
   min-width: 320px;
   background: #f3ede5;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -1605,5 +1606,450 @@ textarea {
   .plan-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+/* ── LP ──────────────────────────────────────────────────────────────────── */
+
+.lp-root {
+  overflow-x: hidden;
+}
+
+/* Hero */
+
+.lp-hero {
+  position: relative;
+  min-height: min(90vh, 760px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(80px, 12vh, 140px) clamp(20px, 6vw, 80px);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.lp-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(transparent 31px, rgba(120, 100, 80, 0.09) 32px);
+  background-size: 100% 32px;
+  pointer-events: none;
+}
+
+.lp-hero-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lp-float-sticker {
+  position: absolute;
+  opacity: 0.82;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.13));
+}
+
+.lp-hero-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 600px;
+  text-align: center;
+}
+
+.lp-eyebrow {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.lp-catch {
+  margin: 0 0 22px;
+  font-size: clamp(30px, 5.5vw, 52px);
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.lp-sub {
+  margin: 0 0 34px;
+  color: var(--muted);
+  font-size: clamp(15px, 2vw, 18px);
+  line-height: 1.85;
+}
+
+.lp-sub strong {
+  color: var(--ink);
+}
+
+.lp-cta-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.lp-btn-main {
+  background: var(--pink);
+  border-color: var(--pink);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 12px 26px;
+}
+
+.lp-btn-main:hover {
+  background: #a03d60;
+}
+
+/* 共通セクション */
+
+.lp-section {
+  padding: clamp(60px, 9vw, 100px) clamp(20px, 6vw, 80px);
+}
+
+.lp-section + .lp-section {
+  border-top: 1px solid var(--line);
+}
+
+.lp-h2 {
+  margin: 0 0 36px;
+  font-size: clamp(26px, 4vw, 38px);
+  font-weight: 900;
+  line-height: 1.28;
+  text-align: center;
+}
+
+/* あるある */
+
+.lp-aru-section {
+  background: #fff;
+}
+
+.lp-aru-list {
+  list-style: none;
+  margin: 0 auto 36px;
+  padding: 0;
+  max-width: 560px;
+  display: grid;
+  gap: 12px;
+}
+
+.lp-aru-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 18px;
+  background: var(--paper);
+  font-size: 15px;
+}
+
+.lp-aru-icon {
+  font-size: 22px;
+  flex: 0 0 auto;
+}
+
+.lp-answer-box {
+  max-width: 480px;
+  margin: 0 auto;
+  border: 2px solid var(--green);
+  border-radius: 14px;
+  padding: 22px 28px;
+  background: var(--green-soft);
+  text-align: center;
+}
+
+.lp-answer-text {
+  font-size: clamp(16px, 2.5vw, 19px);
+  line-height: 1.6;
+}
+
+/* どっち？ */
+
+.lp-scene-pick {
+  background: var(--paper);
+}
+
+.lp-scene-pick-sub {
+  text-align: center;
+  display: block;
+  margin: -24px 0 28px;
+}
+
+.lp-scene-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.lp-scene-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  padding: 28px 20px;
+  background: #fff;
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+  cursor: pointer;
+}
+
+.lp-scene-card:hover {
+  border-color: var(--green);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(47, 117, 104, 0.14);
+}
+
+.lp-scene-big-icon {
+  font-size: 42px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.lp-scene-card strong {
+  font-size: 16px;
+  text-align: center;
+}
+
+.lp-scene-arrow {
+  margin-top: 10px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* 場面セクション共通 */
+
+.lp-scene-section {
+  background: #fff;
+}
+
+.lp-scene-badge {
+  display: flex;
+  width: fit-content;
+  margin: 0 auto 22px;
+  border-radius: 999px;
+  padding: 5px 16px;
+  background: var(--green-soft);
+  border: 1px solid rgba(47, 117, 104, 0.4);
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lp-scene-badge-blue {
+  background: var(--blue-soft);
+  border-color: rgba(47, 95, 143, 0.35);
+  color: var(--blue);
+}
+
+.lp-flow {
+  max-width: 480px;
+  margin: 0 auto;
+  display: grid;
+  gap: 22px;
+}
+
+.lp-flow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.lp-flow-num {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper-strong);
+  font-weight: 900;
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* ネット場面 */
+
+.lp-online-section {
+  background: var(--blue-soft);
+}
+
+.lp-online-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.lp-online-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(47, 95, 143, 0.2);
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 15px;
+}
+
+.lp-online-icon {
+  font-size: 24px;
+  flex: 0 0 auto;
+}
+
+/* 交換帳 */
+
+.lp-book-section {
+  background: var(--paper);
+}
+
+.lp-memory-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.lp-memory-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px 16px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.lp-memory-icon {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.lp-memory-card strong {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* デコ */
+
+.lp-deco-section {
+  background: var(--pink-soft);
+}
+
+.lp-deco-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.lp-deco-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(185, 77, 112, 0.18);
+  border-radius: 14px;
+  padding: 22px 12px;
+  background: rgba(255, 255, 255, 0.78);
+  text-align: center;
+}
+
+.lp-deco-icon {
+  font-size: 34px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+/* 思想 */
+
+.lp-thought-section {
+  background: var(--ink);
+}
+
+.lp-thought-h2 {
+  color: #fffaf3;
+}
+
+.lp-thought-list {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 480px;
+  display: grid;
+  gap: 0;
+}
+
+.lp-thought-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #fffaf3;
+  font-size: 16px;
+  border-bottom: 1px solid rgba(255, 250, 243, 0.14);
+  padding: 18px 0;
+}
+
+.lp-thought-item:last-child {
+  border-bottom: 0;
+}
+
+.lp-thought-mark {
+  color: var(--yellow);
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+
+/* Final CTA */
+
+.lp-final-section {
+  background: var(--paper);
+  text-align: center;
+}
+
+.lp-final-catch {
+  margin: 0 0 36px;
+  font-size: clamp(28px, 5vw, 48px);
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+/* LP レスポンシブ */
+
+@media (max-width: 640px) {
+  .lp-scene-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-memory-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-deco-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-float-sticker {
+    opacity: 0.45;
+  }
+
+  .lp-online-grid {
+    grid-template-columns: 1fr;
   }
 }
