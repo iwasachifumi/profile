@@ -1619,13 +1619,32 @@ textarea {
 
 .lp-hero {
   position: relative;
-  min-height: min(90vh, 760px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(80px, 12vh, 140px) clamp(20px, 6vw, 80px);
+  padding: clamp(48px, 7vh, 80px) clamp(20px, 6vw, 80px);
   background: var(--paper);
   overflow: hidden;
+}
+
+.lp-hero-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(32px, 5vw, 64px);
+  align-items: center;
+  max-width: 1100px;
+  width: 100%;
+}
+
+.lp-hero-img img {
+  width: 100%;
+  display: block;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(50, 36, 22, 0.16);
+}
+
+.lp-cta-left {
+  justify-content: flex-start;
 }
 
 .lp-hero::before {
@@ -1878,6 +1897,24 @@ textarea {
   line-height: 1;
 }
 
+/* 場面写真 */
+
+.lp-scene-photo {
+  max-width: 680px;
+  margin: 0 auto 40px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.lp-scene-photo img {
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+  object-position: center 20%;
+  display: block;
+}
+
 /* ネット場面 */
 
 .lp-online-section {
@@ -2032,6 +2069,31 @@ textarea {
 
 /* LP レスポンシブ */
 
+@media (max-width: 768px) {
+  .lp-hero-split {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .lp-hero-img {
+    order: -1;
+  }
+
+  .lp-hero-img img {
+    border-radius: 12px;
+  }
+
+  .lp-cta-left {
+    justify-content: center;
+  }
+
+  .lp-catch,
+  .lp-sub,
+  .lp-eyebrow {
+    text-align: center;
+  }
+}
+
 @media (max-width: 640px) {
   .lp-scene-cards {
     grid-template-columns: 1fr;
@@ -2051,5 +2113,9 @@ textarea {
 
   .lp-online-grid {
     grid-template-columns: 1fr;
+  }
+
+  .lp-scene-photo img {
+    height: 220px;
   }
 }
