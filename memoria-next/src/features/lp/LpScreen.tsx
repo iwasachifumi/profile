@@ -1,146 +1,171 @@
 import Link from "next/link";
 
-const realWorldFlow = [
+const PAIN_POINTS = [
+  { color: "yellow", text: "名刺だけ残って、誰だったか思い出せない", rot: -1.2 },
+  { color: "pink",   text: "SNS 交換したけど、タイムラインに流れてしまった", rot: 1.0 },
+  { color: "blue",   text: "勉強会で話した人の名前を忘れてしまう", rot: -0.6 },
+  { color: "yellow", text: "「また話したい」のに、連絡先しか残らない", rot: 1.4 },
+  { color: "green",  text: "ネットで知り合った人も、ちゃんと覚えておきたい", rot: -0.9 },
+] as const;
+
+const STORY_STEPS = [
   {
-    step: "1",
-    title: "プロフィールパターンを準備する",
-    desc: "イベント・仕事・コミュニティなど、場面に合わせて公開内容を選べる。",
+    num: "01",
+    title: "会う",
+    body: "イベントや SNS でその人と出会う。\n名刺交換じゃなくて、プロフィール交換。",
+    rot: -0.7,
   },
   {
-    step: "2",
-    title: "URLかQRで交換する",
-    desc: "公開プロフィールをその場でさっと見せるだけ。アプリ不要。",
+    num: "02",
+    title: "QR かリンクで\nこんにちは",
+    body: "スマホひとつで、その場ですぐ交換できます。アプリ不要。",
+    rot: 0.7,
   },
   {
-    step: "3",
-    title: "交換を記録する",
-    desc: "日付・メモ・タグを添えて、会った人を交換帳に残す。",
+    num: "03",
+    title: "交換帳に残る",
+    body: "誰とどこで会ったか、メモやタグを添えて記録。",
+    rot: -0.5,
   },
   {
-    step: "4",
-    title: "あとから思い出せる",
-    desc: "大事な人が記憶の中に埋もれない。",
+    num: "04",
+    title: "あとで思い出す",
+    body: "「猫シールの人」「Rust が好きな人」——そんなふうに思い出せます。",
+    rot: 0.9,
   },
 ];
 
-const onlineUseCases = [
-  "Discordのコミュニティメンバー",
-  "カンファレンスの登壇者・参加者",
-  "GitHubのコラボレーター",
-  "SNSのフォロワー・クリエイター",
+const MEMORY_SAMPLES = [
+  { icon: "🐱", name: "猫シール貼ってた人", where: "同人誌即売会", date: "2024.11", rot: -0.8 },
+  { icon: "🦀", name: "Rust 好きのエンジニア", where: "勉強会", date: "2024.10", rot: 0.6 },
+  { icon: "🎸", name: "音楽の趣味が合った人", where: "Discord", date: "2024.09", rot: -1.0 },
+];
+
+const ONLINE_USES = [
+  { icon: "💬", text: "Discord のコミュニティメンバー" },
+  { icon: "📺", text: "配信で知った人" },
+  { icon: "🐙", text: "GitHub のコラボレーター" },
+  { icon: "🐦", text: "SNS でつながった人" },
 ];
 
 export default function LpScreen() {
   return (
     <div className="lp-root">
 
-      {/* ── Hero ── */}
-      <section className="lp-hero">
-        <div className="lp-hero-split">
-          <div className="lp-hero-text">
-            <p className="lp-eyebrow">✦ Memoria</p>
-            <h1 className="lp-catch">
-              SNS交換だけじゃ、<br />
-              覚えていられないから。
-            </h1>
-            <p className="lp-sub">
-              イベントやSNSで出会った人を、<br />
-              QRやリンクで交換して、<br />
-              自分だけの<strong>交換帳</strong>に残せます。
-            </p>
-            <div className="lp-cta-row lp-cta-left">
-              <Link className="button lp-btn-main" href="/mine">プロフ帳を作る</Link>
-              <Link className="button secondary" href="/guide">使い方を見る</Link>
-            </div>
-          </div>
-          <div className="lp-hero-img">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/eyecatch2.png" alt="Memoriaでプロフィール交換と交換帳の記録" />
-          </div>
-        </div>
-      </section>
-
-      {/* ── あるある ── */}
-      <section className="lp-section lp-aru-section">
-        <h2 className="lp-h2">こんなこと、ありませんか？</h2>
-        <ul className="lp-aru-list">
-          <li className="lp-aru-item">
-            <span className="lp-aru-icon">📇</span>
-            <span>すごく良い人と会ったのに、あとで詳細を忘れてしまう。</span>
-          </li>
-          <li className="lp-aru-item">
-            <span className="lp-aru-icon">📱</span>
-            <span>SNSは活発なのに、つながりが深くならない。</span>
-          </li>
-          <li className="lp-aru-item">
-            <span className="lp-aru-icon">💭</span>
-            <span>どこで、なぜ会ったのか、思い出せない。</span>
-          </li>
-        </ul>
-        <div className="lp-answer-box">
-          <p className="muted" style={{ margin: "0 0 6px" }}>Memoria は、</p>
-          <strong className="lp-answer-text">人との接点を残す、プロフィール帳です。</strong>
-        </div>
-      </section>
-
-      {/* ── リアルイベント ── */}
-      <section className="lp-section lp-scene-section" id="real">
-        <div className="lp-scene-badge">🎪 リアルイベント</div>
-        <h2 className="lp-h2">素早く交換。文脈を残す。</h2>
-        <div className="lp-scene-photo">
+      {/* ── 1. Hero ── */}
+      <section className="lp-hero lp-hero-v2">
+        <div className="lp-hero-photo-wrap">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/eyecatch3.png" alt="Tech meetupでQRコード交換するシーン" />
+          <img
+            src="/images/eyecatch2.png"
+            alt="Memoria — プロフィール交換と交換帳"
+            className="lp-hero-photo"
+          />
+          <div className="lp-hero-tape" aria-hidden="true" />
         </div>
-        <div className="lp-flow">
-          {realWorldFlow.map((item) => (
-            <div key={item.step} className="lp-flow-step">
-              <div className="lp-flow-num">{item.step}</div>
-              <div>
-                <strong style={{ display: "block", marginBottom: "2px" }}>{item.title}</strong>
-                <p className="muted small" style={{ margin: 0 }}>{item.desc}</p>
-              </div>
+        <div className="lp-hero-body">
+          <p className="lp-eyebrow">✦ Memoria</p>
+          <h1 className="lp-catch">
+            会った人を、<br />忘れないために。
+          </h1>
+          <p className="lp-sub">
+            プロフィールを交換して、自分だけの交換帳に残せます。
+          </p>
+          <div className="lp-cta-row lp-cta-left">
+            <Link className="button lp-btn-main" href="/mine">プロフ帳を作る</Link>
+            <Link className="button secondary" href="/guide">使い方を見る</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 2. あるある（付箋スタイル）── */}
+      <section className="lp-section lp-aru-section lp-notebook-bg">
+        <h2 className="lp-h2">こんなこと、ありませんか？</h2>
+        <div className="lp-stickies">
+          {PAIN_POINTS.map((p, i) => (
+            <div
+              key={i}
+              className={`lp-sticky lp-sticky-${p.color}`}
+              style={{ transform: `rotate(${p.rot}deg)` }}
+            >
+              {p.text}
+            </div>
+          ))}
+        </div>
+        <div className="lp-answer-pinned">
+          <strong>Memoria は、「人との接点」を残すプロフィール帳です。</strong>
+        </div>
+      </section>
+
+      {/* ── 3. 使い方（ノートカード）── */}
+      <section className="lp-section lp-story-section">
+        <h2 className="lp-h2">こんな流れで使います</h2>
+        <div className="lp-story-grid">
+          {STORY_STEPS.map((s) => (
+            <div
+              key={s.num}
+              className="lp-story-card"
+              style={{ transform: `rotate(${s.rot}deg)` }}
+            >
+              <span className="lp-story-num">{s.num}</span>
+              <strong className="lp-story-title">{s.title}</strong>
+              <p className="lp-story-body">{s.body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── オンライン ── */}
-      <section className="lp-section lp-scene-section lp-online-section" id="online">
-        <div className="lp-scene-badge lp-scene-badge-blue">💻 オンラインコミュニティ</div>
-        <h2 className="lp-h2">会わなくても使える</h2>
-        <div className="lp-online-grid">
-          {onlineUseCases.map((text) => (
-            <div key={text} className="lp-online-item">
+      {/* ── 4. フォトブレイク（eyecatch3）── */}
+      <div className="lp-photo-break">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/eyecatch3.png"
+          alt="Tech Meetup でプロフィール交換するシーン"
+          className="lp-break-photo"
+        />
+        <p className="lp-break-caption">Tech Meetup での一場面</p>
+      </div>
+
+      {/* ── 5. オンラインでも── */}
+      <section className="lp-section lp-online2-section lp-notebook-bg">
+        <div className="lp-scene-badge lp-scene-badge-blue">💻 オンラインでも</div>
+        <h2 className="lp-h2">リアルだけじゃない</h2>
+        <div className="lp-online-rows">
+          {ONLINE_USES.map(({ icon, text }) => (
+            <div key={text} className="lp-online-row">
+              <span className="lp-online-row-icon">{icon}</span>
               <span>{text}</span>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── 交換帳 ── */}
-      <section className="lp-section lp-book-section">
-        <h2 className="lp-h2">交換帳が、<br />人間関係の地図になる</h2>
-        <div className="lp-memory-cards">
-          <div className="lp-memory-card">
-            <span className="lp-memory-icon">📅</span>
-            <strong>日付・文脈</strong>
-            <span className="muted small">どこで、いつ会ったか</span>
-          </div>
-          <div className="lp-memory-card">
-            <span className="lp-memory-icon">📝</span>
-            <strong>プライベートメモ</strong>
-            <span className="muted small">話した内容や印象を残す</span>
-          </div>
-          <div className="lp-memory-card">
-            <span className="lp-memory-icon">🏷</span>
-            <strong>タグ</strong>
-            <span className="muted small">あとで素早く検索できる</span>
-          </div>
+      {/* ── 6. 交換帳（スクラップブック）── */}
+      <section className="lp-section lp-book-section lp-notebook-bg">
+        <h2 className="lp-h2">交換帳に、人との記憶が積まれていく</h2>
+        <div className="lp-scrapbook">
+          {MEMORY_SAMPLES.map((m) => (
+            <div
+              key={m.name}
+              className="lp-scrap-card"
+              style={{ transform: `rotate(${m.rot}deg)` }}
+            >
+              <span className="lp-scrap-tape" aria-hidden="true" />
+              <span className="lp-scrap-date">{m.date}</span>
+              <span className="lp-scrap-icon">{m.icon}</span>
+              <strong className="lp-scrap-name">{m.name}</strong>
+              <span className="muted small">{m.where}</span>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ── Final CTA ── */}
+      {/* ── 7. Final CTA ── */}
       <section className="lp-section lp-final-section">
+        <div className="lp-final-garland" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/stamp/garland_ribbon.png" alt="" style={{ width: "220px", opacity: 0.6 }} />
+        </div>
         <h2 className="lp-final-catch">
           人との出会いを、<br />忘れないように。
         </h2>
@@ -148,7 +173,7 @@ export default function LpScreen() {
           <Link className="button lp-btn-main" href="/mine">プロフ帳を作る</Link>
           <Link className="button secondary" href="/guide">使い方を見る</Link>
         </div>
-        <p className="muted small" style={{ textAlign: "center", marginTop: "12px" }}>
+        <p className="muted small" style={{ textAlign: "center", marginTop: "14px" }}>
           無料ではじめられます
         </p>
       </section>
