@@ -62,10 +62,10 @@ export default function LpScreen() {
             className="lp-hero-photo"
           />
           <div className="lp-hero-tape" aria-hidden="true" />
-          <div className="lp-hero-cta-overlay">
-            <Link className="button lp-btn-main" href="/mine">プロフ帳を作る</Link>
-            <Link className="button secondary lp-btn-glass" href="/guide">使い方を見る</Link>
-          </div>
+        </div>
+        <div className="lp-hero-footer">
+          <Link className="button lp-btn-main lp-btn-lg" href="/mine">プロフ帳を作る</Link>
+          <Link className="button secondary lp-btn-lg" href="/guide">使い方を見る</Link>
         </div>
       </section>
 

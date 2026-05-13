@@ -42,14 +42,20 @@ select {
 
 button,
 a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 40px;
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 8px 16px;
   color: var(--ink);
   background: var(--yellow);
   cursor: pointer;
   text-decoration: none;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 button.secondary,
@@ -2162,23 +2168,25 @@ textarea {
   transform: rotate(2deg);
 }
 
-.lp-hero-cta-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+.lp-hero-footer {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 56px 28px 26px;
-  background: linear-gradient(to bottom, transparent, rgba(28, 22, 16, 0.54));
+  align-items: center;
+  padding: 20px 28px 24px;
+  background: var(--paper);
+  background-image: linear-gradient(transparent 31px, rgba(120, 100, 80, 0.09) 32px);
+  background-size: 100% 32px;
 }
 
-.lp-btn-glass {
-  background: rgba(255, 255, 255, 0.18) !important;
-  border-color: rgba(255, 255, 255, 0.52) !important;
-  color: #fff !important;
-  backdrop-filter: blur(6px);
+.lp-btn-lg {
+  min-height: 48px;
+  padding: 12px 24px;
+  font-size: 15px;
+}
+
+.lp-btn-main.lp-btn-lg {
+  min-width: 160px;
 }
 
 /* ノート罫線背景 */
