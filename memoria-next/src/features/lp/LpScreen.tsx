@@ -62,18 +62,9 @@ export default function LpScreen() {
             className="lp-hero-photo"
           />
           <div className="lp-hero-tape" aria-hidden="true" />
-        </div>
-        <div className="lp-hero-body">
-          <p className="lp-eyebrow">✦ Memoria</p>
-          <h1 className="lp-catch">
-            会った人を、<br />忘れないために。
-          </h1>
-          <p className="lp-sub">
-            プロフィールを交換して、自分だけの交換帳に残せます。
-          </p>
-          <div className="lp-cta-row lp-cta-left">
+          <div className="lp-hero-cta-overlay">
             <Link className="button lp-btn-main" href="/mine">プロフ帳を作る</Link>
-            <Link className="button secondary" href="/guide">使い方を見る</Link>
+            <Link className="button secondary lp-btn-glass" href="/guide">使い方を見る</Link>
           </div>
         </div>
       </section>
