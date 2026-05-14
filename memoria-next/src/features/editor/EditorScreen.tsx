@@ -6,6 +6,7 @@ import { settingsApi } from "@/api/settings";
 import { stickerGiftsApi } from "@/api/stickerGifts";
 import { PLAN_LIMITS } from "@/config/planLimits";
 import AuthScreen from "@/features/auth/AuthScreen";
+import QrModal from "@/features/qr/QrModal";
 import { useSession } from "@/store/session";
 import { useLang } from "@/store/language";
 import type {
@@ -155,6 +156,7 @@ export default function EditorScreen() {
   const [giftNotice,         setGiftNotice]         = useState<string | null>(null);
   const [giftInbox,          setGiftInbox]          = useState<StickerGiftInboxItem[]>([]);
   const [giftInboxBusy,      setGiftInboxBusy]      = useState(false);
+  const [qrOpen,             setQrOpen]             = useState(false);
 
   const paperRef      = useRef<HTMLDivElement>(null);
   const dragState     = useRef<{ idx: number } | null>(null);
@@ -296,6 +298,17 @@ export default function EditorScreen() {
     const next = remaining[0] ?? null;
     setActiveId(next?.id ?? null);
     setDraft(next ? cloneProfile(next) : null);
+  }
+
+  // ── 公開・QR ──────────────────────────────────────────────────────────────
+
+  function handleTogglePublic(makePublic: boolean) {
+    if (!draft) return;
+    // 公開にする場合、slug が未設定ならランダム生成（10文字英数字）
+    const slug = makePublic && !draft.publicSlug
+      ? crypto.randomUUID().replace(/-/g, "").slice(0, 10)
+      : draft.publicSlug;
+    applyAndSave({ ...draft, isPublic: makePublic, publicSlug: slug });
   }
 
   // ── Field ops ─────────────────────────────────────────────────────────────
@@ -825,6 +838,64 @@ export default function EditorScreen() {
           </div>
         </div>
 
+        {/* 公開・QRコード */}
+        <div className="meta-block" style={{
+          background: "linear-gradient(135deg, #f0fff8 0%, #eaf4ff 100%)",
+          borderColor: "#9ecfba",
+        }}>
+          <p className="meta-block-title" style={{ color: "#2f7568" }}>
+            {t("公開・QRコード", "Public & QR")}
+          </p>
+          {draft.isPublic && draft.publicSlug ? (
+            <div className="stack" style={{ gap: "8px" }}>
+              <p className="muted small" style={{ margin: 0 }}>
+                {t("公開中", "Public")}:{" "}
+                <a
+                  href={`/profile/${draft.publicSlug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "var(--blue)", fontSize: "12px" }}
+                >
+                  /profile/{draft.publicSlug}
+                </a>
+              </p>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => setQrOpen(true)}
+                  style={{ flex: 1 }}
+                >
+                  📲 {t("QRコードを表示", "Show QR code")}
+                </button>
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => handleTogglePublic(false)}
+                >
+                  {t("非公開にする", "Make private")}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="stack" style={{ gap: "6px" }}>
+              <p className="muted small" style={{ margin: 0 }}>
+                {t(
+                  "公開するとQRコードでプロフ交換ができます",
+                  "Go public to share your profile via QR code"
+                )}
+              </p>
+              <button
+                type="button"
+                className="button"
+                onClick={() => handleTogglePublic(true)}
+              >
+                🔓 {t("公開してQRコードを使う", "Make public & use QR")}
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* フィールド */}
         <div>
           <h3 style={{ margin: "0 0 8px", fontSize: "14px" }}>{t("プロフィール項目", "Profile fields")}</h3>
@@ -1171,6 +1242,15 @@ export default function EditorScreen() {
         ))}
       </nav>
       <div className="editor-bottom-pad" />
+
+      {/* QRコードモーダル */}
+      {qrOpen && draft?.isPublic && draft?.publicSlug && (
+        <QrModal
+          url={`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}?via=qr`}
+          patternName={draft.patternName}
+          onClose={() => setQrOpen(false)}
+        />
+      )}
     </div>
   );
 }

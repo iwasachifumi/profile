@@ -3199,6 +3199,25 @@ body:has(.lp-root) .topnav a.active {
   box-shadow: 0 4px 24px rgba(0 0 0 / 0.06);
 }
 
+.pub-qr-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #e8fff4 0%, #e4f4ff 100%);
+  border: 1px solid #9ecfba;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #2f7568;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.pub-qr-banner-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
 .pub-header {
   display: flex;
   align-items: center;

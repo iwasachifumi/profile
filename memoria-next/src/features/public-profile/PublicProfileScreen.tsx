@@ -9,8 +9,9 @@ import { useSession } from "@/store/session";
 import type { Profile } from "@/types";
 
 interface PublicProfileScreenProps {
-  slug?: string;
+  slug?:   string;
   handle?: string;
+  via?:    string;  // "qr" のとき QR交換フローを前面に出す
 }
 
 const LINK_ICONS: Record<string, string> = {
@@ -22,18 +23,19 @@ const LINK_ICONS: Record<string, string> = {
   other:     "🔗",
 };
 
-export default function PublicProfileScreen({ slug, handle }: PublicProfileScreenProps) {
+export default function PublicProfileScreen({ slug, handle, via }: PublicProfileScreenProps) {
   const hasIdentifier = Boolean(slug || handle);
+  const isQr          = via === "qr";
   const { session } = useSession();
   const router = useRouter();
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(hasIdentifier);
-  const [error, setError] = useState<string | null>(
+  const [profile,       setProfile]       = useState<Profile | null>(null);
+  const [loading,       setLoading]       = useState(hasIdentifier);
+  const [error,         setError]         = useState<string | null>(
     hasIdentifier ? null : "プロフィールが見つかりません。"
   );
-  const [exchanged, setExchanged] = useState(false);
-  const [exchangeBusy, setExchangeBusy] = useState(false);
+  const [exchanged,     setExchanged]     = useState(false);
+  const [exchangeBusy,  setExchangeBusy]  = useState(false);
   const [exchangeError, setExchangeError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,13 +60,13 @@ export default function PublicProfileScreen({ slug, handle }: PublicProfileScree
 
   async function handleExchange() {
     if (!profile) return;
-
     if (session.status === "loading") return;
 
     if (session.status === "guest") {
+      // QR経由のパラメータを保持したまま戻れるようにする
       const returnPath = slug
-        ? `/profile/${slug}`
-        : `/profile/handle/${handle}`;
+        ? `/profile/${slug}${isQr ? "?via=qr" : ""}`
+        : `/profile/handle/${handle}${isQr ? "?via=qr" : ""}`;
       router.push(`/?return=${encodeURIComponent(returnPath)}`);
       return;
     }
@@ -75,15 +77,15 @@ export default function PublicProfileScreen({ slug, handle }: PublicProfileScree
     const result = await exchangesApi.create({
       id: crypto.randomUUID(),
       targetProfileId: profile.id,
-      method: "qr",
+      method: isQr ? "qr" : "manual",
       eventName: null,
       exchangedAt: new Date().toISOString(),
       snapshot: {
         patternName: profile.patternName,
-        audience: profile.audience,
+        audience:    profile.audience,
         description: profile.description,
-        handle: profile.handle,
-        slug: profile.publicSlug,
+        handle:      profile.handle,
+        slug:        profile.publicSlug,
       },
       privateNote: "",
       tags: [],
@@ -126,6 +128,14 @@ export default function PublicProfileScreen({ slug, handle }: PublicProfileScree
   return (
     <main className="pub-page">
       <div className="pub-card">
+
+        {/* ── QR経由バナー ─────────────────────────────────────────────── */}
+        {isQr && (
+          <div className="pub-qr-banner">
+            <span className="pub-qr-banner-icon">📲</span>
+            <span>QRコードで受け取ったプロフィールです</span>
+          </div>
+        )}
 
         {/* ── ヘッダー ─────────────────────────────────────────────────── */}
         <div className="pub-header">
@@ -182,17 +192,17 @@ export default function PublicProfileScreen({ slug, handle }: PublicProfileScree
         <div className="pub-exchange-area">
           {exchanged ? (
             <div className="pub-exchange-done">
-              <p>✓ 交換帳に追加しました</p>
+              <p>✓ {isQr ? "QRで交換記録しました" : "交換帳に追加しました"}</p>
               <Link href="/book" className="button secondary">
-                交換帳を見る
+                交換帳を見る →
               </Link>
             </div>
           ) : (
             <>
               <button
                 type="button"
-                className="button lp-btn-main"
-                style={{ width: "100%" }}
+                className="button"
+                style={{ width: "100%", minHeight: "48px", fontSize: "15px" }}
                 onClick={() => void handleExchange()}
                 disabled={exchangeBusy || session.status === "loading"}
               >
@@ -200,6 +210,8 @@ export default function PublicProfileScreen({ slug, handle }: PublicProfileScree
                   ? "追加中..."
                   : session.status === "guest"
                   ? "ログインして交換帳に追加"
+                  : isQr
+                  ? "📒 交換帳に記録する"
                   : "この人を交換帳に追加"}
               </button>
               {exchangeError && (
@@ -207,7 +219,7 @@ export default function PublicProfileScreen({ slug, handle }: PublicProfileScree
               )}
               {session.status === "guest" && (
                 <p className="muted small" style={{ textAlign: "center", marginTop: "6px" }}>
-                  アカウント不要で閲覧できます。交換帳への追加はログインが必要です。
+                  アカウント不要で閲覧できます。交換帳への記録はログインが必要です。
                 </p>
               )}
             </>
