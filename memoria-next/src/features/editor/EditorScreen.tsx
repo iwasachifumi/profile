@@ -247,10 +247,28 @@ export default function EditorScreen() {
       return;
     }
 
+    const mf = (groupId: string, label: string, value: string): Field =>
+      ({ id: crypto.randomUUID(), groupId, label, value, visible: true });
     const next: Profile = {
       id: crypto.randomUUID(), publicSlug: null, handle: null, isPublic: false,
       patternName: "新しいパターン", audience: "", description: "",
-      themeId: "default", frameId: "none", fields: [], links: [], stickers: [],
+      themeId: "default", frameId: "none",
+      fields: [
+        mf("basic",        "名前",               "まだ名前なし"),
+        mf("basic",        "ニックネーム",        "まだない"),
+        mf("basic",        "呼ばれたい名前",      "好きに呼んで"),
+        mf("basic",        "出身地",              "地球！"),
+        mf("conversation", "家族構成",            "親はいる"),
+        mf("whatif",       "自分を動物に例えると", "二足歩行のいきもの！"),
+        mf("life",         "落ち着く場所",        "ベッドの中"),
+        mf("life",         "ついやってしまうこと", "ネット"),
+        mf("values",       "尊敬する人",          "エジソン"),
+        mf("favorite",     "最近ハマってること",   "推し活"),
+        mf("favorite",     "昔ハマってたこと",    "つかまり立ち"),
+        mf("favorite",     "推し",                "秘密！"),
+        mf("free",         "自由記入欄",          "とりあえず、いろいろ書いてみよう！"),
+      ],
+      links: [], stickers: [],
     };
     setBusy("create");
     const res = await profilesApi.create(next);
