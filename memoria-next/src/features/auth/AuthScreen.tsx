@@ -15,14 +15,23 @@ type BusyKind = "login" | "register" | "logout" | "guest" | null;
 
 interface AuthScreenProps {
   redirectOnAuth?: string;
-  googleError?: string;
+  googleError?:    string;
+  defaultMode?:    "login" | "register";
 }
 
-export default function AuthScreen({ redirectOnAuth, googleError }: AuthScreenProps) {
+export default function AuthScreen({ redirectOnAuth, googleError, defaultMode }: AuthScreenProps) {
   const router = useRouter();
   const { session, startGuest, login, register, logout } = useSession();
   const { ui, dispatch } = useUi();
   const { t } = useLang();
+
+  // defaultMode が "register" なら初回マウント時にタブを切り替える
+  useEffect(() => {
+    if (defaultMode === "register") {
+      dispatch({ type: "SET_AUTH_TAB", payload: "register" });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");

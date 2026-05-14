@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { publicApi } from "@/api/public";
 import { exchangesApi } from "@/api/exchanges";
 import { useSession } from "@/store/session";
@@ -11,7 +10,7 @@ import type { Profile } from "@/types";
 interface PublicProfileScreenProps {
   slug?:   string;
   handle?: string;
-  via?:    string;  // "qr" のとき QR交換フローを前面に出す
+  via?:    string;  // "qr" のとき QR交換フロー
 }
 
 const LINK_ICONS: Record<string, string> = {
@@ -26,17 +25,19 @@ const LINK_ICONS: Record<string, string> = {
 export default function PublicProfileScreen({ slug, handle, via }: PublicProfileScreenProps) {
   const hasIdentifier = Boolean(slug || handle);
   const isQr          = via === "qr";
-  const { session } = useSession();
-  const router = useRouter();
+  const { session }   = useSession();
 
-  const [profile,       setProfile]       = useState<Profile | null>(null);
-  const [loading,       setLoading]       = useState(hasIdentifier);
-  const [error,         setError]         = useState<string | null>(
+  const [profile,        setProfile]        = useState<Profile | null>(null);
+  const [loading,        setLoading]        = useState(hasIdentifier);
+  const [error,          setError]          = useState<string | null>(
     hasIdentifier ? null : "プロフィールが見つかりません。"
   );
-  const [exchanged,     setExchanged]     = useState(false);
-  const [exchangeBusy,  setExchangeBusy]  = useState(false);
-  const [exchangeError, setExchangeError] = useState<string | null>(null);
+  const [exchanged,      setExchanged]      = useState(false);
+  const [exchangeBusy,   setExchangeBusy]   = useState(false);
+  const [exchangeError,  setExchangeError]  = useState<string | null>(null);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+
+  // ── プロフィール取得 ─────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!hasIdentifier) return;
@@ -56,30 +57,29 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
     return () => { alive = false; };
   }, [handle, hasIdentifier, slug]);
 
-  // ── 交換する ──────────────────────────────────────────────────────────────
+  // ── ゲスト向けログイン促進モーダル ──────────────────────────────────────
+  // プロフ読み込み完了後、少し間を置いてから表示（閲覧を邪魔しない）
+
+  useEffect(() => {
+    if (session.status !== "guest" || !profile) return;
+    const timer = setTimeout(() => setLoginModalOpen(true), 1200);
+    return () => clearTimeout(timer);
+  }, [session.status, profile]);
+
+  // ── 交換記録（ログイン済みのみ） ────────────────────────────────────────
 
   async function handleExchange() {
-    if (!profile) return;
-    if (session.status === "loading") return;
-
-    if (session.status === "guest") {
-      // QR経由のパラメータを保持したまま戻れるようにする
-      const returnPath = slug
-        ? `/profile/${slug}${isQr ? "?via=qr" : ""}`
-        : `/profile/handle/${handle}${isQr ? "?via=qr" : ""}`;
-      router.push(`/?return=${encodeURIComponent(returnPath)}`);
-      return;
-    }
+    if (!profile || session.status !== "user") return;
 
     setExchangeBusy(true);
     setExchangeError(null);
 
     const result = await exchangesApi.create({
-      id: crypto.randomUUID(),
+      id:              crypto.randomUUID(),
       targetProfileId: profile.id,
-      method: isQr ? "qr" : "manual",
-      eventName: null,
-      exchangedAt: new Date().toISOString(),
+      method:          isQr ? "qr" : "manual",
+      eventName:       null,
+      exchangedAt:     new Date().toISOString(),
       snapshot: {
         patternName: profile.patternName,
         audience:    profile.audience,
@@ -96,7 +96,16 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
     setExchanged(true);
   }
 
-  // ── ローディング / エラー ─────────────────────────────────────────────────
+  // ── ログインリターン URL 生成 ────────────────────────────────────────────
+
+  const returnPath = slug
+    ? `/profile/${slug}${isQr ? "?via=qr" : ""}`
+    : `/profile/handle/${handle ?? ""}${isQr ? "?via=qr" : ""}`;
+  const authBase    = `/?return=${encodeURIComponent(returnPath)}`;
+  const loginUrl    = authBase;
+  const registerUrl = `${authBase}&mode=register`;
+
+  // ── ローディング / エラー ────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -188,43 +197,34 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
           </div>
         )}
 
-        {/* ── 交換ボタン ────────────────────────────────────────────────── */}
-        <div className="pub-exchange-area">
-          {exchanged ? (
-            <div className="pub-exchange-done">
-              <p>✓ {isQr ? "QRで交換記録しました" : "交換帳に追加しました"}</p>
-              <Link href="/book" className="button secondary">
-                交換帳を見る →
-              </Link>
-            </div>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="button"
-                style={{ width: "100%", minHeight: "48px", fontSize: "15px" }}
-                onClick={() => void handleExchange()}
-                disabled={exchangeBusy || session.status === "loading"}
-              >
-                {exchangeBusy
-                  ? "追加中..."
-                  : session.status === "guest"
-                  ? "ログインして交換帳に追加"
-                  : isQr
-                  ? "📒 交換帳に記録する"
-                  : "この人を交換帳に追加"}
-              </button>
-              {exchangeError && (
-                <p className="error-text" style={{ marginTop: "8px" }}>{exchangeError}</p>
-              )}
-              {session.status === "guest" && (
-                <p className="muted small" style={{ textAlign: "center", marginTop: "6px" }}>
-                  アカウント不要で閲覧できます。交換帳への記録はログインが必要です。
-                </p>
-              )}
-            </>
-          )}
-        </div>
+        {/* ── 交換ボタン（ログイン済みのみ） ───────────────────────────── */}
+        {session.status === "user" && (
+          <div className="pub-exchange-area">
+            {exchanged ? (
+              <div className="pub-exchange-done">
+                <p>✓ {isQr ? "QRで交換記録しました" : "交換帳に追加しました"}</p>
+                <Link href="/book" className="button secondary">
+                  交換帳を見る →
+                </Link>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="button"
+                  style={{ width: "100%", minHeight: "48px", fontSize: "15px" }}
+                  onClick={() => void handleExchange()}
+                  disabled={exchangeBusy}
+                >
+                  {exchangeBusy ? "記録中..." : isQr ? "📒 交換帳に記録する" : "この人を交換帳に追加"}
+                </button>
+                {exchangeError && (
+                  <p className="error-text" style={{ marginTop: "8px" }}>{exchangeError}</p>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         {/* ── フッター ─────────────────────────────────────────────────── */}
         <div className="pub-footer">
@@ -234,6 +234,61 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
         </div>
 
       </div>
+
+      {/* ── ログイン促進モーダル（ゲスト向け・閉じられる） ─────────────── */}
+      {loginModalOpen && (
+        <div
+          className="auth-prompt-backdrop"
+          onClick={() => setLoginModalOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="ログインのご案内"
+        >
+          <div
+            className="auth-prompt-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 閉じるボタン */}
+            <button
+              type="button"
+              className="auth-prompt-close"
+              onClick={() => setLoginModalOpen(false)}
+              aria-label="閉じる"
+            >
+              ×
+            </button>
+
+            {/* アイコン＋メッセージ */}
+            <div className="auth-prompt-icon">📒</div>
+            <h2 className="auth-prompt-title">
+              交換したプロフィールを<br />あとで見返せます
+            </h2>
+            <p className="auth-prompt-body">
+              ログインすると、QRコードやリンクで受け取ったプロフィールを
+              交換帳に記録して、いつでも振り返ることができます。
+            </p>
+
+            {/* CTAボタン */}
+            <div className="auth-prompt-actions">
+              <Link href={loginUrl} className="button auth-prompt-btn-login">
+                ログインする
+              </Link>
+              <Link href={registerUrl} className="button secondary auth-prompt-btn-register">
+                新規登録（無料）
+              </Link>
+            </div>
+
+            {/* 閉じるリンク */}
+            <button
+              type="button"
+              className="auth-prompt-skip"
+              onClick={() => setLoginModalOpen(false)}
+            >
+              このまま閲覧する
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

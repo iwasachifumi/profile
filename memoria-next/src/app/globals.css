@@ -3442,3 +3442,120 @@ body:has(.lp-root) .topnav a.active {
   color: var(--ink);
   text-decoration: underline;
 }
+
+/* ── ゲスト向けログイン促進モーダル ─────────────────────────────────────── */
+
+.auth-prompt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(30, 20, 10, 0.45);
+  display: flex;
+  align-items: flex-end; /* モバイル: ボトムシート */
+  justify-content: center;
+}
+
+.auth-prompt-sheet {
+  position: relative;
+  background: var(--panel);
+  border-radius: 20px 20px 0 0;
+  padding: 28px 24px 36px;
+  width: 100%;
+  max-width: 480px;
+  display: grid;
+  gap: 10px;
+  text-align: center;
+  box-shadow: 0 -4px 24px rgba(30, 20, 10, 0.18);
+  animation: sheet-up 0.28s ease;
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(60px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.auth-prompt-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.auth-prompt-close:hover { background: var(--line); }
+
+.auth-prompt-icon {
+  font-size: 36px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.auth-prompt-title {
+  font-size: 17px;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.auth-prompt-body {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.65;
+}
+
+.auth-prompt-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.auth-prompt-btn-login {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+  font-size: 15px;
+  min-height: 48px;
+  font-weight: 700;
+}
+.auth-prompt-btn-login:hover { opacity: 0.88; }
+
+.auth-prompt-btn-register {
+  font-size: 14px;
+  min-height: 44px;
+}
+
+.auth-prompt-skip {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 6px;
+  margin-top: 2px;
+}
+.auth-prompt-skip:hover { color: var(--ink); }
+
+/* デスクトップ: 中央ダイアログに切り替え */
+@media (min-width: 640px) {
+  .auth-prompt-backdrop {
+    align-items: center;
+  }
+  .auth-prompt-sheet {
+    border-radius: 16px;
+    padding: 36px 32px 40px;
+    max-width: 420px;
+    animation: modal-in 0.22s ease;
+  }
+  @keyframes modal-in {
+    from { transform: scale(0.95); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+}
