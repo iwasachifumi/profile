@@ -111,15 +111,19 @@ function resolveStickerSrc(stickerId: string) {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "stickers" | "frame" | "friends" | "settings";
+type Tab = "preview" | "stickers" | "frame" | "friends" | "settings";
 type BusyKind = "load" | "create" | "save" | "delete" | null;
 
+// モバイルフッタ用（プレビュータブを先頭に追加）
 const TABS: { id: Tab; icon: string; labelJa: string; labelEn: string }[] = [
-  { id: "stickers", icon: "🏷", labelJa: "シール",   labelEn: "Stickers" },
-  { id: "frame",    icon: "🖼", labelJa: "フレーム", labelEn: "Frame"    },
-  { id: "friends",  icon: "👥", labelJa: "友達",     labelEn: "Friends"  },
-  { id: "settings", icon: "⚙️", labelJa: "項目",     labelEn: "Fields" },
+  { id: "preview",  icon: "👁",  labelJa: "プレビュー", labelEn: "Preview"  },
+  { id: "stickers", icon: "🏷",  labelJa: "シール",     labelEn: "Stickers" },
+  { id: "frame",    icon: "🖼",  labelJa: "フレーム",   labelEn: "Frame"    },
+  { id: "friends",  icon: "👥",  labelJa: "友達",       labelEn: "Friends"  },
+  { id: "settings", icon: "⚙️", labelJa: "項目",       labelEn: "Fields"   },
 ];
+// PCパネルタブ用（プレビュータブは不要：常にカードが見えているため）
+const DESKTOP_TABS = TABS.filter((t) => t.id !== "preview");
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -1027,8 +1031,8 @@ export default function EditorScreen() {
         )}
       </div>
 
-      {/* メインワークスペース */}
-      <div className="editor-workspace">
+      {/* メインワークスペース: data-tab をCSSで参照してカード/パネルの表示制御 */}
+      <div className="editor-workspace" data-tab={activeTab}>
 
         {/* プロフィールカード（WYSIWYG） */}
         <div className="editor-card-area">
@@ -1133,9 +1137,9 @@ export default function EditorScreen() {
         {/* ツールパネル */}
         {draft && (
           <div className="editor-panel-area">
-            {/* デスクトップ用タブ（モバイルは非表示） */}
+            {/* デスクトップ用タブ（プレビュータブは不要なので除外） */}
             <div className="editor-panel-tabs">
-              {TABS.map((tab) => (
+              {DESKTOP_TABS.map((tab) => (
                 <button key={tab.id} type="button"
                   className={`editor-panel-tab${activeTab === tab.id ? " active" : ""}`}
                   onClick={() => setActiveTab(tab.id)}>
@@ -1145,10 +1149,11 @@ export default function EditorScreen() {
               ))}
             </div>
             <div className="editor-panel-content">
-              {activeTab === "stickers" && renderStickerPanel()}
-              {activeTab === "frame"    && renderFramePanel()}
-              {activeTab === "friends"  && renderFriendsPanel()}
-              {activeTab === "settings" && renderSettingsPanel()}
+              {/* デスクトップでプレビュータブのまま来た場合は項目を表示 */}
+              {(activeTab === "stickers")                      && renderStickerPanel()}
+              {(activeTab === "frame")                         && renderFramePanel()}
+              {(activeTab === "friends")                       && renderFriendsPanel()}
+              {(activeTab === "settings" || activeTab === "preview") && renderSettingsPanel()}
             </div>
           </div>
         )}

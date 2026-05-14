@@ -1639,8 +1639,31 @@ textarea {
 }
 
 @media (max-width: 767px) {
+  /* デスクトップ用インラインタブは非表示（モバイルはフッタタブを使う） */
   .editor-panel-tabs {
     display: none;
+  }
+
+  /* ── モバイルタブ別 表示制御 ────────────────────────────────────────────── */
+
+  /* 友達・項目タブ: カードは不要 → 非表示にしてパネルを全高使用 */
+  .editor-workspace[data-tab="friends"] .editor-card-area,
+  .editor-workspace[data-tab="settings"] .editor-card-area {
+    display: none;
+  }
+  .editor-workspace[data-tab="friends"] .editor-panel-content,
+  .editor-workspace[data-tab="settings"] .editor-panel-content {
+    max-height: calc(100svh - 58px - 66px); /* ビューポート - トップバー - フッタ */
+  }
+
+  /* シール・フレームタブ: カードへのWYSIWYG操作が必要なので両方表示（デフォルト） */
+
+  /* プレビュータブ: カードのみ全画面・パネルは非表示 */
+  .editor-workspace[data-tab="preview"] .editor-panel-area {
+    display: none;
+  }
+  .editor-workspace[data-tab="preview"] .editor-card-area {
+    padding-bottom: 80px; /* フッタ分の余白 */
   }
 }
 
