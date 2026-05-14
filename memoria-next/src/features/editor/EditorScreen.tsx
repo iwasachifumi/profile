@@ -118,7 +118,7 @@ const TABS: { id: Tab; icon: string; labelJa: string; labelEn: string }[] = [
   { id: "stickers", icon: "🏷", labelJa: "シール",   labelEn: "Stickers" },
   { id: "frame",    icon: "🖼", labelJa: "フレーム", labelEn: "Frame"    },
   { id: "friends",  icon: "👥", labelJa: "友達",     labelEn: "Friends"  },
-  { id: "settings", icon: "⚙️", labelJa: "設定",     labelEn: "Settings" },
+  { id: "settings", icon: "⚙️", labelJa: "項目",     labelEn: "Fields" },
 ];
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -799,23 +799,26 @@ export default function EditorScreen() {
             )}
           </span>
         </div>
-        {/* 基本 */}
-        <div className="stack" style={{ gap: "8px" }}>
-          <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-            {t("パターン名", "Pattern name")}
-            <input value={draft.patternName}
-              onChange={(e) => { const n = { ...draft, patternName: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
-          </label>
-          <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-            {t("対象", "Audience")}
-            <input value={draft.audience} placeholder={t("例：仕事、友人", "e.g. work, friends")}
-              onChange={(e) => { const n = { ...draft, audience: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
-          </label>
-          <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-            {t("ひとこと", "Description")}
-            <input value={draft.description}
-              onChange={(e) => { const n = { ...draft, description: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
-          </label>
+        {/* パターン基本情報（他のプロフィール項目とは別扱い） */}
+        <div className="meta-block">
+          <p className="meta-block-title">{t("このパターンの基本情報", "Pattern info")}</p>
+          <div className="stack" style={{ gap: "8px" }}>
+            <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
+              {t("パターン名", "Pattern name")}
+              <input value={draft.patternName}
+                onChange={(e) => { const n = { ...draft, patternName: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
+            </label>
+            <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
+              {t("対象", "Audience")}
+              <input value={draft.audience} placeholder={t("例：仕事、友人", "e.g. work, friends")}
+                onChange={(e) => { const n = { ...draft, audience: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
+            </label>
+            <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
+              {t("ひとこと", "Description")}
+              <input value={draft.description}
+                onChange={(e) => { const n = { ...draft, description: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
+            </label>
+          </div>
         </div>
 
         {/* フィールド */}
@@ -826,7 +829,7 @@ export default function EditorScreen() {
               const fields = fieldsByGroup[groupId] || [];
               const [lJa, lEn] = GROUP_LABELS[groupId] ?? [groupId, groupId];
               return (
-                <details key={groupId} className="field-group" open={fields.length > 0}>
+                <details key={groupId} className="field-group" open={groupId === "basic"}>
                   <summary>
                     <span>
                       {t(lJa, lEn)}{" "}

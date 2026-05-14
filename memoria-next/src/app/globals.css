@@ -523,6 +523,26 @@ textarea {
   align-self: center;
 }
 
+/* ── パターン基本情報ブロック（パターン名・対象・ひとこと） ─────────────────── */
+
+.meta-block {
+  background: linear-gradient(135deg, #fff8f0 0%, #fdf0ff 100%);
+  border: 1.5px solid #e8c8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 0;
+}
+
+.meta-block-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9a6fbf;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 10px;
+}
+
 /* ── コンパクトフィールド行（新エディター） ────────────────────────────────── */
 
 .field-row {

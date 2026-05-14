@@ -1,6 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { settingsApi } from "@/api/settings";
@@ -23,18 +22,16 @@ export default function SettingsScreen() {
   const { session, logout } = useSession();
   const { t, setLanguage } = useLang();
   const [settings, setSettings] = useState<UserSettings>(defaultSettings);
-  const [busy, setBusy] = useState<BusyKind>("load");
-  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy]         = useState<BusyKind>("load");
+  const [error, setError]       = useState<string | null>(null);
+  const [saved, setSaved]       = useState(false);
 
   const loadSettings = useCallback(async () => {
     setBusy("load");
     setError(null);
     const result = await settingsApi.get();
     setBusy(null);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
+    if (!result.ok) { setError(result.error); return; }
     setSettings(result.data);
     setLanguage(result.data.language);
   }, [setLanguage]);
@@ -49,17 +46,16 @@ export default function SettingsScreen() {
     setError(null);
     const result = await settingsApi.update(settings);
     setBusy(null);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
+    if (!result.ok) { setError(result.error); return; }
     setLanguage(settings.language);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   }
 
   if (session.status === "loading") {
     return (
-      <main style={styles.page}>
-        <p style={styles.muted}>Loading session...</p>
+      <main className="app-shell">
+        <p className="muted">{t("確認中...", "Loading...")}</p>
       </main>
     );
   }
@@ -68,181 +64,122 @@ export default function SettingsScreen() {
     return <AuthScreen redirectOnAuth="/settings" />;
   }
 
+  const plan   = settings.plan;
+  const limits = PLAN_LIMITS[plan];
+  const email  = session.status === "user" ? session.user.email : undefined;
+
   return (
-    <main style={styles.page}>
-      <header style={styles.header}>
-        <div>
-          <h1 style={styles.title}>{t("設定", "Settings")}</h1>
-          <p style={styles.muted}>{t("アカウント設定", "Account preferences")}</p>
-        </div>
-        <div style={styles.headerActions}>
-          <Link href="/mine" style={styles.linkButton}>
-            {t("マイページ", "Mine")}
-          </Link>
-          <Link href="/guide" style={styles.linkButton}>
-            {t("ガイド", "Guide")}
-          </Link>
-          <button type="button" onClick={() => void logout()} style={styles.linkButton}>
-            {t("ログアウト", "Sign out")}
-          </button>
-        </div>
-      </header>
+    <main className="app-shell" style={{ gap: "16px", maxWidth: "600px", margin: "0 auto", padding: "20px 16px" }}>
 
-      <section style={styles.card}>
-        {busy === "load" ? <p style={styles.muted}>{t("設定を読み込み中...", "Loading settings...")}</p> : null}
+      {/* ヘッダー */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+        <h1 style={{ margin: 0, fontSize: "20px" }}>{t("設定", "Settings")}</h1>
+        <Link href="/mine" className="button secondary" style={{ fontSize: "13px", padding: "4px 14px", minHeight: "auto" }}>
+          {t("← マイページ", "← Mine")}
+        </Link>
+      </div>
 
-        <div style={styles.label}>
-          {t("プラン", "Plan")}
-          <p style={styles.readonlyValue}>{settings.plan}</p>
-        </div>
-        <div style={styles.limitsBox}>
-          <strong style={styles.limitsTitle}>{t("Plan limits", "Plan limits")}</strong>
-          <p style={styles.limitRow}>
-            <span>Free</span>
-            <span>
-              P:{PLAN_LIMITS.free.patterns} / F:{PLAN_LIMITS.free.fieldsPerPattern} / G:{PLAN_LIMITS.free.groups} / E:{PLAN_LIMITS.free.exchanges} / Upload:{PLAN_LIMITS.free.customStickerUpload ? "Yes" : "No"}
-            </span>
-          </p>
-          <p style={styles.limitRow}>
-            <span>Pro</span>
-            <span>
-              P:{PLAN_LIMITS.pro.patterns} / F:{PLAN_LIMITS.pro.fieldsPerPattern} / G:{PLAN_LIMITS.pro.groups} / E:{PLAN_LIMITS.pro.exchanges} / Upload:{PLAN_LIMITS.pro.customStickerUpload ? "Yes" : "No"}
-            </span>
-          </p>
-        </div>
+      {error && <p className="error-text">{error}</p>}
 
-        <label style={styles.label}>
-          {t("言語", "Language")}
-          <select
-            value={settings.language}
-            onChange={(e) =>
-              setSettings((current) => ({ ...current, language: e.target.value as "ja" | "en" }))
-            }
-            style={styles.input}
-          >
-            <option value="ja">ja</option>
-            <option value="en">en</option>
-          </select>
-        </label>
+      {busy === "load" ? (
+        <p className="muted small">{t("設定を読み込み中...", "Loading settings...")}</p>
+      ) : (
+        <>
+          {/* アカウント情報 */}
+          <section className="panel pad" style={{ gap: "10px", display: "grid" }}>
+            <h2 style={{ margin: 0, fontSize: "14px", borderBottom: "1px solid var(--line)", paddingBottom: "8px" }}>
+              {t("アカウント", "Account")}
+            </h2>
+            {email && (
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <span className="muted small" style={{ minWidth: "60px" }}>{t("メール", "Email")}</span>
+                <span style={{ fontSize: "13px" }}>{email}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <span className="muted small" style={{ minWidth: "60px" }}>{t("プラン", "Plan")}</span>
+              <span style={{
+                fontSize: "12px", fontWeight: 700, padding: "2px 10px", borderRadius: "99px",
+                background: plan === "pro" ? "var(--green-soft)" : "var(--blue-soft)",
+                color:      plan === "pro" ? "var(--green)"      : "var(--blue)",
+              }}>
+                {plan.toUpperCase()}
+              </span>
+            </div>
+          </section>
 
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={busy === "save"}
-          style={styles.primaryButton}
-        >
-          {busy === "save" ? t("保存中...", "Saving...") : t("設定を保存", "Save settings")}
-        </button>
+          {/* プラン上限 */}
+          <section className="panel pad" style={{ gap: "10px", display: "grid" }}>
+            <h2 style={{ margin: 0, fontSize: "14px", borderBottom: "1px solid var(--line)", paddingBottom: "8px" }}>
+              {t("ご利用上限", "Plan limits")}
+            </h2>
+            <div style={{ display: "grid", gap: "8px" }}>
+              {[
+                { label: t("パターン数", "Patterns"),           value: `${limits.patterns} 件` },
+                { label: t("項目数 / パターン", "Fields / pattern"), value: `${limits.fieldsPerPattern} 件` },
+                { label: t("グループ数", "Groups"),              value: `${limits.groups} 件` },
+                { label: t("交換帳", "Exchanges"),               value: `${limits.exchanges} 件` },
+                { label: t("カスタムシール", "Custom stickers"),  value: limits.customStickerUpload ? t("アップロード可", "Upload OK") : t("不可（Pro限定）", "Not available") },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "13px" }}>
+                  <span className="muted">{label}</span>
+                  <span style={{ fontWeight: 600 }}>{value}</span>
+                </div>
+              ))}
+            </div>
+            {plan !== "pro" && (
+              <p className="muted small" style={{ margin: 0, borderTop: "1px solid var(--line)", paddingTop: "8px" }}>
+                {t("Proにアップグレードすると上限が増え、カスタムシールが使えるようになります。", "Upgrade to Pro for higher limits and custom sticker upload.")}
+              </p>
+            )}
+          </section>
 
-        {error ? <p style={styles.errorText}>{error}</p> : null}
-      </section>
+          {/* 表示言語 */}
+          <section className="panel pad" style={{ gap: "10px", display: "grid" }}>
+            <h2 style={{ margin: 0, fontSize: "14px", borderBottom: "1px solid var(--line)", paddingBottom: "8px" }}>
+              {t("表示言語", "Language")}
+            </h2>
+            <label style={{ display: "grid", gap: "6px", fontSize: "13px", color: "var(--muted)" }}>
+              {t("言語を選択", "Select language")}
+              <select
+                value={settings.language}
+                onChange={(e) =>
+                  setSettings((cur) => ({ ...cur, language: e.target.value as "ja" | "en" }))
+                }
+              >
+                <option value="ja">日本語</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <button
+                type="button"
+                className="button"
+                onClick={() => void handleSave()}
+                disabled={busy === "save"}
+                style={{ minHeight: "36px", padding: "0 20px", fontSize: "14px" }}
+              >
+                {busy === "save" ? t("保存中...", "Saving...") : t("保存", "Save")}
+              </button>
+              {saved && <span className="muted small">✓ {t("保存しました", "Saved")}</span>}
+            </div>
+          </section>
+
+          {/* アカウント操作 */}
+          <section className="panel pad" style={{ gap: "8px", display: "grid" }}>
+            <h2 style={{ margin: 0, fontSize: "14px", borderBottom: "1px solid var(--line)", paddingBottom: "8px" }}>
+              {t("操作", "Actions")}
+            </h2>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => void logout()}
+            >
+              {t("ログアウト", "Sign out")}
+            </button>
+          </section>
+        </>
+      )}
     </main>
   );
 }
-
-const styles: Record<string, CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    padding: "20px",
-    background: "linear-gradient(120deg, #f8fafc 0%, #e2e8f0 100%)",
-    display: "grid",
-    gap: "16px",
-  },
-  header: {
-    background: "#ffffff",
-    border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    padding: "14px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "12px",
-  },
-  headerActions: {
-    display: "flex",
-    gap: "8px",
-  },
-  title: {
-    margin: 0,
-    fontSize: "24px",
-  },
-  card: {
-    background: "#ffffff",
-    border: "1px solid #cbd5e1",
-    borderRadius: "10px",
-    padding: "14px",
-    display: "grid",
-    gap: "12px",
-    alignContent: "start",
-    maxWidth: "560px",
-  },
-  label: {
-    display: "grid",
-    gap: "6px",
-    fontSize: "13px",
-  },
-  input: {
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
-    padding: "10px",
-    fontSize: "14px",
-  },
-  readonlyValue: {
-    margin: 0,
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
-    padding: "10px",
-    fontSize: "14px",
-    background: "#f8fafc",
-    color: "#0f172a",
-  },
-  limitsBox: {
-    display: "grid",
-    gap: "6px",
-    border: "1px solid #cbd5e1",
-    borderRadius: "8px",
-    padding: "10px",
-    background: "#f8fafc",
-  },
-  limitsTitle: {
-    fontSize: "13px",
-  },
-  limitRow: {
-    margin: 0,
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "8px",
-    fontSize: "12px",
-    color: "#334155",
-  },
-  muted: {
-    margin: 0,
-    color: "#475569",
-    fontSize: "13px",
-  },
-  primaryButton: {
-    border: "1px solid #0f172a",
-    borderRadius: "8px",
-    background: "#0f172a",
-    color: "#ffffff",
-    padding: "8px 10px",
-    cursor: "pointer",
-    width: "fit-content",
-  },
-  linkButton: {
-    border: "1px solid #475569",
-    borderRadius: "8px",
-    background: "#ffffff",
-    color: "#0f172a",
-    padding: "8px 10px",
-    textDecoration: "none",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  errorText: {
-    margin: 0,
-    color: "#b91c1c",
-    fontSize: "13px",
-  },
-};
