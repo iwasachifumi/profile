@@ -157,6 +157,9 @@ export default function EditorScreen() {
   const [giftInbox,          setGiftInbox]          = useState<StickerGiftInboxItem[]>([]);
   const [giftInboxBusy,      setGiftInboxBusy]      = useState(false);
   const [qrOpen,             setQrOpen]             = useState(false);
+  const [metaOpen,           setMetaOpen]           = useState(false);
+  const [showAddModal,       setShowAddModal]        = useState(false);
+  const [newPatternName,     setNewPatternName]      = useState("");
 
   const paperRef      = useRef<HTMLDivElement>(null);
   const dragState     = useRef<{ idx: number } | null>(null);
@@ -247,7 +250,7 @@ export default function EditorScreen() {
     setEditingLinkId(null);
   }
 
-  async function handleCreate() {
+  async function handleCreate(name?: string) {
     if (profiles.length >= planLimits.patterns) {
       showLimitError("patterns");
       return;
@@ -257,7 +260,7 @@ export default function EditorScreen() {
       ({ id: crypto.randomUUID(), groupId, label, value, visible: true });
     const next: Profile = {
       id: crypto.randomUUID(), publicSlug: null, handle: null, isPublic: false,
-      patternName: "新しいパターン", audience: "", description: "",
+      patternName: name?.trim() || "新しいパターン", audience: "", description: "",
       themeId: "default", frameId: "none",
       fields: [
         mf("basic",        "名前",               "まだ名前なし"),
@@ -284,6 +287,7 @@ export default function EditorScreen() {
     setActiveId(next.id);
     setDraft(cloneProfile(next));
     setActiveTab("settings");
+    setMetaOpen(true);  // 新規作成直後はパターン基本情報を開いておく
   }
 
   async function handleDeletePattern() {
@@ -807,35 +811,65 @@ export default function EditorScreen() {
     if (!draft) return null;
     return (
       <div className="stack">
-        <div className="panel pad" style={{ gap: "4px", display: "grid" }}>
-          <strong style={{ fontSize: "13px" }}>{t("プラン", "Plan")}: {settings.plan}</strong>
-          <span className="muted small">
-            {t(
-              `パターン上限 ${planLimits.patterns} / 項目上限 ${planLimits.fieldsPerPattern}`,
-              `Pattern limit ${planLimits.patterns} / Field limit ${planLimits.fieldsPerPattern}`
-            )}
-          </span>
-        </div>
-        {/* パターン基本情報（他のプロフィール項目とは別扱い） */}
-        <div className="meta-block">
-          <p className="meta-block-title">{t("このパターンの基本情報", "Pattern info")}</p>
-          <div className="stack" style={{ gap: "8px" }}>
-            <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-              {t("パターン名", "Pattern name")}
-              <input value={draft.patternName}
-                onChange={(e) => { const n = { ...draft, patternName: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
-            </label>
-            <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-              {t("対象", "Audience")}
-              <input value={draft.audience} placeholder={t("例：仕事、友人", "e.g. work, friends")}
-                onChange={(e) => { const n = { ...draft, audience: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
-            </label>
-            <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-              {t("ひとこと", "Description")}
-              <input value={draft.description}
-                onChange={(e) => { const n = { ...draft, description: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
-            </label>
+
+        {/* ── パターン選択＆基本情報アコーディオン ──────────────────────── */}
+        <div className="pattern-meta-block">
+          {/* ヘッダー行: ▼パターン名 / 複数時はselectも / ＋ボタン */}
+          <div className="pattern-meta-header">
+            <button
+              type="button"
+              className="pattern-meta-toggle"
+              onClick={() => setMetaOpen(!metaOpen)}
+            >
+              <span className="pattern-meta-arrow">{metaOpen ? "▲" : "▼"}</span>
+              {profiles.length > 1 ? (
+                <select
+                  value={activeId ?? ""}
+                  onChange={(e) => { selectProfile(e.target.value); }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="pattern-meta-select"
+                >
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>{p.patternName}</option>
+                  ))}
+                </select>
+              ) : (
+                <span className="pattern-meta-name">
+                  {t("パターン名", "Pattern")}：{draft.patternName}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              className="icon-button mini-button"
+              onClick={() => { setNewPatternName(""); setShowAddModal(true); }}
+              title={t("新しいパターンを追加", "Add new pattern")}
+              style={{ flexShrink: 0 }}
+            >
+              ＋
+            </button>
           </div>
+
+          {/* アコーディオン本体 */}
+          {metaOpen && (
+            <div className="pattern-meta-body">
+              <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
+                {t("パターン名", "Pattern name")}
+                <input value={draft.patternName}
+                  onChange={(e) => { const n = { ...draft, patternName: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
+              </label>
+              <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
+                {t("対象", "Audience")}
+                <input value={draft.audience} placeholder={t("例：仕事、友人", "e.g. work, friends")}
+                  onChange={(e) => { const n = { ...draft, audience: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
+              </label>
+              <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
+                {t("ひとこと", "Description")}
+                <input value={draft.description}
+                  onChange={(e) => { const n = { ...draft, description: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
+              </label>
+            </div>
+          )}
         </div>
 
         {/* 公開・QRコード */}
@@ -1089,7 +1123,8 @@ export default function EditorScreen() {
               </button>
             ))}
             <button type="button" className="icon-button"
-              onClick={() => void handleCreate()} disabled={busy === "create"}
+              onClick={() => { setNewPatternName(""); setShowAddModal(true); }}
+              disabled={busy === "create"}
               title={t("パターンを追加", "Add pattern")}>
               +
             </button>
@@ -1240,16 +1275,88 @@ export default function EditorScreen() {
             <span>{t(tab.labelJa, tab.labelEn)}</span>
           </button>
         ))}
+        {/* QRボタン（パターンが公開済みなら即表示、未公開なら項目タブへ誘導） */}
+        {draft && (
+          <button
+            type="button"
+            className={`editor-tab-btn${!draft.isPublic ? " editor-tab-btn--dim" : ""}`}
+            onClick={() => {
+              if (draft.isPublic && draft.publicSlug) {
+                setQrOpen(true);
+              } else {
+                setActiveTab("settings");
+                setMetaOpen(false);
+              }
+            }}
+            title={t(
+              draft.isPublic ? "QRコードを表示" : "公開するとQRが使えます",
+              draft.isPublic ? "Show QR code"   : "Make public to use QR"
+            )}
+          >
+            <span className="editor-tab-icon">📲</span>
+            <span>QR</span>
+          </button>
+        )}
       </nav>
       <div className="editor-bottom-pad" />
 
-      {/* QRコードモーダル */}
+      {/* ── QRコードモーダル ─────────────────────────────────────────────── */}
       {qrOpen && draft?.isPublic && draft?.publicSlug && (
         <QrModal
           url={`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}?via=qr`}
           patternName={draft.patternName}
           onClose={() => setQrOpen(false)}
         />
+      )}
+
+      {/* ── パターン追加モーダル ─────────────────────────────────────────── */}
+      {showAddModal && (
+        <div className="qr-overlay" onClick={() => setShowAddModal(false)} role="dialog" aria-modal="true">
+          <div className="qr-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "360px" }}>
+            <button type="button" className="qr-modal-close" onClick={() => setShowAddModal(false)} aria-label="閉じる">
+              ×
+            </button>
+            <p className="qr-modal-label">{t("パターンを追加", "Add pattern")}</p>
+            <p className="muted small" style={{ margin: "0 0 16px", lineHeight: 1.7 }}>
+              {t(
+                "パターンごとにデザインやシール、表示項目を変えられます。友達用と仕事用を切り分けたり、イベントごとに使い分けることができます。",
+                "Each pattern can have its own design, stickers, and fields. Great for separating friends vs. work, or event-specific profiles."
+              )}
+            </p>
+            <label style={{ display: "grid", gap: "6px", fontSize: "13px", color: "var(--muted)" }}>
+              {t("パターン名", "Pattern name")}
+              <input
+                value={newPatternName}
+                onChange={(e) => setNewPatternName(e.target.value)}
+                placeholder={t("例：友達、仕事、推し活", "e.g. Friends, Work, Hobbies")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    void handleCreate(newPatternName);
+                    setShowAddModal(false);
+                  }
+                }}
+                autoFocus
+              />
+            </label>
+            <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
+              <button
+                type="button"
+                className="button"
+                style={{ flex: 1 }}
+                disabled={busy === "create"}
+                onClick={() => {
+                  void handleCreate(newPatternName);
+                  setShowAddModal(false);
+                }}
+              >
+                {busy === "create" ? t("追加中...", "Adding...") : t("追加する", "Add")}
+              </button>
+              <button type="button" className="button secondary" onClick={() => setShowAddModal(false)}>
+                {t("キャンセル", "Cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
