@@ -58,10 +58,25 @@ export interface Exchange {
   tags: string[];
 }
 
+export interface CustomSticker {
+  id: string;
+  label: string;
+  assetSrc: string;
+  assetHash?: string;
+}
+
+export interface StickerGiftInboxItem {
+  id: string;
+  senderHandle: string | null;
+  stickerLabel: string;
+  stickerAssetSrc: string;
+  createdAt: string;
+}
+
 export interface UserSettings {
   plan: "free" | "pro";
   language: "ja" | "en";
-  customStickers: unknown[];
+  customStickers: CustomSticker[];
   groups: unknown[];
 }
 

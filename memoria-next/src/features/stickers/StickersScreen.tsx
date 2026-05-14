@@ -43,6 +43,9 @@ function fileToLabel(file: string) {
 function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
 }
+function resolveStickerSrc(stickerId: string) {
+  return stickerId.startsWith("data:") ? stickerId : `/stamp/${stickerId}`;
+}
 
 // ── コンポーネント ────────────────────────────────────────────────────────────
 
@@ -269,7 +272,7 @@ export default function StickersScreen() {
                     )}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={`/stamp/${s.stickerId}`}
+                      src={resolveStickerSrc(s.stickerId)}
                       alt=""
                       style={{ width: "100%", display: "block", pointerEvents: "none" }}
                     />

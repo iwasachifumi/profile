@@ -166,7 +166,7 @@ export default function BookScreen() {
                 {selected.targetProfileId && (
                   <a
                     className="button secondary"
-                    href={`/profile/${selected.targetProfileId}`}
+                    href={`/preview/${selected.targetProfileId}`}
                   >
                     {t("現在のプロフィール", "Current profile")}
                   </a>

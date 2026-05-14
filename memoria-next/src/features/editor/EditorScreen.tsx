@@ -2,10 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { profilesApi } from "@/api/profiles";
+import { settingsApi } from "@/api/settings";
+import { stickerGiftsApi } from "@/api/stickerGifts";
+import { PLAN_LIMITS } from "@/config/planLimits";
 import AuthScreen from "@/features/auth/AuthScreen";
 import { useSession } from "@/store/session";
 import { useLang } from "@/store/language";
-import type { Field, Link as ProfileLink, Profile } from "@/types";
+import type {
+  CustomSticker,
+  Field,
+  Link as ProfileLink,
+  Profile,
+  StickerGiftInboxItem,
+  UserSettings,
+} from "@/types";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -83,6 +93,21 @@ function initialOf(name: string) { return (name || "?")[0].toUpperCase(); }
 function cloneProfile(p: Profile): Profile {
   return { ...p, fields: [...p.fields], links: [...p.links], stickers: [...p.stickers] };
 }
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") resolve(result);
+      else reject(new Error("failed to read image"));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("failed to read image"));
+    reader.readAsDataURL(file);
+  });
+}
+function resolveStickerSrc(stickerId: string) {
+  return stickerId.startsWith("data:") ? stickerId : `/stamp/${stickerId}`;
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -98,6 +123,13 @@ const TABS: { id: Tab; icon: string; labelJa: string; labelEn: string }[] = [
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+const DEFAULT_SETTINGS: UserSettings = {
+  plan: "free",
+  language: "ja",
+  customStickers: [],
+  groups: [],
+};
+
 export default function EditorScreen() {
   const { session, logout } = useSession();
   const { t } = useLang();
@@ -107,11 +139,18 @@ export default function EditorScreen() {
   const [draft,     setDraft]     = useState<Profile | null>(null);
   const [busy,      setBusy]      = useState<BusyKind>("load");
   const [error,     setError]     = useState<string | null>(null);
+  const [settings,  setSettings]  = useState<UserSettings>(DEFAULT_SETTINGS);
   const [activeTab, setActiveTab] = useState<Tab>("settings");
   const [selectedStickerIdx, setSelectedStickerIdx] = useState<number | null>(null);
   const [savedRecently,      setSavedRecently]      = useState(false);
   const [editingFieldId,     setEditingFieldId]     = useState<string | null>(null);
   const [editingLinkId,      setEditingLinkId]      = useState<string | null>(null);
+  const [giftToHandle,       setGiftToHandle]       = useState("");
+  const [giftStickerSrc,     setGiftStickerSrc]     = useState("");
+  const [giftBusy,           setGiftBusy]           = useState(false);
+  const [giftNotice,         setGiftNotice]         = useState<string | null>(null);
+  const [giftInbox,          setGiftInbox]          = useState<StickerGiftInboxItem[]>([]);
+  const [giftInboxBusy,      setGiftInboxBusy]      = useState(false);
 
   const paperRef      = useRef<HTMLDivElement>(null);
   const dragState     = useRef<{ idx: number } | null>(null);
@@ -126,8 +165,16 @@ export default function EditorScreen() {
   const load = useCallback(async () => {
     setBusy("load");
     setError(null);
-    const res = await profilesApi.list();
+    const [res, settingsRes] = await Promise.all([
+      profilesApi.list(),
+      settingsApi.get(),
+    ]);
     setBusy(null);
+
+    if (settingsRes.ok) {
+      setSettings(settingsRes.data);
+    }
+
     if (!res.ok) { setError(res.error); return; }
     setProfiles(res.data);
     setActiveId((cur) => {
@@ -141,6 +188,25 @@ export default function EditorScreen() {
   useEffect(() => {
     if (session.status === "user") void load();
   }, [load, session.status]);
+
+  const loadGiftInbox = useCallback(async () => {
+    setGiftInboxBusy(true);
+    const res = await stickerGiftsApi.inbox();
+    setGiftInboxBusy(false);
+    if (!res.ok) {
+      setGiftNotice(res.error);
+      return;
+    }
+    setGiftInbox(res.data);
+  }, []);
+
+  useEffect(() => {
+    if (session.status !== "user") {
+      setGiftInbox([]);
+      return;
+    }
+    void loadGiftInbox();
+  }, [loadGiftInbox, session.status]);
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
@@ -176,6 +242,11 @@ export default function EditorScreen() {
   }
 
   async function handleCreate() {
+    if (profiles.length >= planLimits.patterns) {
+      showLimitError("patterns");
+      return;
+    }
+
     const next: Profile = {
       id: crypto.randomUUID(), publicSlug: null, handle: null, isPublic: false,
       patternName: "新しいパターン", audience: "", description: "",
@@ -213,6 +284,10 @@ export default function EditorScreen() {
   }
   function addFieldToGroup(groupId: string) {
     if (!draft) return;
+    if (draft.fields.length >= planLimits.fieldsPerPattern) {
+      showLimitError("fields");
+      return;
+    }
     const nf: Field = { id: crypto.randomUUID(), groupId, label: "", value: "", visible: true };
     const next = { ...draft, fields: [...draft.fields, nf] };
     setDraft(next); setEditingFieldId(nf.id); scheduleAutoSave(next);
@@ -247,12 +322,95 @@ export default function EditorScreen() {
 
   // ── Sticker ops ───────────────────────────────────────────────────────────
 
-  function handleAddSticker(file: string) {
+  function handleAddSticker(stickerId: string) {
     if (!draft) return;
-    const item = { id: crypto.randomUUID(), stickerId: file, x: 50, y: 50, scale: 1 };
+    const item = { id: crypto.randomUUID(), stickerId, x: 50, y: 50, scale: 1 };
     const next = { ...draft, stickers: [...draft.stickers, item] };
     setSelectedStickerIdx(next.stickers.length - 1);
     applyAndSave(next);
+  }
+  async function handleCustomStickerUpload(file: File) {
+    if (!planLimits.customStickerUpload) {
+      setError(t("Pro plan required for custom sticker upload.", "Pro plan required for custom sticker upload."));
+      return;
+    }
+    try {
+      const assetSrc = await readFileAsDataUrl(file);
+      const nextCustomStickers: CustomSticker[] = [
+        { id: crypto.randomUUID(), label: fileToLabel(file.name || "custom"), assetSrc },
+        ...customStickers,
+      ];
+      const nextSettings: UserSettings = {
+        ...settings,
+        customStickers: nextCustomStickers,
+      };
+      const res = await settingsApi.update(nextSettings);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setSettings(nextSettings);
+      setError(null);
+    } catch {
+      setError(t("Failed to load the sticker image.", "Failed to load the sticker image."));
+    }
+  }
+  async function handleSendStickerGift() {
+    const toHandle = giftToHandle.trim().replace(/^@+/, "");
+    if (!toHandle) {
+      setGiftNotice(t("受け取り相手のhandleを入力してください。", "Please enter recipient handle."));
+      return;
+    }
+    const selected = customStickers.find((sticker) => sticker.assetSrc === giftStickerSrc);
+    if (!selected) {
+      setGiftNotice(t("贈るシールを選んでください。", "Please select a sticker to gift."));
+      return;
+    }
+
+    setGiftBusy(true);
+    const res = await stickerGiftsApi.send(toHandle, {
+      label: selected.label,
+      assetSrc: selected.assetSrc,
+    });
+    setGiftBusy(false);
+
+    if (!res.ok) {
+      setGiftNotice(res.error);
+      return;
+    }
+
+    setGiftToHandle("");
+    setGiftStickerSrc("");
+    setGiftNotice(t("シールを贈りました。", "Sticker gift sent."));
+  }
+  async function handleAcceptStickerGift(id: string) {
+    setGiftBusy(true);
+    const res = await stickerGiftsApi.accept(id);
+    setGiftBusy(false);
+    if (!res.ok) {
+      setGiftNotice(res.error);
+      return;
+    }
+
+    const settingsRes = await settingsApi.get();
+    if (settingsRes.ok) setSettings(settingsRes.data);
+    await loadGiftInbox();
+    setGiftNotice(
+      res.data.added
+        ? t("受け取りました。シール一覧に追加されました。", "Accepted. Added to your sticker list.")
+        : t("受け取りました（すでに同じシールを所持しています）。", "Accepted (you already had this sticker).")
+    );
+  }
+  async function handleRejectStickerGift(id: string) {
+    setGiftBusy(true);
+    const res = await stickerGiftsApi.reject(id);
+    setGiftBusy(false);
+    if (!res.ok) {
+      setGiftNotice(res.error);
+      return;
+    }
+    await loadGiftInbox();
+    setGiftNotice(t("ギフトを辞退しました。", "Gift rejected."));
   }
   function handleDeleteSticker(idx: number) {
     if (!draft) return;
@@ -336,24 +494,200 @@ export default function EditorScreen() {
   const allGroups  = [...new Set([...GROUP_ORDER, ...Object.keys(fieldsByGroup)])]
     .filter((g) => (fieldsByGroup[g]?.length ?? 0) > 0);
   const hiddenGroups = GROUP_ORDER.filter((g) => !fieldsByGroup[g]?.length);
+  const planLimits = PLAN_LIMITS[settings.plan];
+  const customStickers: CustomSticker[] = (Array.isArray(settings.customStickers) ? settings.customStickers : [])
+    .map((entry): CustomSticker | null => {
+      if (!entry || typeof entry !== "object") return null;
+      const value = entry as { id?: unknown; label?: unknown; assetSrc?: unknown };
+      if (typeof value.assetSrc !== "string" || value.assetSrc.length === 0) return null;
+      return {
+        id:
+          typeof value.id === "string" && value.id.length > 0
+            ? value.id
+            : value.assetSrc.slice(0, 80),
+        label: typeof value.label === "string" && value.label.length > 0 ? value.label : "Custom",
+        assetSrc: value.assetSrc,
+      };
+    })
+    .filter((entry): entry is CustomSticker => entry !== null);
+
+  function showLimitError(kind: "patterns" | "fields") {
+    if (kind === "patterns") {
+      setError(
+        t(
+          `パターン上限（${planLimits.patterns}件）に達しました。`,
+          `Pattern limit reached (${planLimits.patterns}).`
+        )
+      );
+      return;
+    }
+    setError(
+      t(
+        `項目上限（${planLimits.fieldsPerPattern}件）に達しました。`,
+        `Field limit reached (${planLimits.fieldsPerPattern}).`
+      )
+    );
+  }
 
   // ── Panel: シール ─────────────────────────────────────────────────────────
 
   function renderStickerPanel() {
+    const stickerChoices = [
+      ...customStickers.map((sticker) => ({
+        id: sticker.assetSrc,
+        label: sticker.label,
+        src: sticker.assetSrc,
+        source: "custom" as const,
+      })),
+      ...STAMP_FILES.map((file) => ({
+        id: file,
+        label: fileToLabel(file),
+        src: `/stamp/${file}`,
+        source: "preset" as const,
+      })),
+    ];
+
     return (
       <div className="stack" style={{ gap: "10px" }}>
         <p className="muted small" style={{ margin: 0 }}>{t("タップしてカードに貼る", "Tap to add to card")}</p>
-        <div className="sticker-grid">
-          {STAMP_FILES.map((file) => (
+        <div className="sticker-upload-box">
+          <strong>{t("Custom sticker", "Custom sticker")}</strong>
+          {planLimits.customStickerUpload ? (
+            <label className="file-button">
+              <span>{t("Upload image", "Upload image")}</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleCustomStickerUpload(file);
+                  e.currentTarget.value = "";
+                }}
+              />
+            </label>
+          ) : (
+            <p className="muted small" style={{ margin: 0 }}>
+              {t("Pro plan can upload custom sticker images.", "Pro plan can upload custom sticker images.")}
+            </p>
+          )}
+        </div>
+        <div className="sticker-upload-box">
+          <strong>{t("シールをあげる", "Gift sticker")}</strong>
+          {planLimits.customStickerUpload && customStickers.length > 0 ? (
+            <div className="stack" style={{ gap: "6px" }}>
+              <label style={{ display: "grid", gap: "4px" }}>
+                <span className="muted small">{t("贈るシール", "Sticker")}</span>
+                <select
+                  value={giftStickerSrc}
+                  onChange={(e) => setGiftStickerSrc(e.target.value)}
+                  disabled={giftBusy}
+                >
+                  <option value="">{t("選択してください", "Select sticker")}</option>
+                  {customStickers.map((sticker) => (
+                    <option key={sticker.id} value={sticker.assetSrc}>
+                      {sticker.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: "4px" }}>
+                <span className="muted small">{t("相手のhandle", "Recipient handle")}</span>
+                <input
+                  value={giftToHandle}
+                  placeholder="@handle"
+                  onChange={(e) => setGiftToHandle(e.target.value)}
+                  disabled={giftBusy}
+                />
+              </label>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => void handleSendStickerGift()}
+                disabled={giftBusy}
+              >
+                {giftBusy ? t("送信中...", "Sending...") : t("シールを送る", "Send sticker")}
+              </button>
+            </div>
+          ) : (
+            <p className="muted small" style={{ margin: 0 }}>
+              {t("カスタムシールを持っているProユーザーが利用できます。", "Available for pro users with custom stickers.")}
+            </p>
+          )}
+          {giftNotice && <p className="muted small" style={{ margin: 0 }}>{giftNotice}</p>}
+        </div>
+        <div className="sticker-upload-box">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" }}>
+            <strong>{t("受け取りBOX", "Inbox")}</strong>
             <button
-              key={file} type="button" className="sticker-choice"
-              onClick={() => { handleAddSticker(file); setActiveTab("stickers"); }}
-              title={fileToLabel(file)}
+              type="button"
+              className="button secondary"
+              style={{ minHeight: "auto", padding: "3px 8px", fontSize: "12px" }}
+              onClick={() => void loadGiftInbox()}
+              disabled={giftInboxBusy || giftBusy}
+            >
+              {t("更新", "Refresh")}
+            </button>
+          </div>
+          {giftInboxBusy ? (
+            <p className="muted small" style={{ margin: 0 }}>{t("読み込み中...", "Loading...")}</p>
+          ) : giftInbox.length === 0 ? (
+            <p className="muted small" style={{ margin: 0 }}>{t("受け取り待ちはありません。", "No pending gifts.")}</p>
+          ) : (
+            <div className="stack" style={{ gap: "6px" }}>
+              {giftInbox.map((gift) => (
+                <div key={gift.id} className="field-card" style={{ padding: "8px" }}>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={gift.stickerAssetSrc}
+                      alt={gift.stickerLabel}
+                      style={{ width: "36px", height: "36px", objectFit: "contain", flex: "0 0 auto" }}
+                    />
+                    <div style={{ minWidth: 0 }}>
+                      <strong style={{ fontSize: "12px", display: "block" }}>{gift.stickerLabel}</strong>
+                      <span className="muted small">
+                        {gift.senderHandle ? `@${gift.senderHandle}` : t("匿名", "Anonymous")}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      style={{ minHeight: "auto", padding: "3px 8px", fontSize: "12px" }}
+                      onClick={() => void handleAcceptStickerGift(gift.id)}
+                      disabled={giftBusy}
+                    >
+                      {t("受け取る", "Accept")}
+                    </button>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      style={{ minHeight: "auto", padding: "3px 8px", fontSize: "12px", color: "var(--pink)" }}
+                      onClick={() => void handleRejectStickerGift(gift.id)}
+                      disabled={giftBusy}
+                    >
+                      {t("辞退", "Reject")}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="sticker-grid">
+          {stickerChoices.map((sticker) => (
+            <button
+              key={`${sticker.source}:${sticker.id}`} type="button" className="sticker-choice"
+              onClick={() => { handleAddSticker(sticker.id); setActiveTab("stickers"); }}
+              title={sticker.label}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/stamp/${file}`} alt={fileToLabel(file)}
+              <img src={sticker.src} alt={sticker.label}
                 style={{ width: "56px", height: "56px", objectFit: "contain" }} />
-              <span className="muted small">{fileToLabel(file)}</span>
+              <span className="muted small">
+                {sticker.source === "custom" ? `${sticker.label} (custom)` : sticker.label}
+              </span>
             </button>
           ))}
         </div>
@@ -438,6 +772,15 @@ export default function EditorScreen() {
     if (!draft) return null;
     return (
       <div className="stack">
+        <div className="panel pad" style={{ gap: "4px", display: "grid" }}>
+          <strong style={{ fontSize: "13px" }}>{t("プラン", "Plan")}: {settings.plan}</strong>
+          <span className="muted small">
+            {t(
+              `パターン上限 ${planLimits.patterns} / 項目上限 ${planLimits.fieldsPerPattern}`,
+              `Pattern limit ${planLimits.patterns} / Field limit ${planLimits.fieldsPerPattern}`
+            )}
+          </span>
+        </div>
         {/* 基本 */}
         <div className="stack" style={{ gap: "8px" }}>
           <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
@@ -688,7 +1031,7 @@ export default function EditorScreen() {
                         </div>
                       )}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`/stamp/${s.stickerId}`} alt=""
+                      <img src={resolveStickerSrc(s.stickerId)} alt=""
                         style={{ width: "100%", display: "block", pointerEvents: "none" }} />
                     </div>
                   );

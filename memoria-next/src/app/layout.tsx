@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Memoria",
-  description: "プロフ帳アプリ",
+  description: "Your book of people",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

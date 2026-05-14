@@ -8,7 +8,7 @@ import { useLang } from "@/store/language";
 export default function TopBar() {
   const pathname = usePathname();
   const { session } = useSession();
-  const { lang, toggle, t } = useLang();
+  const { lang, setLanguage, t } = useLang();
 
   const isLoggedIn = session.status === "user";
 
@@ -51,14 +51,14 @@ export default function TopBar() {
           <button
             type="button"
             className={`lang-btn${lang === "ja" ? " active" : ""}`}
-            onClick={() => { if (lang !== "ja") toggle(); }}
+            onClick={() => { if (lang !== "ja") setLanguage("ja"); }}
           >
             JA
           </button>
           <button
             type="button"
             className={`lang-btn${lang === "en" ? " active" : ""}`}
-            onClick={() => { if (lang !== "en") toggle(); }}
+            onClick={() => { if (lang !== "en") setLanguage("en"); }}
           >
             EN
           </button>

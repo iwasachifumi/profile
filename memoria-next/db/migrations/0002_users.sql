@@ -24,9 +24,12 @@ CREATE TRIGGER users_updated_at
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'memoria_app') THEN
-    CREATE ROLE memoria_app WITH LOGIN PASSWORD 'MEMORIA_APP_ROLE_PW';
+    CREATE ROLE memoria_app NOLOGIN;
   END IF;
 END $$;
+
+-- If this project needs direct DB login with memoria_app, run explicitly:
+-- ALTER ROLE memoria_app WITH LOGIN PASSWORD '<strong_password>';
 
 GRANT USAGE ON SCHEMA memoria TO memoria_app;
 GRANT ALL ON ALL TABLES    IN SCHEMA memoria TO memoria_app;

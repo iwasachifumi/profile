@@ -12,6 +12,10 @@ interface PreviewScreenProps {
   id: string;
 }
 
+function resolveStickerSrc(stickerId: string) {
+  return stickerId.startsWith("data:") ? stickerId : `/stamp/${stickerId}`;
+}
+
 export default function PreviewScreen({ id }: PreviewScreenProps) {
   const { session } = useSession();
   const { t } = useLang();
@@ -74,7 +78,7 @@ export default function PreviewScreen({ id }: PreviewScreenProps) {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={`/stamp/${s.stickerId}`}
+                    src={resolveStickerSrc(s.stickerId)}
                     alt=""
                     style={{ width: "100%", display: "block" }}
                   />
