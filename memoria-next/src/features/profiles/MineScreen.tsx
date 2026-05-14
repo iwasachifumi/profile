@@ -64,6 +64,10 @@ function createDefaultLink(): ProfileLink {
   };
 }
 
+function makeField(groupId: string, label: string, value: string): Field {
+  return { id: crypto.randomUUID(), groupId, label, value, visible: true };
+}
+
 function createProfileDraft(): Profile {
   return {
     id: crypto.randomUUID(),
@@ -75,7 +79,21 @@ function createProfileDraft(): Profile {
     description: "",
     themeId: "default",
     frameId: "none",
-    fields: [],
+    fields: [
+      makeField("basic",        "名前",               "まだ名前なし"),
+      makeField("basic",        "ニックネーム",        "まだない"),
+      makeField("basic",        "呼ばれたい名前",      "好きに呼んで"),
+      makeField("basic",        "出身地",              "地球！"),
+      makeField("conversation", "家族構成",            "親はいる"),
+      makeField("whatif",       "自分を動物に例えると", "二足歩行のいきもの！"),
+      makeField("life",         "落ち着く場所",        "ベッドの中"),
+      makeField("life",         "ついやってしまうこと", "ネット"),
+      makeField("values",       "尊敬する人",          "エジソン"),
+      makeField("favorite",     "最近ハマってること",   "推し活"),
+      makeField("favorite",     "昔ハマってたこと",    "つかまり立ち"),
+      makeField("favorite",     "推し",                "秘密！"),
+      makeField("free",         "自由記入欄",          "とりあえず、いろいろ書いてみよう！"),
+    ],
     links: [],
     stickers: [],
   };
