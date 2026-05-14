@@ -12,9 +12,11 @@ interface GoogleTokenResponse {
 }
 
 interface GoogleUserInfo {
-  sub: string;       // Google の一意 ID
+  sub: string;          // Google の一意 ID（v2 では "id" だが両方拾う）
+  id?: string;          // v2 API では sub の代わりに id が来ることがある
   email: string;
-  email_verified: boolean;
+  verified_email?: boolean;   // v2 API のフィールド名
+  email_verified?: boolean;   // OpenID Connect のフィールド名（念のため両方）
   name: string;
   picture?: string;
 }
@@ -75,12 +77,16 @@ export async function GET(request: NextRequest) {
 
     const userInfo = (await userInfoRes.json()) as GoogleUserInfo;
 
-    if (!userInfo.email || !userInfo.email_verified) {
+    const emailVerified = userInfo.verified_email ?? userInfo.email_verified ?? false;
+    if (!userInfo.email || !emailVerified) {
       return NextResponse.redirect(`${origin}/?google_error=email_not_verified`);
     }
 
+    // v2 API は "id"、OpenID Connect は "sub" でユーザーIDが返る
+    const googleId = userInfo.sub ?? userInfo.id ?? userInfo.email;
+
     // ── 3. DB に find-or-create ───────────────────────────────────────────────
-    const user = await findOrCreateGoogleUser(userInfo.email, userInfo.sub);
+    const user = await findOrCreateGoogleUser(userInfo.email, googleId);
 
     // ── 4. セッション Cookie を発行してリダイレクト ──────────────────────────
     const sessionToken = await createSessionToken(user.id, user.email, false);
