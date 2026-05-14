@@ -126,8 +126,8 @@ export default function MineScreen() {
   const [busy, setBusy] = useState<BusyKind>("load");
   const [error, setError] = useState<string | null>(null);
 
-  // フィールド / リンクのインライン編集 UI
-  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+  // ラベル名のインライン編集（クリックで切り替え）
+  const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   // 基本情報（patternName / audience）の編集
   const [editingBasic, setEditingBasic] = useState(false);
@@ -169,7 +169,7 @@ export default function MineScreen() {
   function handleSelect(profile: Profile) {
     setSelectedId(profile.id);
     setDraft(cloneProfile(profile));
-    setEditingFieldId(null);
+    setEditingLabelId(null);
     setEditingLinkId(null);
     setEditingBasic(false);
   }
@@ -250,12 +250,12 @@ export default function MineScreen() {
     if (!draft) return;
     const newField = { ...createDefaultField(), groupId };
     const next = { ...draft, fields: [...draft.fields, newField] };
-    setDraft(next); setEditingFieldId(newField.id); scheduleAutoSave(next);
+    setDraft(next); setEditingLabelId(newField.id); scheduleAutoSave(next);
   }
   function removeField(id: string) {
     if (!draft) return;
     const next = { ...draft, fields: draft.fields.filter((f) => f.id !== id) };
-    setDraft(next); if (editingFieldId === id) setEditingFieldId(null); scheduleAutoSave(next);
+    setDraft(next); if (editingLabelId === id) setEditingLabelId(null); scheduleAutoSave(next);
   }
   function removeGroup(groupId: string) {
     if (!draft) return;
@@ -470,11 +470,11 @@ export default function MineScreen() {
                 const fields = fieldsByGroup[groupId] || [];
                 const [labelJa, labelEn] = GROUP_LABELS[groupId] ?? [groupId, groupId];
                 return (
-                  <details key={groupId} className="field-group" open={fields.length > 0 || activeGroups.includes(groupId)}>
+                  <details key={groupId} className="field-group" open={fields.length > 0}>
                     <summary>
                       <span>
                         {t(labelJa, labelEn)}{" "}
-                        <span className="muted small">{t(`${fields.length}件`, `${fields.length} items`)}</span>
+                        <span className="muted small">{fields.length}{t("件", "")}</span>
                       </span>
                       <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
                         <button
@@ -498,64 +498,65 @@ export default function MineScreen() {
                         </button>
                       </span>
                     </summary>
+
                     <div className="field-list">
                       {fields.length === 0 ? (
-                        <p className="muted small" style={{ padding: "0 0 4px" }}>{t("（未設定）", "(empty)")}</p>
+                        <p className="muted small" style={{ padding: "4px 0" }}>{t("（項目なし）", "(empty)")}</p>
                       ) : (
                         fields.map((field) => (
-                          <div key={field.id} className="field-card">
-                            <div className="field-card-head">
-                              <strong>{field.label || t("ラベル未設定", "No label")}</strong>
-                              <button
-                                type="button"
-                                className="icon-button more-button"
-                                onClick={() => setEditingFieldId(editingFieldId === field.id ? null : field.id)}
-                                aria-label={t("編集", "Edit")}
-                                title={t("編集", "Edit")}
-                              >
-                                &#9998;
-                              </button>
+                          <div key={field.id} className={`field-row${field.visible ? "" : " field-row--hidden"}`}>
+                            {/* ラベル行: テキスト表示 / タップで編集 + 👁 + × */}
+                            <div className="field-row-head">
+                              {editingLabelId === field.id ? (
+                                <input
+                                  className="field-label-input"
+                                  value={field.label}
+                                  onChange={(e) => updateField(field.id, { label: e.target.value })}
+                                  onBlur={() => setEditingLabelId(null)}
+                                  onKeyDown={(e) => { if (e.key === "Enter") setEditingLabelId(null); }}
+                                  autoFocus
+                                  placeholder={t("ラベル名", "Label")}
+                                />
+                              ) : (
+                                <span
+                                  className="field-label-text"
+                                  onClick={() => setEditingLabelId(field.id)}
+                                  title={t("タップでラベル名を編集", "Tap to edit label")}
+                                >
+                                  {field.label || <em className="muted">{t("ラベル未設定", "No label")}</em>}
+                                </span>
+                              )}
+                              <span className="field-row-icons">
+                                <button
+                                  type="button"
+                                  className={`field-icon-btn${field.visible ? "" : " field-icon-btn--off"}`}
+                                  onClick={() => updateField(field.id, { visible: !field.visible })}
+                                  title={field.visible ? t("非表示にする", "Hide") : t("表示にする", "Show")}
+                                  aria-label={field.visible ? t("非表示", "Hide") : t("表示", "Show")}
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="field-icon-btn field-icon-btn--delete"
+                                  onClick={() => removeField(field.id)}
+                                  title={t("削除", "Delete")}
+                                  aria-label={t("削除", "Delete")}
+                                >
+                                  ×
+                                </button>
+                              </span>
                             </div>
-
-                            {editingFieldId === field.id ? (
-                              <div className="stack" style={{ gap: "8px" }}>
-                                <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-                                  {t("ラベル", "Label")}
-                                  <input
-                                    value={field.label}
-                                    onChange={(e) => updateField(field.id, { label: e.target.value })}
-                                    autoFocus
-                                  />
-                                </label>
-                                <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-                                  {t("内容", "Value")}
-                                  <input
-                                    value={field.value}
-                                    onChange={(e) => updateField(field.id, { value: e.target.value })}
-                                  />
-                                </label>
-                                <div className="row" style={{ gap: "8px" }}>
-                                  <label className="checkline" style={{ fontSize: "12px" }}>
-                                    <input
-                                      type="checkbox"
-                                      checked={field.visible}
-                                      style={{ width: "auto" }}
-                                      onChange={(e) => updateField(field.id, { visible: e.target.checked })}
-                                    />
-                                    {t("公開", "Visible")}
-                                  </label>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeField(field.id)}
-                                    style={{ background: "none", border: "none", color: "var(--pink)", fontSize: "12px", cursor: "pointer", padding: "2px 4px", minHeight: "auto" }}
-                                  >
-                                    {t("削除", "Remove")}
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <p>{field.value || <span className="muted">{t("（未設定）", "(unset)")}</span>}</p>
-                            )}
+                            {/* 値: 常に入力フォーム */}
+                            <input
+                              className="field-value-input"
+                              value={field.value}
+                              onChange={(e) => updateField(field.id, { value: e.target.value })}
+                              placeholder={t("（未設定）", "(unset)")}
+                            />
                           </div>
                         ))
                       )}
