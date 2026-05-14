@@ -1,9 +1,11 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { publicApi } from "@/api/public";
+import { exchangesApi } from "@/api/exchanges";
+import { useSession } from "@/store/session";
 import type { Profile } from "@/types";
 
 interface PublicProfileScreenProps {
@@ -11,148 +13,215 @@ interface PublicProfileScreenProps {
   handle?: string;
 }
 
+const LINK_ICONS: Record<string, string> = {
+  x:         "𝕏",
+  instagram: "📷",
+  github:    "🐙",
+  linkedin:  "💼",
+  website:   "🔗",
+  other:     "🔗",
+};
+
 export default function PublicProfileScreen({ slug, handle }: PublicProfileScreenProps) {
   const hasIdentifier = Boolean(slug || handle);
+  const { session } = useSession();
+  const router = useRouter();
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(hasIdentifier);
   const [error, setError] = useState<string | null>(
-    hasIdentifier ? null : "Public profile identifier is missing."
+    hasIdentifier ? null : "プロフィールが見つかりません。"
   );
+  const [exchanged, setExchanged] = useState(false);
+  const [exchangeBusy, setExchangeBusy] = useState(false);
+  const [exchangeError, setExchangeError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hasIdentifier) return;
     let alive = true;
 
-    const request = slug ? publicApi.getBySlug(slug) : publicApi.getByHandle(handle ?? "");
+    const request = slug
+      ? publicApi.getBySlug(slug)
+      : publicApi.getByHandle(handle ?? "");
 
     request.then((result) => {
       if (!alive) return;
       setLoading(false);
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
+      if (!result.ok) { setError(result.error); return; }
       setProfile(result.data);
     });
 
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [handle, hasIdentifier, slug]);
+
+  // ── 交換する ──────────────────────────────────────────────────────────────
+
+  async function handleExchange() {
+    if (!profile) return;
+
+    if (session.status === "loading") return;
+
+    if (session.status === "guest") {
+      const returnPath = slug
+        ? `/profile/${slug}`
+        : `/profile/handle/${handle}`;
+      router.push(`/?return=${encodeURIComponent(returnPath)}`);
+      return;
+    }
+
+    setExchangeBusy(true);
+    setExchangeError(null);
+
+    const result = await exchangesApi.create({
+      id: crypto.randomUUID(),
+      targetProfileId: profile.id,
+      method: "qr",
+      eventName: null,
+      exchangedAt: new Date().toISOString(),
+      snapshot: {
+        patternName: profile.patternName,
+        audience: profile.audience,
+        description: profile.description,
+        handle: profile.handle,
+        slug: profile.publicSlug,
+      },
+      privateNote: "",
+      tags: [],
+    });
+
+    setExchangeBusy(false);
+    if (!result.ok) { setExchangeError(result.error); return; }
+    setExchanged(true);
+  }
+
+  // ── ローディング / エラー ─────────────────────────────────────────────────
 
   if (loading) {
     return (
-      <main style={styles.page}>
-        <section style={styles.card}>
-          <p style={styles.muted}>Loading public profile...</p>
-        </section>
+      <main className="pub-page">
+        <div className="pub-card">
+          <p className="muted">読み込み中...</p>
+        </div>
       </main>
     );
   }
 
   if (error || !profile) {
     return (
-      <main style={styles.page}>
-        <section style={styles.card}>
-          <h1 style={styles.title}>Profile Not Found</h1>
-          <p style={styles.muted}>{error ?? "The profile is unavailable."}</p>
-          <Link href="/" style={styles.linkButton}>
-            Back
+      <main className="pub-page">
+        <div className="pub-card">
+          <h1 className="pub-name">プロフィールが見つかりません</h1>
+          <p className="muted">{error ?? "このプロフィールは存在しないか、非公開です。"}</p>
+          <Link href="/" className="button secondary" style={{ marginTop: "12px" }}>
+            トップに戻る
           </Link>
-        </section>
+        </div>
       </main>
     );
   }
 
-  return (
-    <main style={styles.page}>
-      <section style={styles.card}>
-        <h1 style={styles.title}>{profile.patternName}</h1>
-        <p style={styles.muted}>audience: {profile.audience || "-"}</p>
-        <p style={styles.text}>{profile.description || "-"}</p>
+  const visibleFields = profile.fields.filter((f) => f.visible && f.label && f.value);
+  const visibleLinks  = profile.links.filter((l) => l.visible && l.url);
 
-        <div style={styles.metaGrid}>
-          <div style={styles.metaItem}>
-            <strong>handle</strong>
-            <span>{profile.handle ?? "-"}</span>
+  return (
+    <main className="pub-page">
+      <div className="pub-card">
+
+        {/* ── ヘッダー ─────────────────────────────────────────────────── */}
+        <div className="pub-header">
+          <div className="pub-avatar">
+            <span>{(profile.patternName || "?")[0].toUpperCase()}</span>
           </div>
-          <div style={styles.metaItem}>
-            <strong>theme</strong>
-            <span>{profile.themeId}</span>
-          </div>
-          <div style={styles.metaItem}>
-            <strong>frame</strong>
-            <span>{profile.frameId}</span>
-          </div>
-          <div style={styles.metaItem}>
-            <strong>fields</strong>
-            <span>{profile.fields.length}</span>
+          <div className="pub-header-info">
+            <h1 className="pub-name">{profile.patternName}</h1>
+            {profile.audience && (
+              <span className="pub-audience">{profile.audience}</span>
+            )}
+            {profile.handle && (
+              <p className="pub-handle">@{profile.handle}</p>
+            )}
           </div>
         </div>
 
-        <Link href="/" style={styles.linkButton}>
-          Open App
-        </Link>
-      </section>
+        {/* ── 自己紹介 ─────────────────────────────────────────────────── */}
+        {profile.description && (
+          <p className="pub-description">{profile.description}</p>
+        )}
+
+        {/* ── フィールド ────────────────────────────────────────────────── */}
+        {visibleFields.length > 0 && (
+          <div className="pub-fields">
+            {visibleFields.map((field) => (
+              <div key={field.id} className="pub-field">
+                <span className="pub-field-label">{field.label}</span>
+                <span className="pub-field-value">{field.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── リンク ───────────────────────────────────────────────────── */}
+        {visibleLinks.length > 0 && (
+          <div className="pub-links">
+            {visibleLinks.map((link) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="pub-link"
+              >
+                <span className="pub-link-icon">{LINK_ICONS[link.type] ?? "🔗"}</span>
+                <span>{link.label || link.type}</span>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* ── 交換ボタン ────────────────────────────────────────────────── */}
+        <div className="pub-exchange-area">
+          {exchanged ? (
+            <div className="pub-exchange-done">
+              <p>✓ 交換帳に追加しました</p>
+              <Link href="/book" className="button secondary">
+                交換帳を見る
+              </Link>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="button lp-btn-main"
+                style={{ width: "100%" }}
+                onClick={() => void handleExchange()}
+                disabled={exchangeBusy || session.status === "loading"}
+              >
+                {exchangeBusy
+                  ? "追加中..."
+                  : session.status === "guest"
+                  ? "ログインして交換帳に追加"
+                  : "この人を交換帳に追加"}
+              </button>
+              {exchangeError && (
+                <p className="error-text" style={{ marginTop: "8px" }}>{exchangeError}</p>
+              )}
+              {session.status === "guest" && (
+                <p className="muted small" style={{ textAlign: "center", marginTop: "6px" }}>
+                  アカウント不要で閲覧できます。交換帳への追加はログインが必要です。
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ── フッター ─────────────────────────────────────────────────── */}
+        <div className="pub-footer">
+          <Link href="/" className="pub-footer-link">
+            Memoriaで自分のプロフ帳を作る →
+          </Link>
+        </div>
+
+      </div>
     </main>
   );
 }
-
-const styles: Record<string, CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    display: "grid",
-    placeItems: "center",
-    padding: "20px",
-    background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-  },
-  card: {
-    width: "100%",
-    maxWidth: "720px",
-    background: "#ffffff",
-    borderRadius: "12px",
-    border: "1px solid #cbd5e1",
-    padding: "24px",
-    display: "grid",
-    gap: "12px",
-  },
-  title: {
-    margin: 0,
-    fontSize: "30px",
-  },
-  text: {
-    margin: 0,
-    lineHeight: 1.6,
-    color: "#0f172a",
-  },
-  muted: {
-    margin: 0,
-    color: "#64748b",
-    fontSize: "14px",
-  },
-  metaGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: "10px",
-  },
-  metaItem: {
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    padding: "10px",
-    display: "grid",
-    gap: "4px",
-    fontSize: "14px",
-  },
-  linkButton: {
-    border: "1px solid #334155",
-    borderRadius: "8px",
-    background: "#ffffff",
-    color: "#0f172a",
-    padding: "8px 10px",
-    textDecoration: "none",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "fit-content",
-  },
-};

@@ -2935,3 +2935,228 @@ body:has(.lp-root) .topnav a.active {
     line-height: 1.8;
   }
 }
+
+/* ── QR モーダル ────────────────────────────────────────────────────────────── */
+
+.qr-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0 0 0 / 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 900;
+  padding: 20px;
+}
+
+.qr-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 24px 24px;
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  max-width: 340px;
+  width: 100%;
+  position: relative;
+}
+
+.qr-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 2px 6px;
+  min-height: auto;
+}
+
+.qr-modal-label {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+}
+
+.qr-modal-url {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+  word-break: break-all;
+  text-align: center;
+}
+
+/* ── 公開プロフィール ────────────────────────────────────────────────────────── */
+
+.pub-page {
+  min-height: 100svh;
+  display: grid;
+  place-items: start center;
+  padding: 40px 16px 60px;
+  background: linear-gradient(160deg, #f0f4ff 0%, #fdf6ee 100%);
+}
+
+.pub-card {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  padding: 28px 24px;
+  display: grid;
+  gap: 20px;
+  box-shadow: 0 4px 24px rgba(0 0 0 / 0.06);
+}
+
+.pub-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pub-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink, #f472b6), var(--blue, #60a5fa));
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.pub-header-info {
+  display: grid;
+  gap: 3px;
+}
+
+.pub-name {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.pub-audience {
+  font-size: 12px;
+  background: #f1f5f9;
+  color: #475569;
+  border-radius: 999px;
+  padding: 2px 10px;
+  display: inline-block;
+}
+
+.pub-handle {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.pub-description {
+  font-size: 15px;
+  line-height: 1.7;
+  margin: 0;
+  color: #1e293b;
+  white-space: pre-wrap;
+}
+
+.pub-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.pub-field {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.pub-field-label {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 60px;
+}
+
+.pub-field-value {
+  font-size: 14px;
+  color: #1e293b;
+  word-break: break-word;
+}
+
+.pub-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pub-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #1e293b;
+  text-decoration: none;
+  font-size: 13px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.pub-link:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.pub-link-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.pub-exchange-area {
+  margin-top: 4px;
+}
+
+.pub-exchange-done {
+  display: grid;
+  gap: 10px;
+  text-align: center;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 16px;
+  color: #166534;
+  font-weight: 600;
+}
+
+.pub-exchange-done p {
+  margin: 0;
+}
+
+.pub-footer {
+  text-align: center;
+  padding-top: 4px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.pub-footer-link {
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.pub-footer-link:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}

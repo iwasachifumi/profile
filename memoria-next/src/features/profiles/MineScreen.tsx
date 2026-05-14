@@ -6,6 +6,7 @@ import { profilesApi } from "@/api/profiles";
 import AuthScreen from "@/features/auth/AuthScreen";
 import { useSession } from "@/store/session";
 import { useLang } from "@/store/language";
+import QrModal from "@/features/qr/QrModal";
 import type { Field, Link as ProfileLink, Profile } from "@/types";
 
 // ── 定数 ─────────────────────────────────────────────────────────────────────
@@ -115,6 +116,8 @@ export default function MineScreen() {
   // 自動保存
   const [savedRecently, setSavedRecently] = useState(false);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // QRモーダル
+  const [showQr, setShowQr] = useState(false);
 
   // ── データ読み込み ──────────────────────────────────────────────────────────
 
@@ -678,6 +681,15 @@ export default function MineScreen() {
               <Link className="button secondary" href={`/preview/${draft.id}`}>
                 {t("プレビュー", "Preview")}
               </Link>
+              {draft.isPublic && draft.publicSlug ? (
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => setShowQr(true)}
+                >
+                  {t("QRコード", "QR code")}
+                </button>
+              ) : null}
               <Link className="button secondary" href="/design">
                 {t("デザイン", "Design")}
               </Link>
@@ -693,6 +705,15 @@ export default function MineScreen() {
           <p className="muted">{t("＋ボタンでパターンを追加してください。", "Click + to create your first pattern.")}</p>
         </div>
       ) : null}
+
+      {/* QRモーダル */}
+      {showQr && draft?.isPublic && draft.publicSlug && (
+        <QrModal
+          url={`${typeof window !== "undefined" ? window.location.origin : ""}/profile/${draft.publicSlug}`}
+          patternName={draft.patternName}
+          onClose={() => setShowQr(false)}
+        />
+      )}
     </main>
   );
 }
