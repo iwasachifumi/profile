@@ -1,5 +1,6 @@
-import DesignScreen from "@/features/design/DesignScreen";
+import { redirect } from "next/navigation";
 
+// /design は EditorScreen（/mine）のフレームタブに統合済み
 export default function DesignPage() {
-  return <DesignScreen />;
+  redirect("/mine");
 }

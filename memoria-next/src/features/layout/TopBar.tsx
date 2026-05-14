@@ -27,12 +27,6 @@ export default function TopBar() {
           <Link href="/mine" className={pathname === "/mine" ? "active" : ""}>
             {t("マイページ", "My page")}
           </Link>
-          <Link href="/design" className={pathname === "/design" ? "active" : ""}>
-            {t("デザイン", "Design")}
-          </Link>
-          <Link href="/stickers" className={pathname === "/stickers" ? "active" : ""}>
-            {t("シール", "Stickers")}
-          </Link>
           <Link href="/book" className={pathname === "/book" ? "active" : ""}>
             {t("人脈帳", "People")}
           </Link>

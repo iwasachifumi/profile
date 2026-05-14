@@ -1,5 +1,6 @@
-import StickersScreen from "@/features/stickers/StickersScreen";
+import { redirect } from "next/navigation";
 
+// /stickers は EditorScreen（/mine）のシールタブに統合済み
 export default function StickersPage() {
-  return <StickersScreen />;
+  redirect("/mine");
 }
