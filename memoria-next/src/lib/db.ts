@@ -95,6 +95,23 @@ export async function createGuestUser() {
   return rows[0];
 }
 
+// Google OAuth: email + google_id でユーザーを find-or-create する。
+// 同じ email が既に存在する場合は google_id を紐づけて返す。
+export async function findOrCreateGoogleUser(
+  email: string,
+  googleId: string
+): Promise<{ id: string; email: string }> {
+  const sql = getSql();
+  const rows = await sql`
+    INSERT INTO memoria.users (email, google_id, is_guest)
+    VALUES (${email}, ${googleId}, false)
+    ON CONFLICT (email) DO UPDATE
+      SET google_id = EXCLUDED.google_id
+    RETURNING id, email
+  `;
+  return rows[0] as { id: string; email: string };
+}
+
 export async function getProfilesByUser(userId: string): Promise<Profile[]> {
   const sql = getSql();
   const rows = await sql`
