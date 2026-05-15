@@ -343,6 +343,11 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
                 color:    item.color    ?? "#222222",
                 fontSize: item.fontSize ?? 16,
               }}>
+                {item.label && (
+                  <span style={{ opacity: 0.6, fontSize: "0.75em", marginRight: "0.3em" }}>
+                    {item.label}
+                  </span>
+                )}
                 {item.value}
               </p>
             ) : null)}
