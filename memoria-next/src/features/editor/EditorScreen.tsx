@@ -249,6 +249,7 @@ export default function EditorScreen() {
   const [qrStickerPickerPage,  setQrStickerPickerPage]  = useState(0);
   const [qrExporting,          setQrExporting]          = useState(false);
   const [qrExportError,        setQrExportError]        = useState<string | null>(null);
+  const [qrCopied,             setQrCopied]             = useState(false);
 
   const paperRef       = useRef<HTMLDivElement>(null);
   const dragState      = useRef<{ idx: number } | null>(null);
@@ -766,13 +767,30 @@ export default function EditorScreen() {
     scheduleQrConfigSave(qrTemplateFile, qrItems, qrCardStickers);
   }
 
+  async function generateQrPng(): Promise<string> {
+    if (!qrCardRef.current) throw new Error("no card ref");
+    setQrSelectedStickerIdx(null);
+    await new Promise((r) => setTimeout(r, 80));
+    return toPng(qrCardRef.current, { pixelRatio: 2, cacheBust: true });
+  }
+
+  async function uploadQrOgImage(dataUrl: string): Promise<void> {
+    if (!draft) return;
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      await fetch(`/api/og/${draft.id}`, {
+        method:  "POST",
+        body:    blob,
+        headers: { "Content-Type": "image/png" },
+      });
+    } catch { /* OG upload failure is non-critical */ }
+  }
+
   async function handleQrCardSave() {
-    if (!qrCardRef.current) return;
     setQrExporting(true); setQrExportError(null);
     try {
-      setQrSelectedStickerIdx(null);
-      await new Promise((r) => setTimeout(r, 80));
-      const dataUrl = await toPng(qrCardRef.current, { pixelRatio: 2, cacheBust: true });
+      const dataUrl = await generateQrPng();
+      void uploadQrOgImage(dataUrl);           // OG image を非同期でアップ
       const a = document.createElement("a");
       a.href = dataUrl;
       a.download = `memoria-card-${draft?.patternName ?? "card"}.png`;
@@ -782,12 +800,10 @@ export default function EditorScreen() {
   }
 
   async function handleQrCardShare() {
-    if (!qrCardRef.current) return;
     setQrExporting(true); setQrExportError(null);
     try {
-      setQrSelectedStickerIdx(null);
-      await new Promise((r) => setTimeout(r, 80));
-      const dataUrl = await toPng(qrCardRef.current, { pixelRatio: 2, cacheBust: true });
+      const dataUrl = await generateQrPng();
+      void uploadQrOgImage(dataUrl);           // OG image を非同期でアップ
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], `memoria-card-${draft?.patternName ?? "card"}.png`, { type: "image/png" });
       if (typeof navigator.share === "function" && navigator.canShare?.({ files: [file] })) {
@@ -802,6 +818,36 @@ export default function EditorScreen() {
       const msg = err instanceof Error ? err.message : "";
       if (!msg.includes("AbortError") && !msg.includes("cancel")) setQrExportError("シェアに失敗しました。");
     } finally { setQrExporting(false); }
+  }
+
+  async function handleQrXShare() {
+    if (!draft?.isPublic || !draft.publicSlug) return;
+    setQrExporting(true); setQrExportError(null);
+    try {
+      const dataUrl = await generateQrPng();
+      void uploadQrOgImage(dataUrl);
+      const profileUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}`;
+      const text = `${qrItems[0]?.value ?? draft.patternName}のプロフィール`;
+      window.open(
+        `https://twitter.com/intent/tweet?url=${encodeURIComponent(profileUrl)}&text=${encodeURIComponent(text)}`,
+        "_blank", "noopener,noreferrer"
+      );
+    } catch { setQrExportError("画像の生成に失敗しました。"); }
+    finally { setQrExporting(false); }
+  }
+
+  async function handleQrCopyUrl() {
+    if (!draft?.isPublic || !draft.publicSlug) return;
+    setQrExporting(true); setQrExportError(null);
+    try {
+      const dataUrl = await generateQrPng();
+      void uploadQrOgImage(dataUrl);
+      const profileUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}`;
+      await navigator.clipboard.writeText(profileUrl);
+      setQrCopied(true);
+      setTimeout(() => setQrCopied(false), 2500);
+    } catch { setQrExportError("コピーに失敗しました。"); }
+    finally { setQrExporting(false); }
   }
 
   // ── Guards ────────────────────────────────────────────────────────────────
@@ -1090,9 +1136,26 @@ export default function EditorScreen() {
           </div>
         </div>
 
-        {/* 保存・シェア */}
+        {/* 保存・シェア・X */}
         {qrExportError && <p className="error-text" style={{ margin: 0 }}>{qrExportError}</p>}
-        <div style={{ display: "flex", gap: "10px" }}>
+
+        {/* SNS シェア行 */}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button type="button" className="button secondary" style={{ flex: 1 }}
+            onClick={() => void handleQrXShare()}
+            disabled={qrExporting || !draft?.isPublic}
+            title={draft?.isPublic ? undefined : t("公開設定が必要です", "Make profile public first")}>
+            {qrExporting ? t("生成中…", "…") : "𝕏 でシェア"}
+          </button>
+          <button type="button" className="button secondary" style={{ flex: 1 }}
+            onClick={() => void handleQrCopyUrl()}
+            disabled={qrExporting || !draft?.isPublic}>
+            {qrCopied ? "✓ " + t("コピー済み", "Copied!") : "🔗 " + t("URLをコピー", "Copy URL")}
+          </button>
+        </div>
+
+        {/* PNG保存・端末シェア行 */}
+        <div style={{ display: "flex", gap: "8px" }}>
           <button type="button" className="button secondary" style={{ flex: 1 }}
             onClick={() => void handleQrCardSave()} disabled={qrExporting}>
             {qrExporting ? t("生成中…", "Generating…") : "💾 PNG保存"}
@@ -1102,8 +1165,14 @@ export default function EditorScreen() {
             {qrExporting ? t("生成中…", "Generating…") : "📤 シェア"}
           </button>
         </div>
+
+        {!draft?.isPublic && (
+          <p className="muted small" style={{ margin: 0, fontSize: "11px" }}>
+            ⚠️ {t("X/URLシェアには公開設定が必要です（「項目」タブから）", "Publish your profile to enable X share & URL copy")}
+          </p>
+        )}
         <p className="muted small" style={{ margin: 0, textAlign: "center", fontSize: "11px" }}>
-          {t("シールはドラッグで移動できます", "Drag stickers to reposition")}
+          {t("シェア・保存時にOG画像が自動生成されます", "OG image is auto-generated on share/save")}
         </p>
 
         {/* QRカード専用ページへ */}
