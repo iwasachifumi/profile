@@ -1941,12 +1941,28 @@ export default function EditorScreen() {
                 {/* プロフィール内容 */}
                 <div className="profile-content">
                   <header className="profile-head">
-                    <div className="avatar">
+                    {/* アバター：クリック／タップで画像アップロード */}
+                    <label className="avatar avatar-upload" title={t("タップして画像を変更", "Tap to change photo")}>
                       {draft.avatarSrc
                         ? <img src={draft.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} /> // eslint-disable-line @next/next/no-img-element
                         : <span>{initialOf(draft.patternName)}</span>
                       }
-                    </div>
+                      <span className="avatar-upload-overlay">
+                        <span>📷</span>
+                        <span>{t("タップして\n変更", "Tap to\nchange")}</span>
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void handleAvatarUpload(f);
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
                     <div>
                       <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
                         {draft.patternName}{draft.audience ? ` / ${draft.audience}` : ""}

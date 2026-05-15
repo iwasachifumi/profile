@@ -1188,6 +1188,40 @@ textarea {
   line-height: 1;
 }
 
+/* アバタークリックアップロード */
+.avatar-upload {
+  position: relative;
+  cursor: pointer;
+  display: grid;          /* .avatar と同じ layout */
+}
+.avatar-upload-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+  user-select: none;
+}
+.avatar-upload-overlay span:first-child { font-size: 20px; }
+.avatar-upload-overlay span:last-child  { font-size: 8px; line-height: 1.3; text-align: center; white-space: pre-line; }
+
+/* デスクトップ: ホバーで表示 */
+@media (hover: hover) {
+  .avatar-upload:hover .avatar-upload-overlay { opacity: 1; }
+}
+/* タッチデバイス: 常時うっすら表示 */
+@media (hover: none) {
+  .avatar-upload-overlay { opacity: 0.78; }
+}
+
 .profile-name {
   margin: 0;
   font-size: clamp(24px, 4vw, 36px);
