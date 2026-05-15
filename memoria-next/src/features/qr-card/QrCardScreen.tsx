@@ -339,8 +339,8 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
           <div className="qr-card-info">
             {items.map((item) => item.value ? (
               <p key={item.id} style={{
-                margin: "1px 0", lineHeight: 1.3, textShadow: "0 1px 2px rgba(0,0,0,.5)",
-                color:    item.color    ?? "#ffffff",
+                margin: "1px 0", lineHeight: 1.3,
+                color:    item.color    ?? "#222222",
                 fontSize: item.fontSize ?? 11,
               }}>
                 {item.value}
@@ -528,7 +528,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
                       文字色
                       <input
                         type="color"
-                        value={item.color ?? "#ffffff"}
+                        value={item.color ?? "#222222"}
                         style={{ width: "30px", height: "24px", padding: "1px", border: "1px solid var(--line)", borderRadius: "4px", cursor: "pointer" }}
                         onChange={(e) => applyItems(items.map((it) => it.id === item.id ? { ...it, color: e.target.value } : it))}
                       />

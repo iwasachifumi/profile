@@ -250,6 +250,7 @@ export default function EditorScreen() {
   const [qrExporting,          setQrExporting]          = useState(false);
   const [qrExportError,        setQrExportError]        = useState<string | null>(null);
   const [qrCopied,             setQrCopied]             = useState(false);
+  const [qrFormatOpenId,       setQrFormatOpenId]       = useState<string | null>(null);
 
   const paperRef       = useRef<HTMLDivElement>(null);
   const dragState      = useRef<{ idx: number } | null>(null);
@@ -991,8 +992,8 @@ export default function EditorScreen() {
             <div className="qr-card-info">
               {qrItems.map((item) => item.value ? (
                 <p key={item.id} style={{
-                  margin: "1px 0", lineHeight: 1.3, textShadow: "0 1px 2px rgba(0,0,0,.5)",
-                  color:    item.color    ?? "#ffffff",
+                  margin: "1px 0", lineHeight: 1.3,
+                  color:    item.color    ?? "#222222",
                   fontSize: item.fontSize ?? 11,
                 }}>
                   {item.value}
@@ -1086,53 +1087,93 @@ export default function EditorScreen() {
             <strong style={{ fontSize: "13px" }}>{t("テキスト内容", "Text items")}</strong>
             <button type="button" className="icon-button mini-button" onClick={handleAddQrItem}>＋</button>
           </div>
-          <div className="stack" style={{ gap: "8px" }}>
-            {qrItems.map((item) => (
-              <div key={item.id} className="qr-item-row">
-                {/* 行1: ラベル + 内容 + 削除ボタン */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "4px", alignItems: "center" }}>
-                  <input
-                    style={{ fontSize: "12px" }}
-                    placeholder={t("ラベル", "Label")}
-                    value={item.label}
-                    onChange={(e) => handleUpdateQrItem(item.id, { label: e.target.value })}
-                  />
-                  <input
-                    style={{ fontSize: "12px" }}
-                    placeholder={t("内容", "Value")}
-                    value={item.value}
-                    onChange={(e) => handleUpdateQrItem(item.id, { value: e.target.value })}
-                  />
-                  <button type="button" className="icon-button"
-                    style={{ color: "var(--pink)", flexShrink: 0, minHeight: "auto", padding: "2px 6px" }}
-                    onClick={() => handleDeleteQrItem(item.id)}>×</button>
-                </div>
-                {/* 行2: 文字色 + 文字サイズ */}
-                <div style={{ display: "flex", gap: "8px", alignItems: "center", paddingLeft: "2px" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "var(--muted)" }}>
-                    {t("色", "Color")}
+          {/* 書式ポップオーバー用バックドロップ */}
+          {qrFormatOpenId && (
+            <div
+              style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+              onClick={() => setQrFormatOpenId(null)}
+            />
+          )}
+
+          <div className="stack" style={{ gap: "6px" }}>
+            {qrItems.map((item) => {
+              const isFormatOpen = qrFormatOpenId === item.id;
+              const currentColor = item.color    ?? "#222222";
+              const currentSize  = item.fontSize ?? 11;
+              return (
+                <div key={item.id} className="qr-item-row" style={{ position: "relative" }}>
+                  {/* 1行: ラベル・内容・書式ボタン・削除ボタン */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto auto", gap: "4px", alignItems: "center" }}>
                     <input
-                      type="color"
-                      value={item.color ?? "#ffffff"}
-                      style={{ width: "28px", height: "22px", padding: "1px", border: "1px solid var(--line)", borderRadius: "4px", cursor: "pointer" }}
-                      onChange={(e) => handleUpdateQrItem(item.id, { color: e.target.value })}
+                      style={{ fontSize: "12px" }}
+                      placeholder={t("ラベル", "Label")}
+                      value={item.label}
+                      onChange={(e) => handleUpdateQrItem(item.id, { label: e.target.value })}
                     />
-                  </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "var(--muted)" }}>
-                    {t("サイズ", "Size")}
-                    <select
-                      value={item.fontSize ?? 11}
-                      style={{ fontSize: "11px", padding: "1px 2px" }}
-                      onChange={(e) => handleUpdateQrItem(item.id, { fontSize: Number(e.target.value) })}
+                    <input
+                      style={{ fontSize: "12px" }}
+                      placeholder={t("内容", "Value")}
+                      value={item.value}
+                      onChange={(e) => handleUpdateQrItem(item.id, { value: e.target.value })}
+                    />
+                    {/* 書式ボタン（色ドット + Aa） */}
+                    <button
+                      type="button"
+                      onClick={() => setQrFormatOpenId(isFormatOpen ? null : item.id)}
+                      title={t("書式設定", "Format")}
+                      style={{
+                        minHeight: "auto", padding: "2px 5px", fontSize: "11px", fontWeight: 700,
+                        border: "1px solid var(--line)", borderRadius: "4px", background: isFormatOpen ? "var(--paper-strong)" : "var(--panel)",
+                        cursor: "pointer", display: "flex", alignItems: "center", gap: "3px", position: "relative", zIndex: 9999,
+                      }}
                     >
-                      {[9, 10, 11, 12, 13, 14, 16, 18, 20].map((s) => (
-                        <option key={s} value={s}>{s}px</option>
-                      ))}
-                    </select>
-                  </label>
+                      <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: currentColor, border: "1px solid #ccc", flexShrink: 0 }} />
+                      <span style={{ color: "var(--ink)" }}>Aa</span>
+                    </button>
+                    <button type="button"
+                      style={{ minHeight: "auto", padding: "2px 6px", color: "var(--pink)", fontSize: "14px", background: "none", border: "none", cursor: "pointer" }}
+                      onClick={() => handleDeleteQrItem(item.id)}>×</button>
+                  </div>
+
+                  {/* 書式ポップオーバー */}
+                  {isFormatOpen && (
+                    <div style={{
+                      position: "absolute", bottom: "calc(100% + 4px)", right: 0,
+                      background: "var(--panel)", border: "1px solid var(--line)", borderRadius: "8px",
+                      padding: "10px 14px", boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+                      zIndex: 9999, display: "flex", gap: "14px", alignItems: "center", whiteSpace: "nowrap",
+                    }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "var(--muted)" }}>
+                        {t("文字色", "Color")}
+                        <input
+                          type="color"
+                          value={currentColor}
+                          style={{ width: "32px", height: "26px", padding: "1px", border: "1px solid var(--line)", borderRadius: "4px", cursor: "pointer" }}
+                          onChange={(e) => handleUpdateQrItem(item.id, { color: e.target.value })}
+                        />
+                      </label>
+                      <label style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "var(--muted)" }}>
+                        {t("サイズ", "Size")}
+                        <select
+                          value={currentSize}
+                          style={{ fontSize: "12px", padding: "2px 4px" }}
+                          onChange={(e) => handleUpdateQrItem(item.id, { fontSize: Number(e.target.value) })}
+                        >
+                          {[9, 10, 11, 12, 13, 14, 16, 18, 20].map((s) => (
+                            <option key={s} value={s}>{s}px</option>
+                          ))}
+                        </select>
+                      </label>
+                      {/* プレビュー */}
+                      <span style={{
+                        fontSize: currentSize, color: currentColor, fontWeight: 600,
+                        padding: "1px 6px", background: "#e8e0d8", borderRadius: "4px",
+                      }}>Aa</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
