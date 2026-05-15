@@ -338,7 +338,11 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
           </div>
           <div className="qr-card-info">
             {items.map((item) => item.value ? (
-              <p key={item.id} style={{ margin: "1px 0", fontSize: "11px", lineHeight: 1.3, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,.6)" }}>
+              <p key={item.id} style={{
+                margin: "1px 0", lineHeight: 1.3, textShadow: "0 1px 2px rgba(0,0,0,.5)",
+                color:    item.color    ?? "#ffffff",
+                fontSize: item.fontSize ?? 11,
+              }}>
                 {item.value}
               </p>
             ) : null)}
@@ -499,22 +503,49 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
           {infoOpen && (
             <div className="qr-card-info-fields">
               {items.map((item) => (
-                <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "4px", alignItems: "center" }}>
-                  <input
-                    style={{ fontSize: "12px" }}
-                    placeholder="ラベル"
-                    value={item.label}
-                    onChange={(e) => applyItems(items.map((it) => it.id === item.id ? { ...it, label: e.target.value } : it))}
-                  />
-                  <input
-                    style={{ fontSize: "12px" }}
-                    placeholder="内容"
-                    value={item.value}
-                    onChange={(e) => applyItems(items.map((it) => it.id === item.id ? { ...it, value: e.target.value } : it))}
-                  />
-                  <button type="button"
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--pink)", fontSize: "16px", padding: "0 4px" }}
-                    onClick={() => applyItems(items.filter((it) => it.id !== item.id))}>×</button>
+                <div key={item.id} style={{ display: "grid", gap: "4px", borderBottom: "1px solid var(--line)", paddingBottom: "8px" }}>
+                  {/* ラベル + 内容 + 削除 */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "4px", alignItems: "center" }}>
+                    <input
+                      style={{ fontSize: "12px" }}
+                      placeholder="ラベル"
+                      value={item.label}
+                      onChange={(e) => applyItems(items.map((it) => it.id === item.id ? { ...it, label: e.target.value } : it))}
+                    />
+                    <input
+                      style={{ fontSize: "12px" }}
+                      placeholder="内容"
+                      value={item.value}
+                      onChange={(e) => applyItems(items.map((it) => it.id === item.id ? { ...it, value: e.target.value } : it))}
+                    />
+                    <button type="button"
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--pink)", fontSize: "16px", padding: "0 4px" }}
+                      onClick={() => applyItems(items.filter((it) => it.id !== item.id))}>×</button>
+                  </div>
+                  {/* 文字色 + 文字サイズ */}
+                  <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", color: "var(--muted)" }}>
+                      文字色
+                      <input
+                        type="color"
+                        value={item.color ?? "#ffffff"}
+                        style={{ width: "30px", height: "24px", padding: "1px", border: "1px solid var(--line)", borderRadius: "4px", cursor: "pointer" }}
+                        onChange={(e) => applyItems(items.map((it) => it.id === item.id ? { ...it, color: e.target.value } : it))}
+                      />
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", color: "var(--muted)" }}>
+                      サイズ
+                      <select
+                        value={item.fontSize ?? 11}
+                        style={{ fontSize: "12px" }}
+                        onChange={(e) => applyItems(items.map((it) => it.id === item.id ? { ...it, fontSize: Number(e.target.value) } : it))}
+                      >
+                        {[9, 10, 11, 12, 13, 14, 16, 18, 20].map((s) => (
+                          <option key={s} value={s}>{s}px</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                 </div>
               ))}
             </div>

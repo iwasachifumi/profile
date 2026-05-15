@@ -1735,6 +1735,11 @@ textarea {
     max-height: calc(100svh - 58px - 66px); /* ビューポート - トップバー - フッタ */
   }
 
+  /* QRカードタブ: カード幅を広めに確保（480px card + 余白）*/
+  .editor-workspace[data-tab="qr"] .editor-card-area {
+    width: clamp(300px, 46%, 560px);
+  }
+
   /* シール・フレームタブ: カードへのWYSIWYG操作が必要なので両方表示（デフォルト） */
 
   /* プレビュータブ: カードのみ全画面・パネルは非表示 */
@@ -4076,4 +4081,14 @@ body:has(.lp-root) .topnav a.active {
   display: grid;
   gap: 8px;
   background: #fff;
+}
+
+/* QRカードパネル内のテキスト項目行 */
+.qr-item-row {
+  background: #faf8f5;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: grid;
+  gap: 5px;
 }

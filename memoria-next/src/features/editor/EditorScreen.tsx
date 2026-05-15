@@ -256,9 +256,11 @@ export default function EditorScreen() {
   const latestDraft    = useRef<Profile | null>(null);  // stale-closure guard for drag
   const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qrCardRef      = useRef<HTMLDivElement>(null);
+  const qrCardWrapRef  = useRef<HTMLDivElement>(null);
   const qrDragState    = useRef<{ idx: number } | null>(null);
   const qrAutoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initDraftIdRef  = useRef<string | null>(null);  // prevents re-init on same profile
+  const [qrCardScale,  setQrCardScale]  = useState(1);
 
   // keep latestDraft in sync
   useEffect(() => { latestDraft.current = draft; }, [draft]);
@@ -341,6 +343,18 @@ export default function EditorScreen() {
     }
     setQrSelectedStickerIdx(null);
   }, [activeId, profiles]);
+
+  // ── QRカードスケーリング（コンテナ幅に合わせてfit） ──────────────────────
+  useEffect(() => {
+    const el = qrCardWrapRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const available = entry.contentRect.width;
+      if (available > 0) setQrCardScale(Math.min(1, available / 480));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [activeTab]); // activeTab が "qr" になった瞬間に要素が出現するのでそのタイミングで再接続
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
@@ -896,11 +910,18 @@ export default function EditorScreen() {
       : "https://profile.ac7.co.jp";
     const avatarInitial = (qrItems[0]?.value || draft.patternName || "?")[0].toUpperCase();
     return (
-      <div style={{ overflowX: "auto" }}>
+      /* コンテナ: 実幅を ResizeObserver で計測してスケール係数を決定 */
+      <div ref={qrCardWrapRef} style={{ width: "100%", overflow: "hidden" }}>
+        {/* スケール用ラッパー: transform-origin top left で縮小するとcollapse対策に高さも明示 */}
+        <div style={{
+          width: 480 * qrCardScale,
+          height: 290 * qrCardScale,
+          position: "relative",
+        }}>
         <div
           ref={qrCardRef}
           className="qr-card-paper"
-          style={{ touchAction: "none" }}
+          style={{ touchAction: "none", transform: `scale(${qrCardScale})`, transformOrigin: "top left", position: "absolute" }}
           onPointerMove={onQrCardPointerMove}
           onPointerUp={onQrCardPointerUp}
           onClick={(e) => {
@@ -923,7 +944,11 @@ export default function EditorScreen() {
             </div>
             <div className="qr-card-info">
               {qrItems.map((item) => item.value ? (
-                <p key={item.id} style={{ margin: "1px 0", fontSize: "11px", lineHeight: 1.3, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,.6)" }}>
+                <p key={item.id} style={{
+                  margin: "1px 0", lineHeight: 1.3, textShadow: "0 1px 2px rgba(0,0,0,.5)",
+                  color:    item.color    ?? "#ffffff",
+                  fontSize: item.fontSize ?? 11,
+                }}>
                   {item.value}
                 </p>
               ) : null)}
@@ -967,6 +992,7 @@ export default function EditorScreen() {
             );
           })}
         </div>
+        </div> {/* /scale wrapper */}
       </div>
     );
   }
@@ -1014,24 +1040,51 @@ export default function EditorScreen() {
             <strong style={{ fontSize: "13px" }}>{t("テキスト内容", "Text items")}</strong>
             <button type="button" className="icon-button mini-button" onClick={handleAddQrItem}>＋</button>
           </div>
-          <div className="stack" style={{ gap: "6px" }}>
+          <div className="stack" style={{ gap: "8px" }}>
             {qrItems.map((item) => (
-              <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "4px", alignItems: "center" }}>
-                <input
-                  style={{ fontSize: "12px" }}
-                  placeholder={t("ラベル", "Label")}
-                  value={item.label}
-                  onChange={(e) => handleUpdateQrItem(item.id, { label: e.target.value })}
-                />
-                <input
-                  style={{ fontSize: "12px" }}
-                  placeholder={t("内容", "Value")}
-                  value={item.value}
-                  onChange={(e) => handleUpdateQrItem(item.id, { value: e.target.value })}
-                />
-                <button type="button" className="icon-button"
-                  style={{ color: "var(--pink)", flexShrink: 0, minHeight: "auto", padding: "2px 6px" }}
-                  onClick={() => handleDeleteQrItem(item.id)}>×</button>
+              <div key={item.id} className="qr-item-row">
+                {/* 行1: ラベル + 内容 + 削除ボタン */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "4px", alignItems: "center" }}>
+                  <input
+                    style={{ fontSize: "12px" }}
+                    placeholder={t("ラベル", "Label")}
+                    value={item.label}
+                    onChange={(e) => handleUpdateQrItem(item.id, { label: e.target.value })}
+                  />
+                  <input
+                    style={{ fontSize: "12px" }}
+                    placeholder={t("内容", "Value")}
+                    value={item.value}
+                    onChange={(e) => handleUpdateQrItem(item.id, { value: e.target.value })}
+                  />
+                  <button type="button" className="icon-button"
+                    style={{ color: "var(--pink)", flexShrink: 0, minHeight: "auto", padding: "2px 6px" }}
+                    onClick={() => handleDeleteQrItem(item.id)}>×</button>
+                </div>
+                {/* 行2: 文字色 + 文字サイズ */}
+                <div style={{ display: "flex", gap: "8px", alignItems: "center", paddingLeft: "2px" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "var(--muted)" }}>
+                    {t("色", "Color")}
+                    <input
+                      type="color"
+                      value={item.color ?? "#ffffff"}
+                      style={{ width: "28px", height: "22px", padding: "1px", border: "1px solid var(--line)", borderRadius: "4px", cursor: "pointer" }}
+                      onChange={(e) => handleUpdateQrItem(item.id, { color: e.target.value })}
+                    />
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "var(--muted)" }}>
+                    {t("サイズ", "Size")}
+                    <select
+                      value={item.fontSize ?? 11}
+                      style={{ fontSize: "11px", padding: "1px 2px" }}
+                      onChange={(e) => handleUpdateQrItem(item.id, { fontSize: Number(e.target.value) })}
+                    >
+                      {[9, 10, 11, 12, 13, 14, 16, 18, 20].map((s) => (
+                        <option key={s} value={s}>{s}px</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </div>
             ))}
           </div>

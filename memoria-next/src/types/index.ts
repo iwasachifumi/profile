@@ -9,9 +9,11 @@ export interface User {
 }
 
 export interface CardInfoItem {
-  id:    string;
-  label: string;
-  value: string;
+  id:       string;
+  label:    string;
+  value:    string;
+  color?:   string;   // CSS color string e.g. "#ffffff"
+  fontSize?: number;  // px e.g. 14
 }
 
 export interface CardConfig {
