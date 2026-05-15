@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { writeFile, mkdir, readFile } from "fs/promises";
+import { writeFile, mkdir, readFile, stat } from "fs/promises";
 import path from "path";
 import { getSession } from "@/lib/auth";
 import { unauthorized, serverError, ok } from "@/lib/response";
@@ -26,16 +26,25 @@ export async function POST(request: NextRequest, { params }: Params) {
   }
 }
 
-// GET /api/og/:profileId — PNG を配信（crawlerがアクセスする場合のフォールバック）
-export async function GET(_request: NextRequest, { params }: Params) {
+// GET /api/og/:profileId — PNG を配信（OGメタタグ・クローラー向け）
+export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { profileId } = await params;
     const filePath = path.join(OG_DIR, `${profileId}.png`);
-    const buffer = await readFile(filePath);
+    const [buffer, fileStat] = await Promise.all([readFile(filePath), stat(filePath)]);
+    const lastModified = fileStat.mtime.toUTCString();
+
+    // If-Modified-Since による条件リクエストに対応
+    const ifModifiedSince = request.headers.get("if-modified-since");
+    if (ifModifiedSince && new Date(ifModifiedSince) >= fileStat.mtime) {
+      return new Response(null, { status: 304 });
+    }
+
     return new Response(buffer, {
       headers: {
-        "Content-Type": "image/png",
-        "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+        "Content-Type":  "image/png",
+        "Cache-Control": "no-cache",   // 毎回サーバーで再検証（古い画像を返さない）
+        "Last-Modified": lastModified,
       },
     });
   } catch {

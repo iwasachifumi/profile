@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
 
   const title       = profile.description || profile.patternName || "Memoria";
   const description = `${title}のプロフィール - Memoria`;
-  const ogImageUrl  = `${BASE_URL}/og/${profile.id}.png`;
+  const ogImageUrl  = `${BASE_URL}/api/og/${profile.id}`;
 
   return {
     title,
