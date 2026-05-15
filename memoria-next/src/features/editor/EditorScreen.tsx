@@ -110,6 +110,33 @@ function resolveStickerSrc(stickerId: string) {
   return stickerId.startsWith("data:") ? stickerId : `/stamp/${stickerId}`;
 }
 
+/** 新規プロフィールのデフォルト構造（初回自動作成・手動追加で共用） */
+function buildDefaultProfile(name: string): Profile {
+  const mf = (groupId: string, label: string, value: string): Field =>
+    ({ id: crypto.randomUUID(), groupId, label, value, visible: true });
+  return {
+    id: crypto.randomUUID(), publicSlug: null, handle: null, isPublic: false,
+    patternName: name, audience: "", description: "",
+    themeId: "default", frameId: "none",
+    fields: [
+      mf("basic",        "名前",               "まだ名前なし"),
+      mf("basic",        "ニックネーム",        "まだない"),
+      mf("basic",        "呼ばれたい名前",      "好きに呼んで"),
+      mf("basic",        "出身地",              "地球！"),
+      mf("conversation", "家族構成",            "親はいる"),
+      mf("whatif",       "自分を動物に例えると", "二足歩行のいきもの！"),
+      mf("life",         "落ち着く場所",        "ベッドの中"),
+      mf("life",         "ついやってしまうこと", "ネット"),
+      mf("values",       "尊敬する人",          "エジソン"),
+      mf("favorite",     "最近ハマってること",   "推し活"),
+      mf("favorite",     "昔ハマってたこと",    "つかまり立ち"),
+      mf("favorite",     "推し",                "秘密！"),
+      mf("free",         "自由記入欄",          "とりあえず、いろいろ書いてみよう！"),
+    ],
+    links: [], stickers: [],
+  };
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type Tab = "preview" | "stickers" | "frame" | "friends" | "settings";
@@ -178,13 +205,25 @@ export default function EditorScreen() {
       profilesApi.list(),
       settingsApi.get(),
     ]);
-    setBusy(null);
 
-    if (settingsRes.ok) {
-      setSettings(settingsRes.data);
+    if (settingsRes.ok) setSettings(settingsRes.data);
+    if (!res.ok) { setBusy(null); setError(res.error); return; }
+
+    // ── 初回ログイン: プロフィールが 0 件なら自動作成 ─────────────────────
+    if (res.data.length === 0) {
+      const newProfile = buildDefaultProfile("プロフィール");
+      const createRes  = await profilesApi.create(newProfile);
+      setBusy(null);
+      if (!createRes.ok) { setError(createRes.error); return; }
+      setProfiles([newProfile]);
+      setActiveId(newProfile.id);
+      setDraft(cloneProfile(newProfile));
+      setActiveTab("settings");
+      setMetaOpen(true);
+      return;
     }
 
-    if (!res.ok) { setError(res.error); return; }
+    setBusy(null);
     setProfiles(res.data);
     setActiveId((cur) => {
       const nextId = cur ?? res.data[0]?.id ?? null;
@@ -255,30 +294,7 @@ export default function EditorScreen() {
       showLimitError("patterns");
       return;
     }
-
-    const mf = (groupId: string, label: string, value: string): Field =>
-      ({ id: crypto.randomUUID(), groupId, label, value, visible: true });
-    const next: Profile = {
-      id: crypto.randomUUID(), publicSlug: null, handle: null, isPublic: false,
-      patternName: name?.trim() || "新しいパターン", audience: "", description: "",
-      themeId: "default", frameId: "none",
-      fields: [
-        mf("basic",        "名前",               "まだ名前なし"),
-        mf("basic",        "ニックネーム",        "まだない"),
-        mf("basic",        "呼ばれたい名前",      "好きに呼んで"),
-        mf("basic",        "出身地",              "地球！"),
-        mf("conversation", "家族構成",            "親はいる"),
-        mf("whatif",       "自分を動物に例えると", "二足歩行のいきもの！"),
-        mf("life",         "落ち着く場所",        "ベッドの中"),
-        mf("life",         "ついやってしまうこと", "ネット"),
-        mf("values",       "尊敬する人",          "エジソン"),
-        mf("favorite",     "最近ハマってること",   "推し活"),
-        mf("favorite",     "昔ハマってたこと",    "つかまり立ち"),
-        mf("favorite",     "推し",                "秘密！"),
-        mf("free",         "自由記入欄",          "とりあえず、いろいろ書いてみよう！"),
-      ],
-      links: [], stickers: [],
-    };
+    const next = buildDefaultProfile(name?.trim() || "新しいパターン");
     setBusy("create");
     const res = await profilesApi.create(next);
     setBusy(null);
@@ -287,7 +303,7 @@ export default function EditorScreen() {
     setActiveId(next.id);
     setDraft(cloneProfile(next));
     setActiveTab("settings");
-    setMetaOpen(true);  // 新規作成直後はパターン基本情報を開いておく
+    setMetaOpen(true);
   }
 
   async function handleDeletePattern() {
