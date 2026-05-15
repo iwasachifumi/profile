@@ -1613,165 +1613,6 @@ export default function EditorScreen() {
     return (
       <div className="stack">
 
-        {/* ── パターン選択＆基本情報アコーディオン ──────────────────────── */}
-        <div className="pattern-meta-block">
-          {/* ヘッダー行: ▼パターン名 / 複数時はselectも / ＋ボタン */}
-          <div className="pattern-meta-header">
-            <button
-              type="button"
-              className="pattern-meta-toggle"
-              onClick={() => setMetaOpen(!metaOpen)}
-            >
-              <span className="pattern-meta-arrow">{metaOpen ? "▲" : "▼"}</span>
-              {profiles.length > 1 ? (
-                <select
-                  value={activeId ?? ""}
-                  onChange={(e) => { selectProfile(e.target.value); }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="pattern-meta-select"
-                >
-                  {profiles.map((p) => (
-                    <option key={p.id} value={p.id}>{p.patternName}</option>
-                  ))}
-                </select>
-              ) : (
-                <span className="pattern-meta-name">
-                  {t("パターン名", "Pattern")}：{draft.patternName}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              className="icon-button mini-button"
-              onClick={() => { setNewPatternName(""); setShowAddModal(true); }}
-              title={t("新しいパターンを追加", "Add new pattern")}
-              style={{ flexShrink: 0 }}
-            >
-              ＋
-            </button>
-          </div>
-
-          {/* アコーディオン本体 */}
-          {metaOpen && (
-            <div className="pattern-meta-body">
-              <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-                {t("パターン名", "Pattern name")}
-                <input value={draft.patternName}
-                  onChange={(e) => { const n = { ...draft, patternName: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
-              </label>
-              <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-                {t("対象", "Audience")}
-                <input value={draft.audience} placeholder={t("例：仕事、友人", "e.g. work, friends")}
-                  onChange={(e) => { const n = { ...draft, audience: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
-              </label>
-              <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-                {t("ひとこと", "Description")}
-                <input value={draft.description}
-                  onChange={(e) => { const n = { ...draft, description: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
-              </label>
-
-              {/* アバター画像アップロード */}
-              <div style={{ fontSize: "13px", color: "var(--muted)", display: "grid", gap: "6px" }}>
-                <span>{t("プロフィール画像", "Profile photo")}</span>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                  <div className="avatar" style={{ flexShrink: 0, width: "48px", height: "48px", fontSize: "18px" }}>
-                    {draft.avatarSrc
-                      // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={draft.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
-                      : <span>{initialOf(draft.patternName)}</span>
-                    }
-                  </div>
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                    <label className="file-button" style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto" }}>
-                      <span>{t("画像を選ぶ", "Choose photo")}</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) void handleAvatarUpload(f);
-                          e.currentTarget.value = "";
-                        }}
-                      />
-                    </label>
-                    {draft.avatarSrc && (
-                      <button
-                        type="button"
-                        className="button secondary"
-                        style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto", color: "var(--pink)" }}
-                        onClick={() => applyAndSave({ ...draft, avatarSrc: null })}
-                      >
-                        {t("削除", "Remove")}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <p className="muted small" style={{ margin: 0 }}>
-                  {t("最大512px・JPEGに変換して保存", "Resized to 512px max, saved as JPEG")}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 公開・QRコード */}
-        <div className="meta-block" style={{
-          background: "linear-gradient(135deg, #f0fff8 0%, #eaf4ff 100%)",
-          borderColor: "#9ecfba",
-        }}>
-          <p className="meta-block-title" style={{ color: "#2f7568" }}>
-            {t("公開・QRコード", "Public & QR")}
-          </p>
-          {draft.isPublic && draft.publicSlug ? (
-            <div className="stack" style={{ gap: "8px" }}>
-              <p className="muted small" style={{ margin: 0 }}>
-                {t("公開中", "Public")}:{" "}
-                <a
-                  href={`/profile/${draft.publicSlug}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: "var(--blue)", fontSize: "12px" }}
-                >
-                  /profile/{draft.publicSlug}
-                </a>
-              </p>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  type="button"
-                  className="button"
-                  onClick={() => setQrOpen(true)}
-                  style={{ flex: 1 }}
-                >
-                  📲 {t("QRコードを表示", "Show QR code")}
-                </button>
-                <button
-                  type="button"
-                  className="button secondary"
-                  onClick={() => handleTogglePublic(false)}
-                >
-                  {t("非公開にする", "Make private")}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="stack" style={{ gap: "6px" }}>
-              <p className="muted small" style={{ margin: 0 }}>
-                {t(
-                  "公開するとQRコードでプロフ交換ができます",
-                  "Go public to share your profile via QR code"
-                )}
-              </p>
-              <button
-                type="button"
-                className="button"
-                onClick={() => handleTogglePublic(true)}
-              >
-                🔓 {t("公開してQRコードを使う", "Make public & use QR")}
-              </button>
-            </div>
-          )}
-        </div>
-
         {/* フィールド */}
         <div>
           <h3 style={{ margin: "0 0 8px", fontSize: "14px" }}>{t("プロフィール項目", "Profile fields")}</h3>
@@ -1949,35 +1790,168 @@ export default function EditorScreen() {
     <div className="editor-root">
       {error && <p className="error-text" style={{ margin: "6px 14px 0" }}>{error}</p>}
 
-      {/* パターン選択バー */}
-      <div className="editor-pattern-bar">
-        {busy === "load" ? (
-          <span className="muted small">{t("読み込み中...", "Loading...")}</span>
-        ) : (
-          <>
-            {profiles.map((p) => (
-              <button key={p.id} type="button"
-                className={`profile-tab${p.id === activeId ? " active" : ""}`}
-                style={{ minWidth: "90px" }}
-                onClick={() => selectProfile(p.id)}>
-                <strong>{p.patternName}</strong>
-                <span>{p.audience || "—"}</span>
-              </button>
-            ))}
-            <button type="button" className="icon-button"
+      {/* パターン選択＆基本情報アコーディオン */}
+      {draft && (
+        <div className="pattern-meta-block">
+          <div className="pattern-meta-header">
+            <button
+              type="button"
+              className="pattern-meta-toggle"
+              onClick={() => setMetaOpen(!metaOpen)}
+            >
+              <span className="pattern-meta-arrow">{metaOpen ? "▲" : "▼"}</span>
+              {profiles.length > 1 ? (
+                <select
+                  value={activeId ?? ""}
+                  onChange={(e) => { selectProfile(e.target.value); }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="pattern-meta-select"
+                >
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>{p.patternName}</option>
+                  ))}
+                </select>
+              ) : (
+                <span className="pattern-meta-name">
+                  {t("パターン名", "Pattern")}：{draft.patternName}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              className="icon-button mini-button"
               onClick={() => { setNewPatternName(""); setShowAddModal(true); }}
               disabled={busy === "create"}
-              title={t("パターンを追加", "Add pattern")}>
-              +
+              title={t("新しいパターンを追加", "Add new pattern")}
+              style={{ flexShrink: 0 }}
+            >
+              ＋
             </button>
-            <span className="muted small" style={{ marginLeft: "auto", whiteSpace: "nowrap", fontSize: "11px" }}>
-              {busy === "save"
-                ? t("保存中…", "Saving…")
-                : savedRecently ? "✓ " + t("保存済み", "Saved") : ""}
-            </span>
-          </>
-        )}
-      </div>
+          </div>
+
+          {/* アコーディオン本体 */}
+          {metaOpen && (
+            <div className="pattern-meta-body">
+              <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
+                {t("パターン名", "Pattern name")}
+                <input value={draft.patternName}
+                  onChange={(e) => { const n = { ...draft, patternName: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
+              </label>
+              <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
+                {t("対象", "Audience")}
+                <input value={draft.audience} placeholder={t("例：仕事、友人", "e.g. work, friends")}
+                  onChange={(e) => { const n = { ...draft, audience: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
+              </label>
+              <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
+                {t("ひとこと", "Description")}
+                <input value={draft.description}
+                  onChange={(e) => { const n = { ...draft, description: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
+              </label>
+
+              {/* アバター画像アップロード */}
+              <div style={{ fontSize: "13px", color: "var(--muted)", display: "grid", gap: "6px" }}>
+                <span>{t("プロフィール画像", "Profile photo")}</span>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <div className="avatar" style={{ flexShrink: 0, width: "48px", height: "48px", fontSize: "18px" }}>
+                    {draft.avatarSrc
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={draft.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                      : <span>{initialOf(draft.patternName)}</span>
+                    }
+                  </div>
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    <label className="file-button" style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto" }}>
+                      <span>{t("画像を選ぶ", "Choose photo")}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void handleAvatarUpload(f);
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                    {draft.avatarSrc && (
+                      <button
+                        type="button"
+                        className="button secondary"
+                        style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto", color: "var(--pink)" }}
+                        onClick={() => applyAndSave({ ...draft, avatarSrc: null })}
+                      >
+                        {t("削除", "Remove")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="muted small" style={{ margin: 0 }}>
+                  {t("最大512px・JPEGに変換して保存", "Resized to 512px max, saved as JPEG")}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 公開・QRコード */}
+      {draft && (
+        <div className="meta-block" style={{
+          background: "linear-gradient(135deg, #f0fff8 0%, #eaf4ff 100%)",
+          borderColor: "#9ecfba",
+        }}>
+          <p className="meta-block-title" style={{ color: "#2f7568" }}>
+            {t("公開・QRコード", "Public & QR")}
+          </p>
+          {draft.isPublic && draft.publicSlug ? (
+            <div className="stack" style={{ gap: "8px" }}>
+              <p className="muted small" style={{ margin: 0 }}>
+                {t("公開中", "Public")}:{" "}
+                <a
+                  href={`/profile/${draft.publicSlug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "var(--blue)", fontSize: "12px" }}
+                >
+                  /profile/{draft.publicSlug}
+                </a>
+              </p>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => setQrOpen(true)}
+                  style={{ flex: 1 }}
+                >
+                  📲 {t("QRコードを表示", "Show QR code")}
+                </button>
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => handleTogglePublic(false)}
+                >
+                  {t("非公開にする", "Make private")}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="stack" style={{ gap: "6px" }}>
+              <p className="muted small" style={{ margin: 0 }}>
+                {t(
+                  "公開するとQRコードでプロフ交換ができます",
+                  "Go public to share your profile via QR code"
+                )}
+              </p>
+              <button
+                type="button"
+                className="button"
+                onClick={() => handleTogglePublic(true)}
+              >
+                🔓 {t("公開してQRコードを使う", "Make public & use QR")}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* メインワークスペース: data-tab をCSSで参照してカード/パネルの表示制御 */}
       <div className="editor-workspace" data-tab={activeTab}>

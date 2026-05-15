@@ -1487,17 +1487,6 @@ textarea {
   max-width: 100vw;
 }
 
-.editor-pattern-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(255, 250, 243, 0.95);
-  overflow-x: auto;
-  flex-shrink: 0;
-}
-
 .editor-workspace {
   flex: 1;
   display: flex;
@@ -1713,11 +1702,6 @@ textarea {
 }
 
 @media (max-width: 767px) {
-  /* パターンバーはモバイルでは非表示（アコーディオンで代替） */
-  .editor-pattern-bar {
-    display: none;
-  }
-
   /* デスクトップ用インラインタブは非表示（モバイルはフッタタブを使う） */
   .editor-panel-tabs {
     display: none;
