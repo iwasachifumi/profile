@@ -148,7 +148,7 @@ const TABS: { id: Tab; icon: string; labelJa: string; labelEn: string }[] = [
   { id: "stickers", icon: "🏷",  labelJa: "シール",     labelEn: "Stickers" },
   { id: "frame",    icon: "🖼",  labelJa: "フレーム",   labelEn: "Frame"    },
   { id: "friends",  icon: "👥",  labelJa: "友達",       labelEn: "Friends"  },
-  { id: "settings", icon: "⚙️", labelJa: "項目",       labelEn: "Fields"   },
+  { id: "settings", icon: "📝", labelJa: "項目",       labelEn: "Fields"   },
 ];
 // PCパネルタブ用（プレビュータブは不要：常にカードが見えているため）
 const DESKTOP_TABS = TABS.filter((t) => t.id !== "preview");
@@ -187,11 +187,17 @@ export default function EditorScreen() {
   const [metaOpen,           setMetaOpen]           = useState(false);
   const [showAddModal,       setShowAddModal]        = useState(false);
   const [newPatternName,     setNewPatternName]      = useState("");
+  const [frameConfirmOpen,   setFrameConfirmOpen]   = useState(false);
+  const [frameConfirmData,   setFrameConfirmData]   = useState<{ themeId: string; frameId: string } | null>(null);
+  const [stickerModalOpen,   setStickerModalOpen]   = useState(false);
+  const [stickerModalPage,   setStickerModalPage]   = useState(0);
+  const [stickerToast,       setStickerToast]       = useState(false);
 
   const paperRef      = useRef<HTMLDivElement>(null);
   const dragState     = useRef<{ idx: number } | null>(null);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestDraft   = useRef<Profile | null>(null);  // stale-closure guard for drag
+  const toastTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // keep latestDraft in sync
   useEffect(() => { latestDraft.current = draft; }, [draft]);
@@ -525,6 +531,36 @@ export default function EditorScreen() {
     if (!draft) return; applyAndSave({ ...draft, frameId });
   }
 
+  // フレーム確認モーダル：選択した瞬間はまだ保存せず、プレビューを見せてから確定
+  function handlePreviewTheme(themeId: string) {
+    if (!draft) return;
+    setFrameConfirmData({ themeId, frameId: draft.frameId ?? "none" });
+    setFrameConfirmOpen(true);
+  }
+  function handlePreviewFrame(frameId: string) {
+    if (!draft) return;
+    setFrameConfirmData({ themeId: draft.themeId ?? "default", frameId });
+    setFrameConfirmOpen(true);
+  }
+  function handleFrameConfirm() {
+    if (!draft || !frameConfirmData) return;
+    applyAndSave({ ...draft, themeId: frameConfirmData.themeId, frameId: frameConfirmData.frameId });
+    setFrameConfirmOpen(false);
+    setFrameConfirmData(null);
+  }
+  function handleFrameCancel() {
+    setFrameConfirmOpen(false);
+    setFrameConfirmData(null);
+  }
+
+  // シール貼りつきトースト
+  function handleAddStickerWithToast(stickerId: string) {
+    handleAddSticker(stickerId);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setStickerToast(true);
+    toastTimer.current = setTimeout(() => setStickerToast(false), 2000);
+  }
+
   // ── Guards ────────────────────────────────────────────────────────────────
 
   if (session.status === "loading") {
@@ -584,27 +620,65 @@ export default function EditorScreen() {
     );
   }
 
+  // ── カードプレビュー（静的・フレーム確認モーダル用） ──────────────────────
+
+  function renderCardPreview(d: Profile) {
+    return (
+      <div className={`profile-paper theme-${d.themeId || "default"}`} style={{ position: "relative" }}>
+        <div className="paper-lines" />
+        {d.frameId && d.frameId !== "none" && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={`/frame/${d.frameId}`} alt=""
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
+              objectFit: "cover", pointerEvents: "none", zIndex: 1 }} />
+        )}
+        <div className="profile-content">
+          <header className="profile-head">
+            <div className="avatar"><span>{initialOf(d.patternName)}</span></div>
+            <div>
+              <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
+                {d.patternName}{d.audience ? ` / ${d.audience}` : ""}
+              </p>
+              <h2 className="profile-name">{d.description || d.patternName}</h2>
+            </div>
+          </header>
+          {d.fields.filter((f) => f.visible && f.value).map((f) => (
+            <div key={f.id} className="answer">
+              <span className="muted small">{f.label}</span>
+              <strong>{f.value}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // ── Panel: シール ─────────────────────────────────────────────────────────
 
   function renderStickerPanel() {
-    const stickerChoices = [
-      ...customStickers.map((sticker) => ({
-        id: sticker.assetSrc,
-        label: sticker.label,
-        src: sticker.assetSrc,
-        source: "custom" as const,
-      })),
-      ...STAMP_FILES.map((file) => ({
-        id: file,
-        label: fileToLabel(file),
-        src: `/stamp/${file}`,
-        source: "preset" as const,
-      })),
-    ];
-
     return (
       <div className="stack" style={{ gap: "10px" }}>
-        <p className="muted small" style={{ margin: 0 }}>{t("タップしてカードに貼る", "Tap to add to card")}</p>
+
+        {/* シールを貼るボタン → モーダルで選ぶ */}
+        <button
+          type="button"
+          className="button"
+          style={{ width: "100%", minHeight: "52px", fontSize: "15px", gap: "8px" }}
+          onClick={() => { setStickerModalPage(0); setStickerModalOpen(true); }}
+        >
+          🏷 {t("シールを貼る", "Add sticker")}
+        </button>
+
+        {stickers.length > 0 && (
+          <button
+            type="button" className="button secondary"
+            style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto", color: "var(--pink)", width: "100%" }}
+            onClick={() => draft && applyAndSave({ ...draft, stickers: [] })}
+          >
+            {t("全部はがす", "Remove all stickers")}
+          </button>
+        )}
+
         <div className="sticker-upload-box">
           <strong>{t("Custom sticker", "Custom sticker")}</strong>
           {planLimits.customStickerUpload ? (
@@ -730,31 +804,6 @@ export default function EditorScreen() {
             </div>
           )}
         </div>
-        <div className="sticker-grid">
-          {stickerChoices.map((sticker) => (
-            <button
-              key={`${sticker.source}:${sticker.id}`} type="button" className="sticker-choice"
-              onClick={() => { handleAddSticker(sticker.id); setActiveTab("stickers"); }}
-              title={sticker.label}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={sticker.src} alt={sticker.label}
-                style={{ width: "56px", height: "56px", objectFit: "contain" }} />
-              <span className="muted small">
-                {sticker.source === "custom" ? `${sticker.label} (custom)` : sticker.label}
-              </span>
-            </button>
-          ))}
-        </div>
-        {stickers.length > 0 && (
-          <button
-            type="button" className="button secondary"
-            style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto", color: "var(--pink)", width: "100%" }}
-            onClick={() => draft && applyAndSave({ ...draft, stickers: [] })}
-          >
-            {t("全部はがす", "Remove all stickers")}
-          </button>
-        )}
       </div>
     );
   }
@@ -765,6 +814,9 @@ export default function EditorScreen() {
     if (!draft) return null;
     return (
       <div className="stack">
+        <p className="muted small" style={{ margin: "0 0 2px" }}>
+          {t("選ぶとプレビューを確認できます", "Select to preview before applying")}
+        </p>
         <div>
           <p className="muted small" style={{ margin: "0 0 6px" }}>{t("テーマ（用紙の色）", "Paper theme")}</p>
           <div className="theme-grid">
@@ -772,7 +824,7 @@ export default function EditorScreen() {
               <button
                 key={th.id} type="button"
                 className={`theme-choice${draft.themeId === th.id ? " active" : ""}`}
-                onClick={() => handleSetTheme(th.id)}
+                onClick={() => handlePreviewTheme(th.id)}
               >
                 <strong style={{ fontSize: "13px" }}>{t(th.labelJa, th.labelEn)}</strong>
               </button>
@@ -786,7 +838,7 @@ export default function EditorScreen() {
               <button
                 key={fr.id} type="button"
                 className={`frame-choice${draft.frameId === fr.id ? " active" : ""}`}
-                onClick={() => handleSetFrame(fr.id)}
+                onClick={() => handlePreviewFrame(fr.id)}
               >
                 <div className={`frame-thumb${fr.id === "none" ? " frame-thumb-none" : ""}`}>
                   {fr.id === "none"
@@ -1372,6 +1424,125 @@ export default function EditorScreen() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── フレーム確認モーダル ──────────────────────────────────────────── */}
+      {frameConfirmOpen && frameConfirmData && draft && (
+        <div className="frame-confirm-backdrop" onClick={handleFrameCancel} role="dialog" aria-modal="true">
+          <div className="frame-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="qr-modal-close" onClick={handleFrameCancel} aria-label="閉じる">×</button>
+            <p className="qr-modal-label" style={{ marginBottom: "12px" }}>
+              {t("こんな感じでいいですか？", "Does this look good?")}
+            </p>
+            <div className="frame-confirm-preview-wrap">
+              {renderCardPreview({ ...draft, themeId: frameConfirmData.themeId, frameId: frameConfirmData.frameId })}
+            </div>
+            <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
+              <button
+                type="button"
+                className="button"
+                style={{ flex: 1 }}
+                onClick={handleFrameConfirm}
+              >
+                {t("これにする", "Apply")}
+              </button>
+              <button type="button" className="button secondary" onClick={handleFrameCancel}>
+                {t("キャンセル", "Cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── シール選択モーダル ────────────────────────────────────────────── */}
+      {stickerModalOpen && (() => {
+        const stickerChoices = [
+          ...customStickers.map((sticker) => ({
+            id: sticker.assetSrc,
+            label: sticker.label,
+            src: sticker.assetSrc,
+            source: "custom" as const,
+          })),
+          ...STAMP_FILES.map((file) => ({
+            id: file,
+            label: fileToLabel(file),
+            src: `/stamp/${file}`,
+            source: "preset" as const,
+          })),
+        ];
+        const PER_PAGE   = 16;
+        const totalPages = Math.ceil(stickerChoices.length / PER_PAGE);
+        const page       = Math.min(stickerModalPage, totalPages - 1);
+        const pageItems  = stickerChoices.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+        return (
+          <div className="sticker-picker-backdrop" onClick={() => setStickerModalOpen(false)} role="dialog" aria-modal="true">
+            <div className="sticker-picker-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="sticker-picker-header">
+                <strong>{t("シールを選ぶ", "Pick a sticker")}</strong>
+                <button
+                  type="button"
+                  className="qr-modal-close"
+                  style={{ position: "static", margin: 0 }}
+                  onClick={() => setStickerModalOpen(false)}
+                  aria-label="閉じる"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="sticker-picker-grid">
+                {pageItems.map((sticker) => (
+                  <button
+                    key={`${sticker.source}:${sticker.id}`}
+                    type="button"
+                    className="sticker-choice"
+                    onClick={() => handleAddStickerWithToast(sticker.id)}
+                    title={sticker.label}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={sticker.src} alt={sticker.label}
+                      style={{ width: "52px", height: "52px", objectFit: "contain" }} />
+                    <span className="muted small" style={{ fontSize: "10px", lineHeight: 1.2 }}>
+                      {sticker.source === "custom" ? `${sticker.label}★` : sticker.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {totalPages > 1 && (
+                <div className="sticker-picker-pagination">
+                  <button
+                    type="button"
+                    className="button secondary"
+                    style={{ minHeight: "auto", padding: "4px 14px" }}
+                    disabled={page === 0}
+                    onClick={() => setStickerModalPage(page - 1)}
+                  >
+                    ← {t("前へ", "Prev")}
+                  </button>
+                  <span className="muted small">{page + 1} / {totalPages}</span>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    style={{ minHeight: "auto", padding: "4px 14px" }}
+                    disabled={page >= totalPages - 1}
+                    onClick={() => setStickerModalPage(page + 1)}
+                  >
+                    {t("次へ", "Next")} →
+                  </button>
+                </div>
+              )}
+              <p className="muted small" style={{ margin: "8px 0 0", textAlign: "center", fontSize: "12px" }}>
+                {t("複数貼れます。終わったら × で閉じてください", "You can add multiple. Close with × when done.")}
+              </p>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── シール貼り付きトースト ────────────────────────────────────────── */}
+      {stickerToast && (
+        <div className="sticker-toast" role="status" aria-live="polite">
+          🏷 {t("シールをはりました", "Sticker added!")}
         </div>
       )}
     </div>
