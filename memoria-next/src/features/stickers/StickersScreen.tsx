@@ -240,12 +240,17 @@ export default function StickersScreen() {
             </div>
 
             <div
-              className={`profile-paper theme-${activeProfile.themeId || "default"}`}
+              className={`profile-paper theme-${activeProfile.themeId || "default"}${activeProfile.frameId && activeProfile.frameId !== "none" ? " has-image-frame" : ""}`}
               ref={paperRef}
               onClick={onPaperClick}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
-              style={{ cursor: "default", userSelect: "none" }}
+              style={{
+                cursor: "default", userSelect: "none",
+                ...(activeProfile.frameId && activeProfile.frameId !== "none"
+                  ? { "--frame-url": `url('/frame/${activeProfile.frameId}')` } as React.CSSProperties
+                  : {}),
+              }}
             >
               <div className="paper-lines" />
 
@@ -280,23 +285,6 @@ export default function StickersScreen() {
                 );
               })}
 
-              {/* フレーム画像 */}
-              {activeProfile.frameId && activeProfile.frameId !== "none" && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={`/frame/${activeProfile.frameId}`}
-                  alt=""
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    pointerEvents: "none",
-                    zIndex: 1,
-                  }}
-                />
-              )}
 
               {/* プロフィール内容 */}
               <div className="profile-content">

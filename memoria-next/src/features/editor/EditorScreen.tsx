@@ -909,14 +909,11 @@ export default function EditorScreen() {
 
   function renderCardPreview(d: Profile) {
     return (
-      <div className={`profile-paper theme-${d.themeId || "default"}`} style={{ position: "relative" }}>
+      <div
+        className={`profile-paper theme-${d.themeId || "default"}${d.frameId && d.frameId !== "none" ? " has-image-frame" : ""}`}
+        style={d.frameId && d.frameId !== "none" ? { "--frame-url": `url('/frame/${d.frameId}')` } as React.CSSProperties : { position: "relative" }}
+      >
         <div className="paper-lines" />
-        {d.frameId && d.frameId !== "none" && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={`/frame/${d.frameId}`} alt=""
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
-              objectFit: "cover", pointerEvents: "none", zIndex: 1 }} />
-        )}
         <div className="profile-content">
           <header className="profile-head">
             <div className="avatar">
@@ -1893,12 +1890,17 @@ export default function EditorScreen() {
           ) : draft ? (
             <div className="editor-card-wrap">
               <div
-                className={`profile-paper theme-${draft.themeId || "default"}`}
+                className={`profile-paper theme-${draft.themeId || "default"}${draft.frameId && draft.frameId !== "none" ? " has-image-frame" : ""}`}
                 ref={paperRef}
                 onClick={onPaperClick}
                 onPointerMove={onPaperPointerMove}
                 onPointerUp={onPaperPointerUp}
-                style={{ cursor: "default", userSelect: "none" }}
+                style={{
+                  cursor: "default", userSelect: "none",
+                  ...(draft.frameId && draft.frameId !== "none"
+                    ? { "--frame-url": `url('/frame/${draft.frameId}')` } as React.CSSProperties
+                    : {}),
+                }}
               >
                 <div className="paper-lines" />
 
@@ -1929,14 +1931,6 @@ export default function EditorScreen() {
                     </div>
                   );
                 })}
-
-                {/* フレーム */}
-                {draft.frameId && draft.frameId !== "none" && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={`/frame/${draft.frameId}`} alt=""
-                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%",
-                      objectFit: "cover", pointerEvents: "none", zIndex: 1 }} />
-                )}
 
                 {/* プロフィール内容 */}
                 <div className="profile-content">

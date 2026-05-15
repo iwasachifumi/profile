@@ -1139,6 +1139,10 @@ textarea {
 
 .profile-paper.has-image-frame {
   border-radius: 0;
+  border-width: 36px;
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--frame-url) 25% / 36px round;
 }
 
 .paper-lines {

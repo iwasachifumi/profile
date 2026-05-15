@@ -57,8 +57,13 @@ export default function PreviewScreen({ id }: PreviewScreenProps) {
       {profile && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
           <div
-            className={`profile-paper theme-${profile.themeId || "default"}`}
-            style={{ maxWidth: "480px", width: "100%", userSelect: "none" }}
+            className={`profile-paper theme-${profile.themeId || "default"}${profile.frameId && profile.frameId !== "none" ? " has-image-frame" : ""}`}
+            style={{
+              maxWidth: "480px", width: "100%", userSelect: "none",
+              ...(profile.frameId && profile.frameId !== "none"
+                ? { "--frame-url": `url('/frame/${profile.frameId}')` } as React.CSSProperties
+                : {}),
+            }}
           >
             <div className="paper-lines" />
 
@@ -85,24 +90,6 @@ export default function PreviewScreen({ id }: PreviewScreenProps) {
                 </div>
               );
             })}
-
-            {/* フレーム */}
-            {profile.frameId && profile.frameId !== "none" && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={`/frame/${profile.frameId}`}
-                alt=""
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  pointerEvents: "none",
-                  zIndex: 1,
-                }}
-              />
-            )}
 
             {/* プロフィール内容 */}
             <div className="profile-content">
