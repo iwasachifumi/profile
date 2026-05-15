@@ -8,14 +8,15 @@ export interface User {
   createdAt?: string;
 }
 
+export interface CardInfoItem {
+  id:    string;
+  label: string;
+  value: string;
+}
+
 export interface CardConfig {
   templateFile: string;
-  cardInfo: {
-    name:        string;
-    nickname:    string;
-    description: string;
-    handle:      string;
-  };
+  items:        CardInfoItem[];
   cardStickers: StickerItem[];
 }
 

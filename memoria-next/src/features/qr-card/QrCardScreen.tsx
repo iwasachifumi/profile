@@ -7,7 +7,7 @@ import { toPng } from "html-to-image";
 import { profilesApi } from "@/api/profiles";
 import { settingsApi } from "@/api/settings";
 import { useSession } from "@/store/session";
-import type { CardConfig, CustomSticker, Profile, StickerItem } from "@/types";
+import type { CardConfig, CardInfoItem, CustomSticker, Profile, StickerItem } from "@/types";
 
 // ── カードテンプレート ────────────────────────────────────────────────────────
 
@@ -71,13 +71,13 @@ function clamp(v: number, lo: number, hi: number) {
 function getField(profile: Profile, label: string) {
   return profile.fields.find((f) => f.label === label)?.value ?? "";
 }
-function buildInitialCardInfo(profile: Profile) {
-  return {
-    name:        getField(profile, "名前") || profile.patternName,
-    nickname:    getField(profile, "ニックネーム"),
-    description: profile.description,
-    handle:      profile.handle ? `@${profile.handle}` : "",
-  };
+function buildInitialItems(profile: Profile): CardInfoItem[] {
+  return [
+    { id: crypto.randomUUID(), label: "名前",         value: getField(profile, "名前") || profile.patternName },
+    { id: crypto.randomUUID(), label: "ニックネーム", value: getField(profile, "ニックネーム") },
+    { id: crypto.randomUUID(), label: "ひとこと",     value: profile.description },
+    { id: crypto.randomUUID(), label: "ハンドル",     value: profile.handle ? `@${profile.handle}` : "" },
+  ];
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -95,9 +95,9 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
 
   // ── Card builder state ────────────────────────────────────────────────────
 
-  const [templateFile,      setTemplateFile]      = useState(CARD_TEMPLATES[0].file);
-  const [cardInfo,          setCardInfo]          = useState({ name: "", nickname: "", description: "", handle: "" });
-  const [cardStickers,      setCardStickers]      = useState<StickerItem[]>([]);
+  const [templateFile,       setTemplateFile]       = useState(CARD_TEMPLATES[0].file);
+  const [items,              setItems]              = useState<CardInfoItem[]>([]);
+  const [cardStickers,       setCardStickers]       = useState<StickerItem[]>([]);
   const [selectedStickerIdx, setSelectedStickerIdx] = useState<number | null>(null);
 
   // ── UI state ──────────────────────────────────────────────────────────────
@@ -138,10 +138,10 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
     // cardConfig が保存済みならそれを使う、なければプロフィールから初期値
     if (found.cardConfig) {
       setTemplateFile(found.cardConfig.templateFile);
-      setCardInfo(found.cardConfig.cardInfo);
+      setItems(found.cardConfig.items);
       setCardStickers(found.cardConfig.cardStickers);
     } else {
-      setCardInfo(buildInitialCardInfo(found));
+      setItems(buildInitialItems(found));
     }
 
     if (settingsRes.ok) {
@@ -176,17 +176,17 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
 
   function applyTemplate(file: string) {
     setTemplateFile(file);
-    scheduleCardConfigSave({ templateFile: file, cardInfo, cardStickers });
+    scheduleCardConfigSave({ templateFile: file, items, cardStickers });
   }
 
-  function applyCardInfo(next: typeof cardInfo) {
-    setCardInfo(next);
-    scheduleCardConfigSave({ templateFile, cardInfo: next, cardStickers });
+  function applyItems(next: CardInfoItem[]) {
+    setItems(next);
+    scheduleCardConfigSave({ templateFile, items: next, cardStickers });
   }
 
   function applyCardStickers(next: StickerItem[]) {
     setCardStickers(next);
-    scheduleCardConfigSave({ templateFile, cardInfo, cardStickers: next });
+    scheduleCardConfigSave({ templateFile, items, cardStickers: next });
   }
 
   // ── Sticker drag ──────────────────────────────────────────────────────────
@@ -214,7 +214,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
     if (!dragState.current) return;
     dragState.current = null;
     // ポインターアップ後に一括保存
-    scheduleCardConfigSave({ templateFile, cardInfo, cardStickers });
+    scheduleCardConfigSave({ templateFile, items, cardStickers });
   }
 
   function handleAddSticker(stickerId: string) {
@@ -224,7 +224,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
     ];
     setCardStickers(next);
     setSelectedStickerIdx(next.length - 1);
-    scheduleCardConfigSave({ templateFile, cardInfo, cardStickers: next });
+    scheduleCardConfigSave({ templateFile, items, cardStickers: next });
   }
 
   function handleDeleteSticker(idx: number) {
@@ -275,7 +275,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
       const blob  = await res.blob();
       const file  = new File([blob], `memoria-card-${profile?.patternName ?? "card"}.png`, { type: "image/png" });
       if (typeof navigator.share === "function" && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: profile?.patternName, text: `${cardInfo.name}のプロフィール`, files: [file] });
+        await navigator.share({ title: profile?.patternName, text: `${items[0]?.value ?? ""}のプロフィール`, files: [file] });
       } else {
         const a = document.createElement("a");
         a.href = dataUrl;
@@ -304,7 +304,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
 
   // ── Card render ───────────────────────────────────────────────────────────
 
-  const avatarInitial = ((cardInfo.name || profile?.patternName) ?? "?")[0].toUpperCase();
+  const avatarInitial = ((items[0]?.value || profile?.patternName) ?? "?")[0].toUpperCase();
   const qrUrl = profile?.isPublic && profile.publicSlug
     ? `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${profile.publicSlug}?via=qr`
     : "https://profile.ac7.co.jp"; // 非公開の場合はダミーURL
@@ -337,10 +337,11 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
             )}
           </div>
           <div className="qr-card-info">
-            {cardInfo.name        && <p className="qr-card-name">{cardInfo.name}</p>}
-            {cardInfo.nickname    && <p className="qr-card-nickname">{cardInfo.nickname}</p>}
-            {cardInfo.description && <p className="qr-card-desc">{cardInfo.description}</p>}
-            {cardInfo.handle      && <p className="qr-card-handle">{cardInfo.handle}</p>}
+            {items.map((item) => item.value ? (
+              <p key={item.id} style={{ margin: "1px 0", fontSize: "11px", lineHeight: 1.3, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,.6)" }}>
+                {item.value}
+              </p>
+            ) : null)}
           </div>
         </div>
 
@@ -485,21 +486,36 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
 
         {/* テキスト編集アコーディオン */}
         <div className="qr-card-info-accordion">
-          <button type="button" className="qr-card-info-toggle" onClick={() => setInfoOpen(!infoOpen)}>
-            <span>✏️ テキスト内容を編集</span>
-            <span>{infoOpen ? "▲" : "▼"}</span>
-          </button>
+          <div className="qr-card-info-toggle" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <button type="button" style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flex: 1, textAlign: "left", display: "flex", justifyContent: "space-between" }}
+              onClick={() => setInfoOpen(!infoOpen)}>
+              <span>✏️ テキスト内容を編集</span>
+              <span>{infoOpen ? "▲" : "▼"}</span>
+            </button>
+            <button type="button" style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", padding: "0 4px", lineHeight: 1 }}
+              onClick={() => applyItems([...items, { id: crypto.randomUUID(), label: "", value: "" }])}
+              title="項目を追加">＋</button>
+          </div>
           {infoOpen && (
             <div className="qr-card-info-fields">
-              {(["name", "nickname", "description", "handle"] as const).map((key) => (
-                <label key={key} style={{ display: "grid", gap: "3px", fontSize: "12px", color: "var(--muted)" }}>
-                  {key === "name" ? "名前" : key === "nickname" ? "ニックネーム" : key === "description" ? "ひとこと" : "ハンドル"}
+              {items.map((item) => (
+                <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "4px", alignItems: "center" }}>
                   <input
-                    value={cardInfo[key]}
-                    onChange={(e) => applyCardInfo({ ...cardInfo, [key]: e.target.value })}
-                    placeholder={key === "handle" ? "@..." : ""}
+                    style={{ fontSize: "12px" }}
+                    placeholder="ラベル"
+                    value={item.label}
+                    onChange={(e) => applyItems(items.map((it) => it.id === item.id ? { ...it, label: e.target.value } : it))}
                   />
-                </label>
+                  <input
+                    style={{ fontSize: "12px" }}
+                    placeholder="内容"
+                    value={item.value}
+                    onChange={(e) => applyItems(items.map((it) => it.id === item.id ? { ...it, value: e.target.value } : it))}
+                  />
+                  <button type="button"
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--pink)", fontSize: "16px", padding: "0 4px" }}
+                    onClick={() => applyItems(items.filter((it) => it.id !== item.id))}>×</button>
+                </div>
               ))}
             </div>
           )}

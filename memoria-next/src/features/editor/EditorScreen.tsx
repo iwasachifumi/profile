@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import { toPng } from "html-to-image";
 import { profilesApi } from "@/api/profiles";
 import { settingsApi } from "@/api/settings";
 import { stickerGiftsApi } from "@/api/stickerGifts";
@@ -10,11 +12,13 @@ import QrModal from "@/features/qr/QrModal";
 import { useSession } from "@/store/session";
 import { useLang } from "@/store/language";
 import type {
+  CardInfoItem,
   CustomSticker,
   Field,
   Link as ProfileLink,
   Profile,
   StickerGiftInboxItem,
+  StickerItem,
   UserSettings,
 } from "@/types";
 
@@ -84,6 +88,36 @@ const LINK_TYPE_LABELS: Record<string, string> = {
 };
 const LINK_TYPE_OPTIONS = Object.entries(LINK_TYPE_LABELS).map(([id, label]) => ({ id, label }));
 
+const CARD_TEMPLATES = [
+  { file: "Sky-5.png",                       label: "青空" },
+  { file: "Sky-7.png",                       label: "夕暮れ" },
+  { file: "Sky-8.png",                       label: "夜空" },
+  { file: "Sky-9.png",                       label: "星空" },
+  { file: "Sky-10.png",                      label: "朝空" },
+  { file: "Sky-20.png",                      label: "昼空" },
+  { file: "Sky-31.png",                      label: "雲" },
+  { file: "Sky-41.png",                      label: "霞" },
+  { file: "Sky-67.png",                      label: "夕空2" },
+  { file: "Sky-68.png",                      label: "夜明け" },
+  { file: "Floral-pattern-gerbera-8.png",    label: "フラワー" },
+  { file: "Floral-pattern-gerbera-11.png",   label: "フラワー2" },
+  { file: "Floral-pattern-sunflower-11.png", label: "ひまわり" },
+  { file: "Rose-pattern-5.png",              label: "ローズ" },
+  { file: "Simple-pedicel-pattern-60.png",   label: "ボタニカル" },
+  { file: "Scenery-white-clover-5.png",      label: "クローバー" },
+  { file: "Scenery-white-clover-6.png",      label: "クローバー2" },
+  { file: "Scenery-white-clover-8.png",      label: "クローバー3" },
+  { file: "PC-wallpaper-others-1.png",       label: "ウォール1" },
+  { file: "PC-wallpaper-others-2.png",       label: "ウォール2" },
+  { file: "PC-wallpaper-others-3.png",       label: "ウォール3" },
+  { file: "PC-wallpaper-others-4.png",       label: "ウォール4" },
+  { file: "PC-wallpaper-others-6.png",       label: "ウォール6" },
+  { file: "Virtual-background-room-3.png",   label: "ルーム1" },
+  { file: "Virtual-background-room-6.png",   label: "ルーム2" },
+  { file: "Virtual-background-room-8.png",   label: "ルーム3" },
+  { file: "Virtual-background-room-14.png",  label: "ルーム4" },
+];
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
@@ -108,6 +142,17 @@ function readFileAsDataUrl(file: File): Promise<string> {
 }
 function resolveStickerSrc(stickerId: string) {
   return stickerId.startsWith("data:") ? stickerId : `/stamp/${stickerId}`;
+}
+
+/** QRカードのテキスト初期値をプロフィールから生成 */
+function buildDefaultCardItems(p: Profile): CardInfoItem[] {
+  const getField = (label: string) => p.fields.find((f) => f.label === label)?.value ?? "";
+  return [
+    { id: crypto.randomUUID(), label: "名前",         value: getField("名前") || p.patternName },
+    { id: crypto.randomUUID(), label: "ニックネーム", value: getField("ニックネーム") },
+    { id: crypto.randomUUID(), label: "ひとこと",     value: p.description },
+    { id: crypto.randomUUID(), label: "ハンドル",     value: p.handle ? `@${p.handle}` : "" },
+  ];
 }
 
 /** 新規プロフィールのデフォルト構造（初回自動作成・手動追加で共用） */
@@ -139,16 +184,17 @@ function buildDefaultProfile(name: string): Profile {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "preview" | "stickers" | "frame" | "friends" | "settings";
+type Tab = "preview" | "settings" | "qr" | "stickers" | "frame" | "friends";
 type BusyKind = "load" | "create" | "save" | "delete" | null;
 
 // モバイルフッタ用（プレビュータブを先頭に追加）
 const TABS: { id: Tab; icon: string; labelJa: string; labelEn: string }[] = [
   { id: "preview",  icon: "👁",  labelJa: "プレビュー", labelEn: "Preview"  },
+  { id: "settings", icon: "📝", labelJa: "項目",       labelEn: "Fields"   },
+  { id: "qr",       icon: "🎴", labelJa: "QRカード",   labelEn: "QR Card"  },
   { id: "stickers", icon: "🏷",  labelJa: "シール",     labelEn: "Stickers" },
   { id: "frame",    icon: "🖼",  labelJa: "フレーム",   labelEn: "Frame"    },
   { id: "friends",  icon: "👥",  labelJa: "友達",       labelEn: "Friends"  },
-  { id: "settings", icon: "📝", labelJa: "項目",       labelEn: "Fields"   },
 ];
 // PCパネルタブ用（プレビュータブは不要：常にカードが見えているため）
 const DESKTOP_TABS = TABS.filter((t) => t.id !== "preview");
@@ -193,11 +239,26 @@ export default function EditorScreen() {
   const [stickerModalPage,   setStickerModalPage]   = useState(0);
   const [stickerToast,       setStickerToast]       = useState(false);
 
-  const paperRef      = useRef<HTMLDivElement>(null);
-  const dragState     = useRef<{ idx: number } | null>(null);
-  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestDraft   = useRef<Profile | null>(null);  // stale-closure guard for drag
-  const toastTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ── QRカードビルダー state ──────────────────────────────────────────────────
+  const [qrTemplateFile,       setQrTemplateFile]       = useState(CARD_TEMPLATES[0].file);
+  const [qrItems,              setQrItems]              = useState<CardInfoItem[]>([]);
+  const [qrCardStickers,       setQrCardStickers]       = useState<StickerItem[]>([]);
+  const [qrSelectedStickerIdx, setQrSelectedStickerIdx] = useState<number | null>(null);
+  const [qrTemplatePickerOpen, setQrTemplatePickerOpen] = useState(false);
+  const [qrStickerPickerOpen,  setQrStickerPickerOpen]  = useState(false);
+  const [qrStickerPickerPage,  setQrStickerPickerPage]  = useState(0);
+  const [qrExporting,          setQrExporting]          = useState(false);
+  const [qrExportError,        setQrExportError]        = useState<string | null>(null);
+
+  const paperRef       = useRef<HTMLDivElement>(null);
+  const dragState      = useRef<{ idx: number } | null>(null);
+  const autoSaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestDraft    = useRef<Profile | null>(null);  // stale-closure guard for drag
+  const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const qrCardRef      = useRef<HTMLDivElement>(null);
+  const qrDragState    = useRef<{ idx: number } | null>(null);
+  const qrAutoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initDraftIdRef  = useRef<string | null>(null);  // prevents re-init on same profile
 
   // keep latestDraft in sync
   useEffect(() => { latestDraft.current = draft; }, [draft]);
@@ -261,6 +322,25 @@ export default function EditorScreen() {
     }
     void loadGiftInbox();
   }, [loadGiftInbox, session.status]);
+
+  // ── QRカード状態の初期化（プロフィール切り替え時） ────────────────────────
+  useEffect(() => {
+    if (!activeId) return;
+    if (initDraftIdRef.current === activeId) return;  // already initialized
+    initDraftIdRef.current = activeId;
+    const p = profiles.find((x) => x.id === activeId);
+    if (!p) return;
+    if (p.cardConfig) {
+      setQrTemplateFile(p.cardConfig.templateFile);
+      setQrItems(p.cardConfig.items);
+      setQrCardStickers(p.cardConfig.cardStickers);
+    } else {
+      setQrTemplateFile(CARD_TEMPLATES[0].file);
+      setQrItems(buildDefaultCardItems(p));
+      setQrCardStickers([]);
+    }
+    setQrSelectedStickerIdx(null);
+  }, [activeId, profiles]);
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
@@ -590,6 +670,126 @@ export default function EditorScreen() {
     toastTimer.current = setTimeout(() => setStickerToast(false), 2000);
   }
 
+  // ── QRカードビルダー ───────────────────────────────────────────────────────
+
+  function scheduleQrConfigSave(template: string, items: CardInfoItem[], stickers: StickerItem[]) {
+    if (qrAutoSaveTimer.current) clearTimeout(qrAutoSaveTimer.current);
+    qrAutoSaveTimer.current = setTimeout(() => {
+      if (!draft) return;
+      const config = { templateFile: template, items, cardStickers: stickers };
+      void profilesApi.update(draft.id, { cardConfig: config });
+      setProfiles((prev) => prev.map((p) => p.id === draft.id ? { ...p, cardConfig: config } : p));
+    }, 700);
+  }
+
+  function applyQrTemplate(file: string) {
+    setQrTemplateFile(file);
+    scheduleQrConfigSave(file, qrItems, qrCardStickers);
+  }
+
+  function handleAddQrItem() {
+    const next: CardInfoItem[] = [...qrItems, { id: crypto.randomUUID(), label: "", value: "" }];
+    setQrItems(next);
+    scheduleQrConfigSave(qrTemplateFile, next, qrCardStickers);
+  }
+
+  function handleUpdateQrItem(id: string, patch: Partial<CardInfoItem>) {
+    const next = qrItems.map((it) => it.id === id ? { ...it, ...patch } : it);
+    setQrItems(next);
+    scheduleQrConfigSave(qrTemplateFile, next, qrCardStickers);
+  }
+
+  function handleDeleteQrItem(id: string) {
+    const next = qrItems.filter((it) => it.id !== id);
+    setQrItems(next);
+    scheduleQrConfigSave(qrTemplateFile, next, qrCardStickers);
+  }
+
+  function handleAddQrSticker(stickerId: string) {
+    const item: StickerItem = { id: crypto.randomUUID(), stickerId, x: 50, y: 50, scale: 1 };
+    const next = [...qrCardStickers, item];
+    setQrCardStickers(next);
+    setQrSelectedStickerIdx(next.length - 1);
+    scheduleQrConfigSave(qrTemplateFile, qrItems, next);
+  }
+
+  function handleDeleteQrSticker(idx: number) {
+    const next = qrCardStickers.filter((_, i) => i !== idx);
+    setQrSelectedStickerIdx(null);
+    setQrCardStickers(next);
+    scheduleQrConfigSave(qrTemplateFile, qrItems, next);
+  }
+
+  function handleResizeQrSticker(idx: number, delta: number) {
+    const next = qrCardStickers.map((s, i) =>
+      i === idx ? { ...s, scale: clamp((s.scale ?? 1) + delta, 0.3, 3) } : s
+    );
+    setQrCardStickers(next);
+    scheduleQrConfigSave(qrTemplateFile, qrItems, next);
+  }
+
+  function onQrStickerPointerDown(e: React.PointerEvent, idx: number) {
+    if ((e.target as HTMLElement).closest("[data-sticker-control]")) return;
+    e.preventDefault(); e.stopPropagation();
+    setQrSelectedStickerIdx(idx);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    qrDragState.current = { idx };
+  }
+
+  function onQrCardPointerMove(e: React.PointerEvent) {
+    const ds = qrDragState.current;
+    if (!ds || !qrCardRef.current) return;
+    e.preventDefault();
+    const rect = qrCardRef.current.getBoundingClientRect();
+    const x = clamp(((e.clientX - rect.left) / rect.width)  * 100, 0, 92);
+    const y = clamp(((e.clientY - rect.top)  / rect.height) * 100, 0, 92);
+    setQrCardStickers((prev) => prev.map((s, i) => i === ds.idx ? { ...s, x, y } : s));
+  }
+
+  function onQrCardPointerUp() {
+    if (!qrDragState.current) return;
+    qrDragState.current = null;
+    scheduleQrConfigSave(qrTemplateFile, qrItems, qrCardStickers);
+  }
+
+  async function handleQrCardSave() {
+    if (!qrCardRef.current) return;
+    setQrExporting(true); setQrExportError(null);
+    try {
+      setQrSelectedStickerIdx(null);
+      await new Promise((r) => setTimeout(r, 80));
+      const dataUrl = await toPng(qrCardRef.current, { pixelRatio: 2, cacheBust: true });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `memoria-card-${draft?.patternName ?? "card"}.png`;
+      a.click();
+    } catch { setQrExportError("画像の生成に失敗しました。"); }
+    finally { setQrExporting(false); }
+  }
+
+  async function handleQrCardShare() {
+    if (!qrCardRef.current) return;
+    setQrExporting(true); setQrExportError(null);
+    try {
+      setQrSelectedStickerIdx(null);
+      await new Promise((r) => setTimeout(r, 80));
+      const dataUrl = await toPng(qrCardRef.current, { pixelRatio: 2, cacheBust: true });
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `memoria-card-${draft?.patternName ?? "card"}.png`, { type: "image/png" });
+      if (typeof navigator.share === "function" && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: draft?.patternName, text: `${qrItems[0]?.value ?? ""}のプロフィール`, files: [file] });
+      } else {
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = file.name;
+        a.click();
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (!msg.includes("AbortError") && !msg.includes("cancel")) setQrExportError("シェアに失敗しました。");
+    } finally { setQrExporting(false); }
+  }
+
   // ── Guards ────────────────────────────────────────────────────────────────
 
   if (session.status === "loading") {
@@ -683,6 +883,264 @@ export default function EditorScreen() {
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  // ── QRカードビュー（カードエリアに表示） ─────────────────────────────────
+
+  function renderQrCardView() {
+    if (!draft) return null;
+    const qrUrl = draft.isPublic && draft.publicSlug
+      ? `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}?via=qr`
+      : "https://profile.ac7.co.jp";
+    const avatarInitial = (qrItems[0]?.value || draft.patternName || "?")[0].toUpperCase();
+    return (
+      <div style={{ overflowX: "auto" }}>
+        <div
+          ref={qrCardRef}
+          className="qr-card-paper"
+          style={{ touchAction: "none" }}
+          onPointerMove={onQrCardPointerMove}
+          onPointerUp={onQrCardPointerUp}
+          onClick={(e) => {
+            if ((e.target as HTMLElement).closest("[data-sticker-el]")) return;
+            setQrSelectedStickerIdx(null);
+          }}
+        >
+          {/* 背景 */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/card/${qrTemplateFile}`} alt="" className="qr-card-bg" crossOrigin="anonymous" />
+
+          {/* 左エリア */}
+          <div className="qr-card-left">
+            <div className="qr-card-avatar">
+              {draft.avatarSrc
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={draft.avatarSrc} alt="" className="qr-card-avatar-img" />
+                : <span>{avatarInitial}</span>
+              }
+            </div>
+            <div className="qr-card-info">
+              {qrItems.map((item) => item.value ? (
+                <p key={item.id} style={{ margin: "1px 0", fontSize: "11px", lineHeight: 1.3, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,.6)" }}>
+                  {item.value}
+                </p>
+              ) : null)}
+            </div>
+          </div>
+
+          {/* 右エリア */}
+          <div className="qr-card-right">
+            <div className="qr-card-qr-wrap">
+              <QRCodeSVG value={qrUrl} size={100} />
+            </div>
+            <p className="qr-card-tagline">Memoriaで見てね</p>
+          </div>
+
+          {/* シール */}
+          {qrCardStickers.map((s, idx) => {
+            const sz    = Math.round(52 * (s.scale ?? 1));
+            const isSel = qrSelectedStickerIdx === idx;
+            const src   = s.stickerId.startsWith("data:") ? s.stickerId : `/stamp/${s.stickerId}`;
+            return (
+              <div
+                key={s.id} data-sticker-el="1"
+                className={`placed-sticker${isSel ? " selected" : ""}`}
+                style={{ left: `${s.x}%`, top: `${s.y}%`, width: `${sz}px`, cursor: "grab", touchAction: "none", zIndex: 10 }}
+                onPointerDown={(e) => onQrStickerPointerDown(e, idx)}
+              >
+                {isSel && (
+                  <div className="placed-sticker-controls" data-sticker-control="true">
+                    <button type="button" className="sticker-ctl"
+                      onClick={(e) => { e.stopPropagation(); handleResizeQrSticker(idx, -0.2); }}>−</button>
+                    <button type="button" className="sticker-ctl"
+                      onClick={(e) => { e.stopPropagation(); handleResizeQrSticker(idx, 0.2); }}>＋</button>
+                    <button type="button" className="sticker-ctl danger"
+                      onClick={(e) => { e.stopPropagation(); handleDeleteQrSticker(idx); }}>×</button>
+                  </div>
+                )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" crossOrigin="anonymous"
+                  style={{ width: "100%", display: "block", pointerEvents: "none" }} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── QRカードパネル（右パネルに表示） ──────────────────────────────────────
+
+  function renderQrPanel() {
+    if (!draft) return null;
+    const stickerChoices = [
+      ...customStickers.map((s) => ({ id: s.assetSrc, src: s.assetSrc, label: s.label })),
+      ...STAMP_FILES.map((f)   => ({ id: f, src: `/stamp/${f}`, label: fileToLabel(f) })),
+    ];
+    return (
+      <div className="stack" style={{ gap: "10px" }}>
+
+        {/* 非公開警告 */}
+        {!draft.isPublic && (
+          <p className="muted small" style={{ margin: 0, background: "var(--pink-soft)", padding: "8px 10px", borderRadius: "6px" }}>
+            ⚠️ このプロフィールは非公開です。QRコードを有効にするには「項目」タブから公開設定してください。
+          </p>
+        )}
+
+        {/* 背景変更 */}
+        <button type="button" className="button secondary" style={{ width: "100%" }}
+          onClick={() => setQrTemplatePickerOpen(true)}>
+          🖼 {t("背景を変える", "Change background")}
+        </button>
+
+        {/* シール */}
+        <button type="button" className="button" style={{ width: "100%" }}
+          onClick={() => { setQrStickerPickerPage(0); setQrStickerPickerOpen(true); }}>
+          🏷 {t("シールを貼る", "Add sticker")}
+        </button>
+        {qrCardStickers.length > 0 && (
+          <button type="button" className="button secondary"
+            style={{ width: "100%", color: "var(--pink)", fontSize: "12px", minHeight: "auto", padding: "4px 10px" }}
+            onClick={() => { setQrCardStickers([]); scheduleQrConfigSave(qrTemplateFile, qrItems, []); }}>
+            {t("シールを全部はがす", "Remove all stickers")}
+          </button>
+        )}
+
+        {/* テキスト編集 */}
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <strong style={{ fontSize: "13px" }}>{t("テキスト内容", "Text items")}</strong>
+            <button type="button" className="icon-button mini-button" onClick={handleAddQrItem}>＋</button>
+          </div>
+          <div className="stack" style={{ gap: "6px" }}>
+            {qrItems.map((item) => (
+              <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: "4px", alignItems: "center" }}>
+                <input
+                  style={{ fontSize: "12px" }}
+                  placeholder={t("ラベル", "Label")}
+                  value={item.label}
+                  onChange={(e) => handleUpdateQrItem(item.id, { label: e.target.value })}
+                />
+                <input
+                  style={{ fontSize: "12px" }}
+                  placeholder={t("内容", "Value")}
+                  value={item.value}
+                  onChange={(e) => handleUpdateQrItem(item.id, { value: e.target.value })}
+                />
+                <button type="button" className="icon-button"
+                  style={{ color: "var(--pink)", flexShrink: 0, minHeight: "auto", padding: "2px 6px" }}
+                  onClick={() => handleDeleteQrItem(item.id)}>×</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 保存・シェア */}
+        {qrExportError && <p className="error-text" style={{ margin: 0 }}>{qrExportError}</p>}
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button type="button" className="button secondary" style={{ flex: 1 }}
+            onClick={() => void handleQrCardSave()} disabled={qrExporting}>
+            {qrExporting ? t("生成中…", "Generating…") : "💾 PNG保存"}
+          </button>
+          <button type="button" className="button" style={{ flex: 1 }}
+            onClick={() => void handleQrCardShare()} disabled={qrExporting}>
+            {qrExporting ? t("生成中…", "Generating…") : "📤 シェア"}
+          </button>
+        </div>
+        <p className="muted small" style={{ margin: 0, textAlign: "center", fontSize: "11px" }}>
+          {t("シールはドラッグで移動できます", "Drag stickers to reposition")}
+        </p>
+
+        {/* QRカード専用ページへ */}
+        <div style={{ borderTop: "1px solid var(--line)", paddingTop: "10px" }}>
+          <a
+            href={`/card/${draft.id}`}
+            className="button secondary"
+            style={{ width: "100%", fontSize: "12px" }}
+            target="_blank" rel="noreferrer"
+          >
+            🔗 {t("大画面で編集", "Open full editor")}
+          </a>
+        </div>
+
+        {/* 背景テンプレートピッカー（インラインモーダル） */}
+        {qrTemplatePickerOpen && (
+          <div className="sticker-picker-backdrop"
+            onClick={() => setQrTemplatePickerOpen(false)} role="dialog" aria-modal="true">
+            <div className="sticker-picker-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="sticker-picker-header">
+                <strong>{t("背景を選ぶ", "Choose background")}</strong>
+                <button type="button" className="qr-modal-close"
+                  style={{ position: "static", margin: 0 }}
+                  onClick={() => setQrTemplatePickerOpen(false)} aria-label="閉じる">×</button>
+              </div>
+              <div className="sticker-picker-grid">
+                {CARD_TEMPLATES.map((tpl) => (
+                  <button key={tpl.file} type="button"
+                    className={`sticker-choice${qrTemplateFile === tpl.file ? " active" : ""}`}
+                    onClick={() => { applyQrTemplate(tpl.file); setQrTemplatePickerOpen(false); }}
+                    title={tpl.label}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/card/${tpl.file}`} alt={tpl.label}
+                      style={{ width: "52px", height: "36px", objectFit: "cover", borderRadius: "4px" }} />
+                    <span className="muted small" style={{ fontSize: "10px" }}>{tpl.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* シールピッカー */}
+        {qrStickerPickerOpen && (() => {
+          const PER_PAGE   = 16;
+          const totalPages = Math.ceil(stickerChoices.length / PER_PAGE);
+          const page       = Math.min(qrStickerPickerPage, totalPages - 1);
+          const pageItems  = stickerChoices.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+          return (
+            <div className="sticker-picker-backdrop"
+              onClick={() => setQrStickerPickerOpen(false)} role="dialog" aria-modal="true">
+              <div className="sticker-picker-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="sticker-picker-header">
+                  <strong>{t("シールを選ぶ", "Pick a sticker")}</strong>
+                  <button type="button" className="qr-modal-close"
+                    style={{ position: "static", margin: 0 }}
+                    onClick={() => setQrStickerPickerOpen(false)} aria-label="閉じる">×</button>
+                </div>
+                <div className="sticker-picker-grid">
+                  {pageItems.map((sticker) => (
+                    <button key={sticker.id} type="button" className="sticker-choice"
+                      onClick={() => handleAddQrSticker(sticker.id)} title={sticker.label}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={sticker.src} alt={sticker.label}
+                        style={{ width: "52px", height: "52px", objectFit: "contain" }} />
+                    </button>
+                  ))}
+                </div>
+                {totalPages > 1 && (
+                  <div className="sticker-picker-pagination">
+                    <button type="button" className="button secondary"
+                      style={{ minHeight: "auto", padding: "4px 14px" }}
+                      disabled={page === 0} onClick={() => setQrStickerPickerPage(page - 1)}>
+                      ← {t("前へ", "Prev")}
+                    </button>
+                    <span className="muted small">{page + 1} / {totalPages}</span>
+                    <button type="button" className="button secondary"
+                      style={{ minHeight: "auto", padding: "4px 14px" }}
+                      disabled={page >= totalPages - 1} onClick={() => setQrStickerPickerPage(page + 1)}>
+                      {t("次へ", "Next")} →
+                    </button>
+                  </div>
+                )}
+                <p className="muted small" style={{ margin: "8px 0 0", textAlign: "center", fontSize: "12px" }}>
+                  {t("複数貼れます。終わったら × で閉じてください", "You can add multiple. Close with × when done.")}
+                </p>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -1283,9 +1741,13 @@ export default function EditorScreen() {
       {/* メインワークスペース: data-tab をCSSで参照してカード/パネルの表示制御 */}
       <div className="editor-workspace" data-tab={activeTab}>
 
-        {/* プロフィールカード（WYSIWYG） */}
+        {/* プロフィールカード / QRカード */}
         <div className="editor-card-area">
-          {draft ? (
+          {draft && activeTab === "qr" ? (
+            <div className="editor-card-wrap">
+              {renderQrCardView()}
+            </div>
+          ) : draft ? (
             <div className="editor-card-wrap">
               <div
                 className={`profile-paper theme-${draft.themeId || "default"}`}
@@ -1404,9 +1866,10 @@ export default function EditorScreen() {
             </div>
             <div className="editor-panel-content">
               {/* デスクトップでプレビュータブのまま来た場合は項目を表示 */}
-              {(activeTab === "stickers")                      && renderStickerPanel()}
-              {(activeTab === "frame")                         && renderFramePanel()}
-              {(activeTab === "friends")                       && renderFriendsPanel()}
+              {(activeTab === "stickers")                           && renderStickerPanel()}
+              {(activeTab === "frame")                              && renderFramePanel()}
+              {(activeTab === "friends")                            && renderFriendsPanel()}
+              {(activeTab === "qr")                                 && renderQrPanel()}
               {(activeTab === "settings" || activeTab === "preview") && renderSettingsPanel()}
             </div>
           </div>
@@ -1423,28 +1886,6 @@ export default function EditorScreen() {
             <span>{t(tab.labelJa, tab.labelEn)}</span>
           </button>
         ))}
-        {/* QRボタン（パターンが公開済みなら即表示、未公開なら項目タブへ誘導） */}
-        {draft && (
-          <button
-            type="button"
-            className={`editor-tab-btn${!draft.isPublic ? " editor-tab-btn--dim" : ""}`}
-            onClick={() => {
-              if (draft.isPublic && draft.publicSlug) {
-                setQrOpen(true);
-              } else {
-                setActiveTab("settings");
-                setMetaOpen(false);
-              }
-            }}
-            title={t(
-              draft.isPublic ? "QRコードを表示" : "公開するとQRが使えます",
-              draft.isPublic ? "Show QR code"   : "Make public to use QR"
-            )}
-          >
-            <span className="editor-tab-icon">📲</span>
-            <span>QR</span>
-          </button>
-        )}
       </nav>
       <div className="editor-bottom-pad" />
 
