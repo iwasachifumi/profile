@@ -259,7 +259,8 @@ export default function EditorScreen() {
   const qrCardRef      = useRef<HTMLDivElement>(null);
   const qrCardWrapRef  = useRef<HTMLDivElement>(null);
   const qrDragState    = useRef<{ idx: number } | null>(null);
-  const qrAutoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const qrAutoSaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const qrOgUploadTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initDraftIdRef  = useRef<string | null>(null);  // prevents re-init on same profile
   const [qrCardScale,  setQrCardScale]  = useState(1);
 
@@ -677,6 +678,7 @@ export default function EditorScreen() {
   // ── QRカードビルダー ───────────────────────────────────────────────────────
 
   function scheduleQrConfigSave(template: string, items: CardInfoItem[], stickers: StickerItem[]) {
+    // ── QRカード設定を保存（700ms debounce）
     if (qrAutoSaveTimer.current) clearTimeout(qrAutoSaveTimer.current);
     qrAutoSaveTimer.current = setTimeout(() => {
       if (!draft) return;
@@ -684,6 +686,17 @@ export default function EditorScreen() {
       void profilesApi.update(draft.id, { cardConfig: config });
       setProfiles((prev) => prev.map((p) => p.id === draft.id ? { ...p, cardConfig: config } : p));
     }, 700);
+
+    // ── OG画像を自動更新（1500ms debounce・公開プロフかつQRタブ表示中のみ）
+    if (qrOgUploadTimer.current) clearTimeout(qrOgUploadTimer.current);
+    qrOgUploadTimer.current = setTimeout(async () => {
+      if (!qrCardRef.current) return;                                        // QRタブが非表示
+      if (!latestDraft.current?.isPublic || !latestDraft.current?.publicSlug) return; // 非公開
+      try {
+        const dataUrl = await generateQrPng();
+        void uploadQrOgImage(dataUrl);
+      } catch { /* silent: OG自動更新失敗は致命的でない */ }
+    }, 1500);
   }
 
   function applyQrTemplate(file: string) {
