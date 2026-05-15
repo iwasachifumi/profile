@@ -8,6 +8,17 @@ export interface User {
   createdAt?: string;
 }
 
+export interface CardConfig {
+  templateFile: string;
+  cardInfo: {
+    name:        string;
+    nickname:    string;
+    description: string;
+    handle:      string;
+  };
+  cardStickers: StickerItem[];
+}
+
 export interface Profile {
   id: string;
   publicSlug: string | null;
@@ -19,6 +30,7 @@ export interface Profile {
   themeId: string;
   frameId: string;
   avatarSrc: string | null;  // base64 data URL（最大512px正方形）
+  cardConfig: CardConfig | null; // QRカードビルダーの作業状態
   fields: Field[];
   links: Link[];
   stickers: StickerItem[];

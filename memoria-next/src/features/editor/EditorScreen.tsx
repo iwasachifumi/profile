@@ -133,7 +133,7 @@ function buildDefaultProfile(name: string): Profile {
       mf("favorite",     "推し",                "秘密！"),
       mf("free",         "自由記入欄",          "とりあえず、いろいろ書いてみよう！"),
     ],
-    links: [], stickers: [], avatarSrc: null,
+    links: [], stickers: [], avatarSrc: null, cardConfig: null,
   };
 }
 
@@ -1454,7 +1454,6 @@ export default function EditorScreen() {
           url={`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}?via=qr`}
           patternName={draft.patternName}
           profile={draft}
-          customStickers={customStickers}
           onClose={() => setQrOpen(false)}
         />
       )}

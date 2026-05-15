@@ -23,7 +23,8 @@ function makeDefaultProfile(): Profile {
     description: "",
     themeId: "default",
     frameId: "none",
-    avatarSrc: null,
+    avatarSrc:  null,
+    cardConfig: null,
     fields: [
       // ── 基本 ──────────────────────────────────────────────────────────────
       f("basic", "名前"),
