@@ -341,7 +341,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
               <p key={item.id} style={{
                 margin: "1px 0", lineHeight: 1.3,
                 color:    item.color    ?? "#222222",
-                fontSize: item.fontSize ?? 11,
+                fontSize: item.fontSize ?? 16,
               }}>
                 {item.value}
               </p>
@@ -536,7 +536,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
                     <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", color: "var(--muted)" }}>
                       サイズ
                       <select
-                        value={item.fontSize ?? 11}
+                        value={item.fontSize ?? 16}
                         style={{ fontSize: "12px" }}
                         onChange={(e) => applyItems(items.map((it) => it.id === item.id ? { ...it, fontSize: Number(e.target.value) } : it))}
                       >

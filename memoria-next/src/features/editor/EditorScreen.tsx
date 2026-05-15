@@ -251,6 +251,7 @@ export default function EditorScreen() {
   const [qrExportError,        setQrExportError]        = useState<string | null>(null);
   const [qrCopied,             setQrCopied]             = useState(false);
   const [qrFormatOpenId,       setQrFormatOpenId]       = useState<string | null>(null);
+  const [qrAddPickerOpen,      setQrAddPickerOpen]      = useState(false);
 
   const paperRef       = useRef<HTMLDivElement>(null);
   const dragState      = useRef<{ idx: number } | null>(null);
@@ -721,6 +722,13 @@ export default function EditorScreen() {
     scheduleQrConfigSave(qrTemplateFile, next, qrCardStickers);
   }
 
+  function handleAddQrItemFromField(label: string, value: string) {
+    const next: CardInfoItem[] = [...qrItems, { id: crypto.randomUUID(), label, value }];
+    setQrItems(next);
+    scheduleQrConfigSave(qrTemplateFile, next, qrCardStickers);
+    setQrAddPickerOpen(false);
+  }
+
   function handleAddQrSticker(stickerId: string) {
     const item: StickerItem = { id: crypto.randomUUID(), stickerId, x: 50, y: 50, scale: 1 };
     const next = [...qrCardStickers, item];
@@ -994,7 +1002,7 @@ export default function EditorScreen() {
                 <p key={item.id} style={{
                   margin: "1px 0", lineHeight: 1.3,
                   color:    item.color    ?? "#222222",
-                  fontSize: item.fontSize ?? 11,
+                  fontSize: item.fontSize ?? 16,
                 }}>
                   {item.value}
                 </p>
@@ -1085,7 +1093,9 @@ export default function EditorScreen() {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
             <strong style={{ fontSize: "13px" }}>{t("テキスト内容", "Text items")}</strong>
-            <button type="button" className="icon-button mini-button" onClick={handleAddQrItem}>＋</button>
+            <button type="button" className="icon-button mini-button"
+              onClick={() => setQrAddPickerOpen(true)}
+              title={t("項目を追加", "Add item")}>＋</button>
           </div>
           {/* 書式ポップオーバー用バックドロップ */}
           {qrFormatOpenId && (
@@ -1099,7 +1109,7 @@ export default function EditorScreen() {
             {qrItems.map((item) => {
               const isFormatOpen = qrFormatOpenId === item.id;
               const currentColor = item.color    ?? "#222222";
-              const currentSize  = item.fontSize ?? 11;
+              const currentSize  = item.fontSize ?? 16;
               return (
                 <div key={item.id} className="qr-item-row" style={{ position: "relative" }}>
                   {/* 1行: ラベル・内容・書式ボタン・削除ボタン */}
@@ -1300,6 +1310,69 @@ export default function EditorScreen() {
                 <p className="muted small" style={{ margin: "8px 0 0", textAlign: "center", fontSize: "12px" }}>
                   {t("複数貼れます。終わったら × で閉じてください", "You can add multiple. Close with × when done.")}
                 </p>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── 項目追加ピッカー ──────────────────────────────────────────── */}
+        {qrAddPickerOpen && (() => {
+          // プロフ項目をグループ別に整理
+          const grouped: Record<string, Field[]> = {};
+          for (const f of draft.fields) {
+            if (!f.value) continue;  // 値のない項目は除外
+            const gid = f.groupId || "basic";
+            if (!grouped[gid]) grouped[gid] = [];
+            grouped[gid].push(f);
+          }
+          const usedGroups = GROUP_ORDER.filter((g) => grouped[g]?.length);
+          return (
+            <div className="sticker-picker-backdrop"
+              onClick={() => setQrAddPickerOpen(false)} role="dialog" aria-modal="true">
+              <div className="sticker-picker-modal" onClick={(e) => e.stopPropagation()}
+                style={{ maxHeight: "70vh", overflowY: "auto" }}>
+                <div className="sticker-picker-header">
+                  <strong>{t("項目を追加", "Add item")}</strong>
+                  <button type="button" className="qr-modal-close"
+                    style={{ position: "static", margin: 0 }}
+                    onClick={() => setQrAddPickerOpen(false)} aria-label="閉じる">×</button>
+                </div>
+                <p className="muted small" style={{ margin: "4px 0 10px", fontSize: "12px" }}>
+                  {t("プロフ項目から選ぶと値をコピーして追加します（以降は独立）", "Values are copied once from your profile and managed independently")}
+                </p>
+                <div className="stack" style={{ gap: "6px" }}>
+                  {usedGroups.map((gid) => {
+                    const [lJa, lEn] = GROUP_LABELS[gid] ?? [gid, gid];
+                    return (
+                      <details key={gid} open={gid === "basic"} className="field-group">
+                        <summary>
+                          <span>{t(lJa, lEn)}</span>
+                        </summary>
+                        <div className="field-list">
+                          {(grouped[gid] ?? []).map((field) => (
+                            <button
+                              key={field.id}
+                              type="button"
+                              className="field-card"
+                              style={{ width: "100%", textAlign: "left", cursor: "pointer", padding: "6px 10px", display: "grid", gap: "2px" }}
+                              onClick={() => handleAddQrItemFromField(field.label, field.value)}
+                            >
+                              <span className="muted small" style={{ fontSize: "11px" }}>{field.label}</span>
+                              <strong style={{ fontSize: "13px" }}>{field.value}</strong>
+                            </button>
+                          ))}
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
+                {/* 新規（空白） */}
+                <div style={{ borderTop: "1px solid var(--line)", marginTop: "10px", paddingTop: "10px" }}>
+                  <button type="button" className="button secondary" style={{ width: "100%" }}
+                    onClick={() => { handleAddQrItem(); setQrAddPickerOpen(false); }}>
+                    ＋ {t("空白の項目を新規追加", "Add blank item")}
+                  </button>
+                </div>
               </div>
             </div>
           );
