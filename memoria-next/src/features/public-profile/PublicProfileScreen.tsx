@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { publicApi } from "@/api/public";
 import { exchangesApi } from "@/api/exchanges";
@@ -21,6 +22,14 @@ const LINK_ICONS: Record<string, string> = {
   website:   "🔗",
   other:     "🔗",
 };
+
+function resolveStickerSrc(stickerId: string) {
+  return stickerId.startsWith("data:") ? stickerId : `/stamp/${stickerId}`;
+}
+
+function initialOf(name: string) {
+  return (name || "?")[0].toUpperCase();
+}
 
 export default function PublicProfileScreen({ slug, handle, via }: PublicProfileScreenProps) {
   const hasIdentifier = Boolean(slug || handle);
@@ -58,7 +67,6 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
   }, [handle, hasIdentifier, slug]);
 
   // ── ゲスト向けログイン促進モーダル ──────────────────────────────────────
-  // プロフ読み込み完了後、少し間を置いてから表示（閲覧を邪魔しない）
 
   useEffect(() => {
     if (session.status !== "guest" || !profile) return;
@@ -133,10 +141,15 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
 
   const visibleFields = profile.fields.filter((f) => f.visible && f.label && f.value);
   const visibleLinks  = profile.links.filter((l) => l.visible && l.url);
+  const hasFrame      = Boolean(profile.frameId && profile.frameId !== "none");
+
+  const paperStyle: CSSProperties = hasFrame
+    ? { "--frame-url": `url('/frame/${profile.frameId}')` } as CSSProperties
+    : {};
 
   return (
     <main className="pub-page">
-      <div className="pub-card">
+      <div style={{ width: "100%", maxWidth: "480px", display: "flex", flexDirection: "column", gap: "12px", padding: "16px 0 32px" }}>
 
         {/* ── QR経由バナー ─────────────────────────────────────────────── */}
         {isQr && (
@@ -146,91 +159,122 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
           </div>
         )}
 
-        {/* ── ヘッダー ─────────────────────────────────────────────────── */}
-        <div className="pub-header">
-          <div className="pub-avatar">
-            <span>{(profile.patternName || "?")[0].toUpperCase()}</span>
-          </div>
-          <div className="pub-header-info">
-            <h1 className="pub-name">{profile.patternName}</h1>
-            {profile.audience && (
-              <span className="pub-audience">{profile.audience}</span>
-            )}
-            {profile.handle && (
-              <p className="pub-handle">@{profile.handle}</p>
+        {/* ── プロフィールカード（デザイン適用） ─────────────────────── */}
+        <div
+          className={`profile-paper theme-${profile.themeId || "default"}${hasFrame ? " has-image-frame" : ""}`}
+          style={paperStyle}
+        >
+          <div className="paper-lines" />
+
+          {/* シール */}
+          {profile.stickers.map((s) => {
+            const sz = Math.round(80 * (s.scale ?? 1));
+            return (
+              <div
+                key={s.id}
+                style={{
+                  position: "absolute",
+                  left:  `${s.x}%`,
+                  top:   `${s.y}%`,
+                  width: `${sz}px`,
+                  pointerEvents: "none",
+                  zIndex: 2,
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={resolveStickerSrc(s.stickerId)}
+                  alt=""
+                  style={{ width: "100%", display: "block" }}
+                />
+              </div>
+            );
+          })}
+
+          {/* プロフィール内容 */}
+          <div className="profile-content">
+            <header className="profile-head">
+              <div className="avatar">
+                {profile.avatarSrc
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={profile.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                  : <span>{initialOf(profile.patternName)}</span>
+                }
+              </div>
+              <div>
+                <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
+                  {profile.patternName}{profile.audience ? ` / ${profile.audience}` : ""}
+                </p>
+                <h2 className="profile-name">{profile.description || profile.patternName}</h2>
+              </div>
+            </header>
+
+            {/* フィールド */}
+            {visibleFields.map((field) => (
+              <div key={field.id} className="answer">
+                <span className="muted small">{field.label}</span>
+                <strong>{field.value}</strong>
+              </div>
+            ))}
+
+            {/* リンク */}
+            {visibleLinks.length > 0 && (
+              <div className="pub-links" style={{ marginTop: "8px" }}>
+                {visibleLinks.map((link) => (
+                  <a
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="pub-link"
+                  >
+                    <span className="pub-link-icon">{LINK_ICONS[link.type] ?? "🔗"}</span>
+                    <span>{link.label || link.type}</span>
+                  </a>
+                ))}
+              </div>
             )}
           </div>
         </div>
 
-        {/* ── 自己紹介 ─────────────────────────────────────────────────── */}
-        {profile.description && (
-          <p className="pub-description">{profile.description}</p>
-        )}
+        {/* ── 交換・フッターエリア ─────────────────────────────────── */}
+        <div className="pub-card" style={{ borderRadius: "12px" }}>
 
-        {/* ── フィールド ────────────────────────────────────────────────── */}
-        {visibleFields.length > 0 && (
-          <div className="pub-fields">
-            {visibleFields.map((field) => (
-              <div key={field.id} className="pub-field">
-                <span className="pub-field-label">{field.label}</span>
-                <span className="pub-field-value">{field.value}</span>
-              </div>
-            ))}
+          {/* 交換ボタン（ログイン済みのみ） */}
+          {session.status === "user" && (
+            <div className="pub-exchange-area">
+              {exchanged ? (
+                <div className="pub-exchange-done">
+                  <p>✓ {isQr ? "QRで交換記録しました" : "交換帳に追加しました"}</p>
+                  <Link href="/book" className="button secondary">
+                    交換帳を見る →
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="button"
+                    style={{ width: "100%", minHeight: "48px", fontSize: "15px" }}
+                    onClick={() => void handleExchange()}
+                    disabled={exchangeBusy}
+                  >
+                    {exchangeBusy ? "記録中..." : isQr ? "📒 交換帳に記録する" : "この人を交換帳に追加"}
+                  </button>
+                  {exchangeError && (
+                    <p className="error-text" style={{ marginTop: "8px" }}>{exchangeError}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* フッター */}
+          <div className="pub-footer">
+            <Link href="/" className="pub-footer-link">
+              Memoriaで自分のプロフ帳を作る →
+            </Link>
           </div>
-        )}
-
-        {/* ── リンク ───────────────────────────────────────────────────── */}
-        {visibleLinks.length > 0 && (
-          <div className="pub-links">
-            {visibleLinks.map((link) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="pub-link"
-              >
-                <span className="pub-link-icon">{LINK_ICONS[link.type] ?? "🔗"}</span>
-                <span>{link.label || link.type}</span>
-              </a>
-            ))}
-          </div>
-        )}
-
-        {/* ── 交換ボタン（ログイン済みのみ） ───────────────────────────── */}
-        {session.status === "user" && (
-          <div className="pub-exchange-area">
-            {exchanged ? (
-              <div className="pub-exchange-done">
-                <p>✓ {isQr ? "QRで交換記録しました" : "交換帳に追加しました"}</p>
-                <Link href="/book" className="button secondary">
-                  交換帳を見る →
-                </Link>
-              </div>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="button"
-                  style={{ width: "100%", minHeight: "48px", fontSize: "15px" }}
-                  onClick={() => void handleExchange()}
-                  disabled={exchangeBusy}
-                >
-                  {exchangeBusy ? "記録中..." : isQr ? "📒 交換帳に記録する" : "この人を交換帳に追加"}
-                </button>
-                {exchangeError && (
-                  <p className="error-text" style={{ marginTop: "8px" }}>{exchangeError}</p>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ── フッター ─────────────────────────────────────────────────── */}
-        <div className="pub-footer">
-          <Link href="/" className="pub-footer-link">
-            Memoriaで自分のプロフ帳を作る →
-          </Link>
         </div>
 
       </div>
@@ -248,7 +292,6 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
             className="auth-prompt-sheet"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 閉じるボタン */}
             <button
               type="button"
               className="auth-prompt-close"
@@ -258,7 +301,6 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
               ×
             </button>
 
-            {/* アイコン＋メッセージ */}
             <div className="auth-prompt-icon">📒</div>
             <h2 className="auth-prompt-title">
               交換したプロフィールを<br />あとで見返せます
@@ -268,7 +310,6 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
               交換帳に記録して、いつでも振り返ることができます。
             </p>
 
-            {/* CTAボタン */}
             <div className="auth-prompt-actions">
               <Link href={loginUrl} className="button auth-prompt-btn-login">
                 ログインする
@@ -278,7 +319,6 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
               </Link>
             </div>
 
-            {/* 閉じるリンク */}
             <button
               type="button"
               className="auth-prompt-skip"
