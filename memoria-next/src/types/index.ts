@@ -18,6 +18,7 @@ export interface Profile {
   description: string;
   themeId: string;
   frameId: string;
+  avatarSrc: string | null;  // base64 data URL（最大512px正方形）
   fields: Field[];
   links: Link[];
   stickers: StickerItem[];

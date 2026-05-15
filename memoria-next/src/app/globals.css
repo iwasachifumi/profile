@@ -3697,3 +3697,272 @@ body:has(.lp-root) .topnav a.active {
   from { opacity: 0; transform: translateX(-50%) translateY(8px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* ── QRカードビルダー ─────────────────────────────────────────────────────── */
+
+/* モーダル本体 */
+.qr-card-builder {
+  background: var(--panel);
+  width: 100%;
+  max-width: 600px;
+  max-height: 96dvh;
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: sheet-up 0.25s ease;
+}
+
+@media (min-width: 640px) {
+  .qr-card-builder {
+    border-radius: 16px;
+    max-height: 92dvh;
+    animation: modal-in 0.22s ease;
+  }
+}
+
+/* ヘッダー */
+.qr-card-builder-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+/* フッター（テンプレート選択ステップ） */
+.qr-card-builder-footer {
+  padding: 12px 16px 20px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* テンプレートグリッド */
+.qr-card-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(120px, 40%), 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.qr-card-template-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 4px;
+  background: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.qr-card-template-btn.active {
+  border-color: var(--green);
+  background: var(--green-soft);
+}
+.qr-card-template-btn:hover {
+  border-color: var(--line);
+}
+
+.qr-card-template-thumb {
+  width: 100%;
+  aspect-ratio: 16/10;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.qr-card-template-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* カードプレビューラッパー（スクロール対応） */
+.qr-card-preview-wrap {
+  background: #e8e0d8;
+  padding: 14px 12px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* カード本体（480×290 横長名刺） */
+.qr-card-paper {
+  position: relative;
+  width: 480px;
+  height: 290px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+  user-select: none;
+}
+
+/* 背景画像（全面） */
+.qr-card-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 左エリア（半透明白オーバーレイ） */
+.qr-card-left {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 66%;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(2px);
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* 右エリア（QRコード） */
+.qr-card-right {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 8px;
+  gap: 6px;
+}
+
+/* アバター */
+.qr-card-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--paper-strong);
+  border: 2px solid rgba(255,255,255,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.qr-card-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* テキスト情報 */
+.qr-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.qr-card-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qr-card-nickname {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qr-card-desc {
+  margin: 0;
+  font-size: 11px;
+  color: #4a4a4a;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.qr-card-handle {
+  margin: 0;
+  font-size: 11px;
+  color: var(--green);
+  font-weight: 600;
+}
+
+/* QRコードボックス */
+.qr-card-qr-wrap {
+  background: #fff;
+  border-radius: 6px;
+  padding: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+/* タグライン */
+.qr-card-tagline {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+  text-align: center;
+}
+
+/* 操作エリア */
+.qr-card-controls {
+  padding: 12px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* 情報編集アコーディオン */
+.qr-card-info-accordion {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.qr-card-info-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--paper);
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.qr-card-info-toggle:hover { background: var(--paper-strong); }
+
+.qr-card-info-fields {
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+  background: #fff;
+}

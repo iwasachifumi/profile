@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "html-to-image": "^1.11.13",
     "jose": "^5.9.6",
     "next": "15.5.18",
     "postgres": "^3.4.4",

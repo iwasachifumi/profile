@@ -133,7 +133,7 @@ function buildDefaultProfile(name: string): Profile {
       mf("favorite",     "推し",                "秘密！"),
       mf("free",         "自由記入欄",          "とりあえず、いろいろ書いてみよう！"),
     ],
-    links: [], stickers: [],
+    links: [], stickers: [], avatarSrc: null,
   };
 }
 
@@ -416,6 +416,35 @@ export default function EditorScreen() {
       setError(t("Failed to load the sticker image.", "Failed to load the sticker image."));
     }
   }
+  async function handleAvatarUpload(file: File) {
+    try {
+      const raw = await readFileAsDataUrl(file);
+      // canvas でリサイズ（最大 512px 正方形）
+      const resized = await new Promise<string>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 512;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const w = Math.round(img.width  * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement("canvas");
+          canvas.width  = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) { reject(new Error("canvas")); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", 0.82));
+        };
+        img.onerror = () => reject(new Error("img load failed"));
+        img.src = raw;
+      });
+      if (!draft) return;
+      applyAndSave({ ...draft, avatarSrc: resized });
+    } catch {
+      setError(t("画像の読み込みに失敗しました。", "Failed to load the image."));
+    }
+  }
+
   async function handleSendStickerGift() {
     const toHandle = giftToHandle.trim().replace(/^@+/, "");
     if (!toHandle) {
@@ -634,7 +663,12 @@ export default function EditorScreen() {
         )}
         <div className="profile-content">
           <header className="profile-head">
-            <div className="avatar"><span>{initialOf(d.patternName)}</span></div>
+            <div className="avatar">
+              {d.avatarSrc
+                ? <img src={d.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} /> // eslint-disable-line @next/next/no-img-element
+                : <span>{initialOf(d.patternName)}</span>
+              }
+            </div>
             <div>
               <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
                 {d.patternName}{d.audience ? ` / ${d.audience}` : ""}
@@ -936,6 +970,47 @@ export default function EditorScreen() {
                 <input value={draft.description}
                   onChange={(e) => { const n = { ...draft, description: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
               </label>
+
+              {/* アバター画像アップロード */}
+              <div style={{ fontSize: "13px", color: "var(--muted)", display: "grid", gap: "6px" }}>
+                <span>{t("プロフィール画像", "Profile photo")}</span>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <div className="avatar" style={{ flexShrink: 0, width: "48px", height: "48px", fontSize: "18px" }}>
+                    {draft.avatarSrc
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={draft.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                      : <span>{initialOf(draft.patternName)}</span>
+                    }
+                  </div>
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    <label className="file-button" style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto" }}>
+                      <span>{t("画像を選ぶ", "Choose photo")}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void handleAvatarUpload(f);
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                    {draft.avatarSrc && (
+                      <button
+                        type="button"
+                        className="button secondary"
+                        style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto", color: "var(--pink)" }}
+                        onClick={() => applyAndSave({ ...draft, avatarSrc: null })}
+                      >
+                        {t("削除", "Remove")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="muted small" style={{ margin: 0 }}>
+                  {t("最大512px・JPEGに変換して保存", "Resized to 512px max, saved as JPEG")}
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -1261,7 +1336,12 @@ export default function EditorScreen() {
                 {/* プロフィール内容 */}
                 <div className="profile-content">
                   <header className="profile-head">
-                    <div className="avatar"><span>{initialOf(draft.patternName)}</span></div>
+                    <div className="avatar">
+                      {draft.avatarSrc
+                        ? <img src={draft.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} /> // eslint-disable-line @next/next/no-img-element
+                        : <span>{initialOf(draft.patternName)}</span>
+                      }
+                    </div>
                     <div>
                       <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
                         {draft.patternName}{draft.audience ? ` / ${draft.audience}` : ""}
@@ -1373,6 +1453,8 @@ export default function EditorScreen() {
         <QrModal
           url={`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}?via=qr`}
           patternName={draft.patternName}
+          profile={draft}
+          customStickers={customStickers}
           onClose={() => setQrOpen(false)}
         />
       )}

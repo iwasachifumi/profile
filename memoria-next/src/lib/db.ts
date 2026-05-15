@@ -158,11 +158,12 @@ export async function insertProfile(userId: string, profile: Profile) {
   await sql`
     INSERT INTO memoria.profiles
       (id, owner_id, public_slug, handle, is_public, pattern_name,
-       audience, description, theme_id, frame_id, fields, links, stickers)
+       audience, description, theme_id, frame_id, avatar_src, fields, links, stickers)
     VALUES
       (${profile.id}, ${userId}, ${profile.publicSlug}, ${profile.handle},
        ${profile.isPublic}, ${profile.patternName}, ${profile.audience},
        ${profile.description}, ${profile.themeId}, ${profile.frameId},
+       ${profile.avatarSrc ?? null},
        ${sql.json(j(profile.fields))}, ${sql.json(j(profile.links))}, ${sql.json(j(profile.stickers))})
   `;
 }
@@ -179,6 +180,7 @@ export async function updateProfile(userId: string, id: string, profile: Partial
       description  = COALESCE(${profile.description ?? null}, description),
       theme_id     = COALESCE(${profile.themeId ?? null}, theme_id),
       frame_id     = COALESCE(${profile.frameId ?? null}, frame_id),
+      avatar_src   = COALESCE(${profile.avatarSrc ?? null}, avatar_src),
       fields       = COALESCE(${profile.fields ? sql.json(j(profile.fields)) : null}, fields),
       links        = COALESCE(${profile.links ? sql.json(j(profile.links)) : null}, links),
       stickers     = COALESCE(${profile.stickers ? sql.json(j(profile.stickers)) : null}, stickers),
@@ -454,6 +456,7 @@ function rowToProfile(row: Record<string, unknown>): Profile {
     description: (row.description as string) ?? "",
     themeId: (row.theme_id as string) ?? "friends",
     frameId: (row.frame_id as string) ?? "none",
+    avatarSrc: (row.avatar_src as string | null) ?? null,
     fields: Array.isArray(row.fields) ? (row.fields as Profile["fields"]) : [],
     links: Array.isArray(row.links) ? (row.links as Profile["links"]) : [],
     stickers: Array.isArray(row.stickers) ? (row.stickers as Profile["stickers"]) : [],
