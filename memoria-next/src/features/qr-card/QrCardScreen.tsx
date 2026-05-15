@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 import { toPng } from "html-to-image";
 import { profilesApi } from "@/api/profiles";
 import { settingsApi } from "@/api/settings";
@@ -357,7 +357,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
         {/* 右エリア */}
         <div className="qr-card-right">
           <div className="qr-card-qr-wrap">
-            <QRCodeSVG value={qrUrl} size={100} />
+            <QRCodeCanvas value={qrUrl} size={100} />
           </div>
           <p className="qr-card-tagline">Memoriaで見てね</p>
         </div>
