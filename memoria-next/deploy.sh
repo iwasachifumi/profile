@@ -13,7 +13,7 @@ cd "$DEPLOY_DIR"
 git pull
 
 echo "=== [2/4] npm ci (依存関係) ==="
-npm ci --omit=dev 2>/dev/null || npm install --omit=dev
+npm ci
 
 echo "=== [3/4] npm run build ==="
 npm run build
