@@ -36,14 +36,26 @@ export async function POST(request: NextRequest) {
     await insertExchange(session.userId, body);
     return ok({ id: body.id }, 201);
   } catch (e) {
+    const code = typeof e === "object" && e !== null ? (e as { code?: string }).code : undefined;
+    console.error("[exchanges POST] insertExchange failed", {
+      userId: session.userId,
+      email: session.email,
+      isGuest: session.isGuest,
+      pgCode: code,
+      error: String(e),
+    });
+
     // 外部キー制約違反 = セッションのユーザーIDがDBに存在しない
     // → ユーザーレコードを自動作成してリトライ（クッキー削除できない端末の救済）
-    if (typeof e === "object" && e !== null && (e as { code?: string }).code === "23503") {
+    if (code === "23503") {
       try {
+        console.log("[exchanges POST] 23503: ensureUserExists →", session.userId);
         await ensureUserExists(session.userId, session.email, session.isGuest);
         await insertExchange(session.userId, body);
+        console.log("[exchanges POST] retry succeeded →", body.id);
         return ok({ id: body.id }, 201);
       } catch (e2) {
+        console.error("[exchanges POST] retry failed", String(e2));
         return serverError(e2);
       }
     }
