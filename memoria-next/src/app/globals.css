@@ -3961,7 +3961,7 @@ body:has(.lp-root) .topnav a.active {
   width: 317px; height: 290px;
   z-index: 1;
   background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(2px);
+  /* backdrop-filter: blur(2px); → html-to-image の foreignObject で背景レンダリングを破壊するため削除 */
   padding: 14px 12px;
   box-sizing: border-box;
   display: flex;
