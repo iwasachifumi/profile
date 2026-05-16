@@ -384,17 +384,24 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
         {/* 右エリア */}
         <div className="qr-card-right">
           <div className="qr-card-qr-wrap">
-            {/* hidden canvas: data URL 生成用 */}
+            {/* hidden canvas: toDataURL() 用。html-to-image はcanvasを取り込めないため img に変換して表示 */}
             <QRCodeCanvas ref={handleQrCanvasRef} value={qrUrl} size={100}
               style={{ position: "absolute", opacity: 0, pointerEvents: "none", top: -9999 }} />
-            {/* img として表示: html-to-image が確実に取り込める */}
-            {qrImgSrc
+            {qrImgSrc && (
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={qrImgSrc} width={100} height={100} alt="QR" style={{ display: "block" }} />
-              : <QRCodeCanvas value={qrUrl} size={100} />
-            }
+              <img src={qrImgSrc} width={100} height={100} alt="QR" style={{ display: "block" }} />
+            )}
           </div>
-          <p className="qr-card-tagline">Memoriaで見てね</p>
+        </div>
+
+        {/* ウォーターマーク（PNG出力時も含まれる） */}
+        <div style={{
+          position: "absolute", bottom: 6, right: 8, zIndex: 100,
+          fontSize: 9, color: "rgba(255,255,255,0.75)",
+          fontFamily: "sans-serif", lineHeight: 1.3, textAlign: "right",
+          textShadow: "0 1px 2px rgba(0,0,0,0.6)", pointerEvents: "none",
+        }}>
+          [memoria]<br />https://profile.ac7.co.jp
         </div>
 
         {/* シール */}
