@@ -4854,3 +4854,31 @@ body:has(.lp-root) .topnav a.active {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* 右ペインの特徴カードは1列(=3行)で縦積み */
+.idx-pane-right .lp-reason-grid {
+  grid-template-columns: 1fr;
+}
+
+/* 右ペインのCTAバナー上書きは不要になったので解除 */
+.idx-pane-right .idx-cta-banner-section {
+  display: block;
+}
+
+/* CTAバナーセクション（フルワイド時）の余白調整 */
+.idx-cta-banner-section {
+  text-align: center;
+}
+.idx-cta-banner-section .idx-cta-banner-grid {
+  text-align: left;
+}
+
+/* 2ペイン全体に統一背景（右側が短くて余白が目立つ問題対策） */
+.idx-two-pane {
+  background: #fff8ec;
+}
+
+/* 重複していたセクション単独の背景は解除 */
+.idx-two-pane .idx-chara-section {
+  background: transparent;
+}
