@@ -843,29 +843,22 @@ export default function EditorScreen() {
     });
     qrExportTrace(7, visibleCard, { handler: "editor_generateQrPng_before_toPng", nodeSource: "visibleRef" });
 
-    // position:absolute のまま toPng すると html-to-image が foreignObject 内で
-    // 幅を誤計算して 317px でクリップされる。position:relative に変えて回避する。
-    // React が再描画で上書きしないよう rAF を挟まず toPng を即呼び出す。
-    const savedTransform = visibleCard.style.transform;
-    const savedPosition  = visibleCard.style.position;
-    visibleCard.style.transform = "none";
-    visibleCard.style.position  = "relative";
-
-    let dataUrl: string;
-    try {
-      dataUrl = await toPng(visibleCard, {
-        pixelRatio: 2,
-        cacheBust: true,
-        width: 480,
-        height: 290,
-        canvasWidth: 960,
-        canvasHeight: 580,
-      });
-    } finally {
-      visibleCard.style.transform = savedTransform;
-      visibleCard.style.position  = savedPosition;
-    }
-    return dataUrl;
+    // style オプションはクローンにのみ適用される → 実際のDOMは変更しない
+    // position:relative にしないと foreignObject 内で幅が 317px に誤計算される
+    return toPng(visibleCard, {
+      pixelRatio: 2,
+      cacheBust: true,
+      width: 480,
+      height: 290,
+      canvasWidth: 960,
+      canvasHeight: 580,
+      style: {
+        position: "relative",
+        transform: "none",
+        width: "480px",
+        height: "290px",
+      },
+    });
   }
 
   async function uploadQrOgImage(dataUrl: string): Promise<void> {
