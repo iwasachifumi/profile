@@ -217,13 +217,10 @@ export default function IndexScreen() {
         {/* Left: Memoria-tan profile */}
         <aside className="idx-pane idx-pane-left">
           <section className="lp-section idx-chara-section">
-            <h2 className="lp-h2">
-              {t("めもりあたん プロフィール", "Memoria-tan profile")}
-            </h2>
             <p className="lp-section-lead">
               {t(
-                "Memoria の公式キャラクター。「人を覚えていたい」を体現した存在です。",
-                "Memoria's official character — the embodiment of \"I want to remember people.\""
+                "本サービスの公式キャラクターのメモリアです。このサービスでは自分のプロフを作成・交換できます。",
+                "Meet Memoria, the official character of this service. Memoria lets you create and exchange your own profile."
               )}
             </p>
 
@@ -304,46 +301,45 @@ export default function IndexScreen() {
               ))}
             </ul>
           </section>
+
+          <section className="lp-section idx-cta-banner-section">
+            <h2 className="lp-h2">{t("もっと知る", "Learn more")}</h2>
+            <div className="idx-cta-banner-grid">
+              <Link href="/lp" className="idx-cta-banner idx-cta-banner-lp">
+                <span className="idx-cta-banner-tag">{t("サービス紹介", "About")}</span>
+                <strong className="idx-cta-banner-title">
+                  {t("Memoria でできること", "What Memoria can do")}
+                </strong>
+                <span className="idx-cta-banner-desc">
+                  {t(
+                    "交換から記録まで、使い方をビジュアルで紹介します。",
+                    "From exchange to record — see how it works, visually."
+                  )}
+                </span>
+                <span className="idx-cta-banner-arrow">{t("LPを見る →", "See the LP →")}</span>
+              </Link>
+              <a
+                href="https://note.com/torataka/n/n5df397c395c1"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="idx-cta-banner idx-cta-banner-note"
+              >
+                <span className="idx-cta-banner-tag">{t("開発秘話", "Dev story")}</span>
+                <strong className="idx-cta-banner-title">
+                  {t("なぜ Memoria をつくったか", "Why I built Memoria")}
+                </strong>
+                <span className="idx-cta-banner-desc">
+                  {t(
+                    "開発の背景や想いを、note にまとめています。",
+                    "The story and ideas behind the project, on note."
+                  )}
+                </span>
+                <span className="idx-cta-banner-arrow">{t("noteで読む →", "Read on note →")}</span>
+              </a>
+            </div>
+          </section>
         </div>
       </div>
-
-      {/* ── More about: LP / note (full width, separated from product info) ── */}
-      <section className="lp-section idx-cta-banner-section">
-        <h2 className="lp-h2">{t("もっと知る", "Learn more")}</h2>
-        <div className="idx-cta-banner-grid">
-          <Link href="/lp" className="idx-cta-banner idx-cta-banner-lp">
-            <span className="idx-cta-banner-tag">{t("サービス紹介", "About")}</span>
-            <strong className="idx-cta-banner-title">
-              {t("Memoria でできること", "What Memoria can do")}
-            </strong>
-            <span className="idx-cta-banner-desc">
-              {t(
-                "交換から記録まで、使い方をビジュアルで紹介します。",
-                "From exchange to record — see how it works, visually."
-              )}
-            </span>
-            <span className="idx-cta-banner-arrow">{t("LPを見る →", "See the LP →")}</span>
-          </Link>
-          <a
-            href="https://note.com/torataka/n/n5df397c395c1"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="idx-cta-banner idx-cta-banner-note"
-          >
-            <span className="idx-cta-banner-tag">{t("開発秘話", "Dev story")}</span>
-            <strong className="idx-cta-banner-title">
-              {t("なぜ Memoria をつくったか", "Why I built Memoria")}
-            </strong>
-            <span className="idx-cta-banner-desc">
-              {t(
-                "開発の背景や想いを、note にまとめています。",
-                "The story and ideas behind the project, on note."
-              )}
-            </span>
-            <span className="idx-cta-banner-arrow">{t("noteで読む →", "Read on note →")}</span>
-          </a>
-        </div>
-      </section>
 
       {/* ── Final CTA ── */}
       <section className="lp-section lp-final-section">
