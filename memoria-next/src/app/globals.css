@@ -4727,3 +4727,112 @@ body:has(.lp-root) .topnav a.active {
 .idx-hero-inner-solo .idx-hero-actions {
   justify-content: center;
 }
+
+/* Hero with photo */
+.idx-hero-visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.idx-hero-photo {
+  width: 100%;
+  max-width: 460px;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(60, 40, 20, 0.18);
+  display: block;
+}
+
+@media (max-width: 720px) {
+  .idx-hero-photo {
+    max-width: 100%;
+  }
+}
+
+/* 大型導線バナー (LP / note) */
+.idx-cta-banner-section {
+  padding: 28px 20px;
+  background: #fff8ec;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.idx-cta-banner-grid {
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 720px) {
+  .idx-cta-banner-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.idx-cta-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px 24px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-left: 6px solid #e07a3c;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #2f2418;
+  box-shadow: 0 3px 10px rgba(120, 80, 40, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.idx-cta-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(120, 80, 40, 0.16);
+}
+
+.idx-cta-banner-note {
+  border-left-color: #4a9b7e;
+}
+
+.idx-cta-banner-tag {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 2px 10px;
+  background: #f0e2c9;
+  color: #6a4f2f;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.idx-cta-banner-note .idx-cta-banner-tag {
+  background: #d8ece3;
+  color: #2f6e58;
+}
+
+.idx-cta-banner-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.idx-cta-banner-desc {
+  font-size: 13px;
+  color: #5a4a36;
+  line-height: 1.65;
+}
+
+.idx-cta-banner-arrow {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e07a3c;
+}
+
+.idx-cta-banner-note .idx-cta-banner-arrow {
+  color: #4a9b7e;
+}
