@@ -399,7 +399,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
               key={s.id}
               data-sticker-el="1"
               className={`placed-sticker${isSel ? " selected" : ""}`}
-              style={{ left: `${s.x}%`, top: `${s.y}%`, width: `${sz}px`, cursor: "grab", touchAction: "none", zIndex: 10 }}
+              style={{ left: `${(s.x / 100) * 480}px`, top: `${(s.y / 100) * 290}px`, width: `${sz}px`, cursor: "grab", touchAction: "none", zIndex: 10 }}
               onPointerDown={(e) => onStickerPointerDown(e, idx)}
             >
               {isSel && (

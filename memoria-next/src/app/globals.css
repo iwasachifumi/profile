@@ -3954,11 +3954,11 @@ body:has(.lp-root) .topnav a.active {
   pointer-events: none;
 }
 
-/* 左エリア（半透明白オーバーレイ）: absolute配置でhtml-to-imageのflex誤算を回避 */
+/* 左エリア（半透明白オーバーレイ）: px指定でhtml-to-imageの%誤算を回避 */
 .qr-card-left {
   position: absolute;
   left: 0; top: 0;
-  width: 66%; height: 100%;
+  width: 317px; height: 290px;
   z-index: 1;
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(2px);
@@ -3970,11 +3970,11 @@ body:has(.lp-root) .topnav a.active {
   overflow: hidden;
 }
 
-/* 右エリア（QRコード）: absolute配置でhtml-to-imageのflex誤算を回避 */
+/* 右エリア（QRコード）: px指定でhtml-to-imageの%誤算を回避 */
 .qr-card-right {
   position: absolute;
-  left: 66%; top: 0;
-  width: 34%; height: 100%;
+  left: 317px; top: 0;
+  width: 163px; height: 290px;
   z-index: 1;
   display: flex;
   flex-direction: column;
