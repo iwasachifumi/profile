@@ -4882,3 +4882,46 @@ body:has(.lp-root) .topnav a.active {
 .idx-two-pane .idx-chara-section {
   background: transparent;
 }
+
+/* === Pane swap: chara→右、service→左 に伴うスタイル付け替え === */
+
+/* 旧: 左ペイン(chara)のスティッキー → 解除 */
+.idx-two-pane .idx-pane-left {
+  position: static;
+}
+
+/* 旧: 左ペイン(chara)用の chara-profile max-width 解除 → 右ペインに付け替え */
+.idx-two-pane .idx-pane-left .idx-chara-profile {
+  max-width: 760px;
+}
+.idx-two-pane .idx-pane-right .idx-chara-profile {
+  max-width: none;
+}
+
+/* 旧: 右ペイン(service)用の縦積み・1列CTA → 左ペインに付け替え */
+.idx-pane-left .lp-reason-grid {
+  grid-template-columns: 1fr;
+}
+.idx-pane-right .lp-reason-grid {
+  /* 右ペインにはもう reason-grid は無いが、保険として戻す */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.idx-pane-left .idx-cta-banner-section {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+.idx-pane-left .idx-cta-banner-grid {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 901px) {
+  .idx-pane-left .idx-cta-banner-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.idx-pane-right .idx-cta-banner-section {
+  /* 右ペインにはもう banner は無いが、保険 */
+  padding: 28px 20px;
+  background: #fff8ec;
+}

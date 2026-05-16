@@ -214,67 +214,14 @@ export default function IndexScreen() {
 
       {/* ── 2-pane (PC) / stacked (mobile) ── */}
       <div className="idx-two-pane">
-        {/* Left: Memoria-tan profile */}
-        <aside className="idx-pane idx-pane-left">
-          <section className="lp-section idx-chara-section">
-            <p className="lp-section-lead">
-              {t(
-                "本サービスの公式キャラクターのメモリアです。このサービスでは自分のプロフを作成・交換できます。",
-                "Meet Memoria, the official character of this service. Memoria lets you create and exchange your own profile."
-              )}
-            </p>
-
-            <div className="idx-chara-profile">
-              <div className="idx-chara-profile-head">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/memoria.png" alt={t("めもりあたん", "Memoria-tan")} className="idx-chara-profile-img" />
-                <dl className="idx-chara-basic">
-                  {CHARA_BASIC.map((it) => (
-                    <div key={it.label} className="idx-chara-basic-row">
-                      <dt>{it.label}</dt>
-                      <dd>{it.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              {CHARA_SECTIONS.map((sec) => (
-                <div key={sec.heading} className="idx-chara-block">
-                  <h3 className="idx-chara-block-title">{sec.heading}</h3>
-                  <dl className="idx-chara-list">
-                    {sec.items.map((it) => (
-                      <div key={it.label} className="idx-chara-list-row">
-                        <dt>{it.label}</dt>
-                        <dd>{it.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              ))}
-
-              <div className="idx-chara-block">
-                <h3 className="idx-chara-block-title">{t("最近のメモ", "Recent notes")}</h3>
-                <ul className="idx-chara-notes">
-                  {CHARA_NOTES.map((n, i) => (
-                    <li key={i}>{n}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <p className="idx-chara-message">「{CHARA_MESSAGE}」</p>
-            </div>
-          </section>
-        </aside>
-
-        {/* Right: Service overview + CTA banners + Changelog */}
-        <div className="idx-pane idx-pane-right">
+        {/* Left: Service overview + Changelog + CTA banners */}
+        <div className="idx-pane idx-pane-left">
           <section className="lp-section idx-about-section">
             <h2 className="lp-h2">{t("Memoria とは", "What is Memoria")}</h2>
             <p className="lp-section-lead">
-              {t(
-                "イベントや SNS で出会った人を、QRやリンクで交換して、自分だけの「交換帳」に残せるサービスです。",
-                "A service to exchange profiles (via QR or link) with people you meet at events or on SNS, and keep them in your own \"book of people.\""
-              )}
+              {t("イベントや SNS で出会った人を、QRやリンクで交換。", "Exchange profiles via QR or link with people you meet at events or on SNS.")}
+              <br />
+              {t("自分だけの「交換帳」に残せるサービスです。", "Keep them in your own \"book of people.\"")}
             </p>
             <div className="lp-reason-grid">
               {FEATURES.map((f) => (
@@ -339,6 +286,57 @@ export default function IndexScreen() {
             </div>
           </section>
         </div>
+
+        {/* Right: Memoria-tan profile */}
+        <aside className="idx-pane idx-pane-right">
+          <section className="lp-section idx-chara-section">
+            <p className="lp-section-lead">
+              {t("本サービスの公式キャラクター、メモリアです。", "Meet Memoria, the official character of this service.")}
+              <br />
+              {t("このサービスでは、自分のプロフを作成・交換できます。", "Memoria lets you create and exchange your own profile.")}
+            </p>
+
+            <div className="idx-chara-profile">
+              <div className="idx-chara-profile-head">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/memoria.png" alt={t("めもりあたん", "Memoria-tan")} className="idx-chara-profile-img" />
+                <dl className="idx-chara-basic">
+                  {CHARA_BASIC.map((it) => (
+                    <div key={it.label} className="idx-chara-basic-row">
+                      <dt>{it.label}</dt>
+                      <dd>{it.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              {CHARA_SECTIONS.map((sec) => (
+                <div key={sec.heading} className="idx-chara-block">
+                  <h3 className="idx-chara-block-title">{sec.heading}</h3>
+                  <dl className="idx-chara-list">
+                    {sec.items.map((it) => (
+                      <div key={it.label} className="idx-chara-list-row">
+                        <dt>{it.label}</dt>
+                        <dd>{it.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ))}
+
+              <div className="idx-chara-block">
+                <h3 className="idx-chara-block-title">{t("最近のメモ", "Recent notes")}</h3>
+                <ul className="idx-chara-notes">
+                  {CHARA_NOTES.map((n, i) => (
+                    <li key={i}>{n}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <p className="idx-chara-message">「{CHARA_MESSAGE}」</p>
+            </div>
+          </section>
+        </aside>
       </div>
 
       {/* ── Final CTA ── */}
