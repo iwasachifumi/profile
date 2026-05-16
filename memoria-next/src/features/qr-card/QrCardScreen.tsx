@@ -558,7 +558,8 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
 
         {/* DEBUG: QR状態確認（確認後に削除） */}
         <p style={{ margin: 0, fontSize: 11, color: "#888", fontFamily: "monospace" }}>
-          [DEBUG] qrImgSrc: {qrImgSrc ? `✓ (${qrImgSrc.length}bytes)` : "空 - QRコード未生成"}
+          [DEBUG] qrImgSrc: {qrImgSrc ? `✓ (${qrImgSrc.length}bytes)` : "空"}{" / "}
+          cardRef: {cardRef.current ? `${cardRef.current.offsetWidth}x${cardRef.current.offsetHeight}` : "未マウント"}
         </p>
 
         {exportError && <p className="error-text" style={{ margin: 0 }}>{exportError}</p>}
