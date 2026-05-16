@@ -384,9 +384,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
         {/* 右エリア */}
         <div className="qr-card-right">
           <div className="qr-card-qr-wrap">
-            {/* hidden canvas: toDataURL() 用。html-to-image はcanvasを取り込めないため img に変換して表示 */}
-            <QRCodeCanvas ref={handleQrCanvasRef} value={qrUrl} size={100}
-              style={{ position: "absolute", opacity: 0, pointerEvents: "none", top: -9999 }} />
+            {/* img: toDataURL()で生成。html-to-imageが確実に取り込める */}
             {qrImgSrc && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={qrImgSrc} width={100} height={100} alt="QR" style={{ display: "block" }} />
@@ -469,6 +467,10 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
 
   return (
     <main className="qr-card-page">
+
+      {/* hidden canvas: QR toDataURL()専用。カード外に置くことでCSS clipping/overflow の影響を受けない */}
+      <QRCodeCanvas ref={handleQrCanvasRef} value={qrUrl} size={100}
+        style={{ position: "fixed", left: -9999, top: 0, opacity: 0, pointerEvents: "none" }} />
 
       {/* ページヘッダー */}
       <div className="qr-card-page-header">
