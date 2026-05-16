@@ -184,7 +184,7 @@ function buildDefaultProfile(name: string): Profile {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "preview" | "settings" | "qr" | "stickers" | "frame" | "friends";
+type Tab = "preview" | "settings" | "qr" | "stickers" | "frame";
 type BusyKind = "load" | "create" | "save" | "delete" | null;
 
 // モバイルフッタ用（プレビュータブを先頭に追加）
@@ -194,7 +194,6 @@ const TABS: { id: Tab; icon: string; labelJa: string; labelEn: string }[] = [
   { id: "qr",       icon: "🎴", labelJa: "QRカード",   labelEn: "QR Card"  },
   { id: "stickers", icon: "🏷",  labelJa: "シール",     labelEn: "Stickers" },
   { id: "frame",    icon: "🖼",  labelJa: "フレーム",   labelEn: "Frame"    },
-  { id: "friends",  icon: "👥",  labelJa: "友達",       labelEn: "Friends"  },
 ];
 // PCパネルタブ用（プレビュータブは不要：常にカードが見えているため）
 const DESKTOP_TABS = TABS.filter((t) => t.id !== "preview");
@@ -1677,20 +1676,6 @@ const dataUrl = await generateQrPng();
     );
   }
 
-  // ── Panel: 友達 ───────────────────────────────────────────────────────────
-
-  function renderFriendsPanel() {
-    return (
-      <div className="stack" style={{ textAlign: "center", padding: "28px 0" }}>
-        <p style={{ fontSize: "40px", margin: 0 }}>👥</p>
-        <p style={{ margin: "8px 0 0", fontWeight: 700 }}>{t("名刺交換", "Card Exchange")}</p>
-        <p className="muted small" style={{ margin: "4px 0 0" }}>
-          {t("近日公開予定です", "Coming soon")}
-        </p>
-      </div>
-    );
-  }
-
   // ── Panel: 設定（フィールド・基本情報） ───────────────────────────────────
 
   function renderSettingsPanel() {
@@ -2122,7 +2107,6 @@ const dataUrl = await generateQrPng();
               {/* デスクトップでプレビュータブのまま来た場合は項目を表示 */}
               {(activeTab === "stickers")                           && renderStickerPanel()}
               {(activeTab === "frame")                              && renderFramePanel()}
-              {(activeTab === "friends")                            && renderFriendsPanel()}
               {(activeTab === "qr")                                 && renderQrPanel()}
               {(activeTab === "settings" || activeTab === "preview") && renderSettingsPanel()}
             </div>
