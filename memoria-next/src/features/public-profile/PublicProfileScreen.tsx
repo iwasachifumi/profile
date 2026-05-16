@@ -34,17 +34,19 @@ function initialOf(name: string) {
 export default function PublicProfileScreen({ slug, handle, via }: PublicProfileScreenProps) {
   const hasIdentifier = Boolean(slug || handle);
   const isQr          = via === "qr";
-  const { session }   = useSession();
+  const { session, startGuest } = useSession();
 
-  const [profile,        setProfile]        = useState<Profile | null>(null);
-  const [loading,        setLoading]        = useState(hasIdentifier);
-  const [error,          setError]          = useState<string | null>(
+  const [profile,       setProfile]       = useState<Profile | null>(null);
+  const [loading,       setLoading]       = useState(hasIdentifier);
+  const [error,         setError]         = useState<string | null>(
     hasIdentifier ? null : "プロフィールが見つかりません。"
   );
-  const [exchanged,      setExchanged]      = useState(false);
-  const [exchangeBusy,   setExchangeBusy]   = useState(false);
-  const [exchangeError,  setExchangeError]  = useState<string | null>(null);
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [exchanged,     setExchanged]     = useState(false);
+  const [exchangeBusy,  setExchangeBusy]  = useState(false);
+  const [exchangeError, setExchangeError] = useState<string | null>(null);
+  const [authModal,     setAuthModal]     = useState(false);
+  const [authBusy,      setAuthBusy]      = useState(false);
+  const [authError,     setAuthError]     = useState<string | null>(null);
 
   // ── プロフィール取得 ─────────────────────────────────────────────────────
 
@@ -66,22 +68,19 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
     return () => { alive = false; };
   }, [handle, hasIdentifier, slug]);
 
-  // ── ゲスト向けログイン促進モーダル ──────────────────────────────────────
+  // ── 交換記録 ────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (session.status !== "guest" || !profile) return;
-    const timer = setTimeout(() => setLoginModalOpen(true), 1200);
-    return () => clearTimeout(timer);
-  }, [session.status, profile]);
+  // 未ログイン時は認証選択モーダルを開く
+  function handleExchangeClick() {
+    if (!profile) return;
+    if (session.status !== "user") { setAuthModal(true); return; }
+    void doExchange();
+  }
 
-  // ── 交換記録（ログイン済みのみ） ────────────────────────────────────────
-
-  async function handleExchange() {
-    if (!profile || session.status !== "user") return;
-
+  async function doExchange() {
+    if (!profile) return;
     setExchangeBusy(true);
     setExchangeError(null);
-
     const result = await exchangesApi.create({
       id:              crypto.randomUUID(),
       targetProfileId: profile.id,
@@ -98,10 +97,20 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
       privateNote: "",
       tags: [],
     });
-
     setExchangeBusy(false);
-    if (!result.ok) { setExchangeError(result.error); return; }
+    if (!result.ok) { setExchangeError("記録できませんでした。もう一度お試しください。"); return; }
     setExchanged(true);
+  }
+
+  // ゲスト登録 → 即座に交換記録
+  async function handleGuestAndExchange() {
+    setAuthBusy(true);
+    setAuthError(null);
+    const err = await startGuest();
+    if (err) { setAuthBusy(false); setAuthError("ゲスト登録に失敗しました。"); return; }
+    setAuthModal(false);
+    setAuthBusy(false);
+    await doExchange();
   }
 
   // ── ログインリターン URL 生成 ────────────────────────────────────────────
@@ -240,34 +249,32 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
         {/* ── 交換・フッターエリア ─────────────────────────────────── */}
         <div className="pub-card" style={{ borderRadius: "12px" }}>
 
-          {/* 交換ボタン（ログイン済みのみ） */}
-          {session.status === "user" && (
-            <div className="pub-exchange-area">
-              {exchanged ? (
-                <div className="pub-exchange-done">
-                  <p>✓ {isQr ? "QRで交換記録しました" : "交換帳に追加しました"}</p>
-                  <Link href="/book" className="button secondary">
-                    交換帳を見る →
-                  </Link>
-                </div>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="button"
-                    style={{ width: "100%", minHeight: "48px", fontSize: "15px" }}
-                    onClick={() => void handleExchange()}
-                    disabled={exchangeBusy}
-                  >
-                    {exchangeBusy ? "記録中..." : isQr ? "📒 交換帳に記録する" : "この人を交換帳に追加"}
-                  </button>
-                  {exchangeError && (
-                    <p className="error-text" style={{ marginTop: "8px" }}>{exchangeError}</p>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+          {/* 交換ボタン（全ユーザー表示・未ログイン時は認証モーダルへ） */}
+          <div className="pub-exchange-area">
+            {exchanged ? (
+              <div className="pub-exchange-done">
+                <p>✓ {isQr ? "QRで交換記録しました" : "交換帳に追加しました"}</p>
+                <Link href="/book" className="button secondary">
+                  交換帳を見る →
+                </Link>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="button"
+                  style={{ width: "100%", minHeight: "48px", fontSize: "15px" }}
+                  onClick={handleExchangeClick}
+                  disabled={exchangeBusy || session.status === "loading"}
+                >
+                  {exchangeBusy ? "記録中..." : isQr ? "📒 交換帳に記録する" : "この人を交換帳に追加"}
+                </button>
+                {exchangeError && (
+                  <p className="error-text" style={{ marginTop: "8px" }}>{exchangeError}</p>
+                )}
+              </>
+            )}
+          </div>
 
           {/* フッター */}
           <div className="pub-footer">
@@ -279,52 +286,61 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
 
       </div>
 
-      {/* ── ログイン促進モーダル（ゲスト向け・閉じられる） ─────────────── */}
-      {loginModalOpen && (
+      {/* ── 交換帳記録のための認証選択モーダル ─────────────────────────── */}
+      {authModal && (
         <div
           className="auth-prompt-backdrop"
-          onClick={() => setLoginModalOpen(false)}
+          onClick={() => { if (!authBusy) setAuthModal(false); }}
           role="dialog"
           aria-modal="true"
-          aria-label="ログインのご案内"
+          aria-label="交換帳に記録する方法を選んでください"
         >
-          <div
-            className="auth-prompt-sheet"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="auth-prompt-sheet" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               className="auth-prompt-close"
-              onClick={() => setLoginModalOpen(false)}
+              onClick={() => setAuthModal(false)}
+              disabled={authBusy}
               aria-label="閉じる"
             >
               ×
             </button>
 
             <div className="auth-prompt-icon">📒</div>
-            <h2 className="auth-prompt-title">
-              交換したプロフィールを<br />あとで見返せます
-            </h2>
+            <h2 className="auth-prompt-title">交換帳に記録する</h2>
             <p className="auth-prompt-body">
-              ログインすると、QRコードやリンクで受け取ったプロフィールを
-              交換帳に記録して、いつでも振り返ることができます。
+              記録方法を選んでください。
             </p>
 
+            {authError && (
+              <p className="error-text" style={{ marginBottom: "8px" }}>{authError}</p>
+            )}
+
             <div className="auth-prompt-actions">
-              <Link href={loginUrl} className="button auth-prompt-btn-login">
-                ログインする
+              <button
+                type="button"
+                className="button"
+                onClick={() => void handleGuestAndExchange()}
+                disabled={authBusy}
+                style={{ width: "100%" }}
+              >
+                {authBusy ? "処理中..." : "📲 ゲスト登録で記録する"}
+              </button>
+              <Link href={loginUrl} className="button secondary auth-prompt-btn-login" style={{ textAlign: "center" }}>
+                🔑 ログインして記録する
               </Link>
-              <Link href={registerUrl} className="button secondary auth-prompt-btn-register">
-                新規登録（無料）
+              <Link href={registerUrl} className="button secondary auth-prompt-btn-register" style={{ textAlign: "center" }}>
+                ✉️ ユーザー登録して記録する
               </Link>
             </div>
 
             <button
               type="button"
               className="auth-prompt-skip"
-              onClick={() => setLoginModalOpen(false)}
+              onClick={() => setAuthModal(false)}
+              disabled={authBusy}
             >
-              このまま閲覧する
+              キャンセル
             </button>
           </div>
         </div>
