@@ -270,7 +270,18 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
                   {exchangeBusy ? "記録中..." : isQr ? "📒 交換帳に記録する" : "この人を交換帳に追加"}
                 </button>
                 {exchangeError && (
-                  <p className="error-text" style={{ marginTop: "8px" }}>{exchangeError}</p>
+                  <div style={{ marginTop: "8px" }}>
+                    <p className="error-text" style={{ margin: 0 }}>{exchangeError}</p>
+                    {exchangeError.includes("有効期限") && (
+                      <Link
+                        href={loginUrl}
+                        className="button secondary"
+                        style={{ display: "block", marginTop: "8px", textAlign: "center" }}
+                      >
+                        🔑 ログインし直す
+                      </Link>
+                    )}
+                  </div>
                 )}
               </>
             )}
