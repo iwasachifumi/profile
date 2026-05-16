@@ -84,9 +84,9 @@ export default function IndexScreen() {
   return (
     <div className="idx-root lp-root">
 
-      {/* ── Hero with Memoria-tan ── */}
+      {/* ── Hero ── */}
       <section className="idx-hero">
-        <div className="idx-hero-inner">
+        <div className="idx-hero-inner idx-hero-inner-solo">
           <div className="idx-hero-copy">
             <p className="idx-hero-eyebrow">人との出会いを、忘れないように。</p>
             <h1 className="idx-hero-title">
@@ -103,14 +103,6 @@ export default function IndexScreen() {
               <Link className="button secondary lp-btn-lg" href="/lp">
                 サービス紹介を見る
               </Link>
-            </div>
-          </div>
-          <div className="idx-hero-chara">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/memoria.png" alt="めもりあたん" className="idx-chara-img" />
-            <div className="idx-chara-bubble">
-              <strong>めもりあたん</strong>
-              <span>Memoria 公式キャラクター</span>
             </div>
           </div>
         </div>
