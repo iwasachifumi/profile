@@ -215,6 +215,32 @@ export default function IndexScreen() {
         </p>
       </section>
 
+      {/* ── Footer ── */}
+      <footer className="idx-footer">
+        <nav className="idx-footer-links" aria-label="フッターリンク">
+          <a
+            href="https://note.com/torataka/n/n5df397c395c1"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            開発秘話（note）
+          </a>
+          <a
+            href="https://x.com/Aci2t66187"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            お問い合わせ（X / @Aci2t66187）
+          </a>
+        </nav>
+        <p className="idx-footer-copy">
+          © {new Date().getFullYear()}{" "}
+          <a href="https://ac7.co.jp" target="_blank" rel="noopener noreferrer">
+            ACナレッヂ株式会社
+          </a>
+        </p>
+      </footer>
+
     </div>
   );
 }
