@@ -4676,3 +4676,42 @@ body:has(.lp-root) .topnav a.active {
 .idx-footer-copy a:hover {
   color: #2f2418;
 }
+
+/* Index 2-pane layout (PC) */
+.idx-two-pane {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(380px, 1fr) minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+}
+
+.idx-two-pane .idx-pane-left {
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+.idx-two-pane .idx-pane-left .idx-chara-profile {
+  max-width: none;
+}
+
+.idx-two-pane .lp-section {
+  /* インナーの段組みを使うので余白を控えめに */
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.idx-two-pane .lp-section + .lp-section {
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .idx-two-pane {
+    grid-template-columns: 1fr;
+  }
+  .idx-two-pane .idx-pane-left {
+    position: static;
+  }
+}
