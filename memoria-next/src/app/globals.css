@@ -4925,3 +4925,14 @@ body:has(.lp-root) .topnav a.active {
   padding: 28px 20px;
   background: #fff8ec;
 }
+
+/* キャラ紹介文（白カード内に表示） */
+.idx-chara-intro {
+  margin: 0 0 18px;
+  padding: 0 0 16px;
+  border-bottom: 1px dashed rgba(120, 100, 80, 0.3);
+  font-size: 14px;
+  line-height: 1.75;
+  color: #5a4a36;
+  text-align: center;
+}
