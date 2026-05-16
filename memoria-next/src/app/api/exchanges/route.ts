@@ -32,8 +32,17 @@ export async function POST(request: NextRequest) {
   }
   if (!body.id) return err("id は必須です");
 
+  console.log("[exchanges POST] start", {
+    userId: session.userId,
+    email: session.email,
+    isGuest: session.isGuest,
+    exchangeId: body.id,
+    method: body.method,
+  });
+
   try {
     await insertExchange(session.userId, body);
+    console.log("[exchanges POST] ok →", body.id);
     return ok({ id: body.id }, 201);
   } catch (e) {
     const code = typeof e === "object" && e !== null ? (e as { code?: string }).code : undefined;

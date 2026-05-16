@@ -47,6 +47,7 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
   const [authModal,     setAuthModal]     = useState(false);
   const [authBusy,      setAuthBusy]      = useState(false);
   const [authError,     setAuthError]     = useState<string | null>(null);
+  const [debugLog,      setDebugLog]      = useState<string | null>(null);
 
   // ── プロフィール取得 ─────────────────────────────────────────────────────
 
@@ -81,12 +82,14 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
     if (!profile) return;
     setExchangeBusy(true);
     setExchangeError(null);
+    setDebugLog(null);
+    const ts = new Date().toISOString();
     const result = await exchangesApi.create({
       id:              crypto.randomUUID(),
       targetProfileId: profile.id,
       method:          isQr ? "qr" : "manual",
       eventName:       null,
-      exchangedAt:     new Date().toISOString(),
+      exchangedAt:     ts,
       snapshot: {
         patternName: profile.patternName,
         audience:    profile.audience,
@@ -98,6 +101,9 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
       tags: [],
     });
     setExchangeBusy(false);
+    const log = `[${ts}] ${result.ok ? "OK" : "NG"} ${JSON.stringify(result)}`;
+    setDebugLog(log);
+    console.log("[doExchange]", log);
     if (!result.ok) { setExchangeError(result.error ?? "記録できませんでした。もう一度お試しください。"); return; }
     setExchanged(true);
   }
@@ -249,6 +255,17 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
         {/* ── 交換・フッターエリア ─────────────────────────────────── */}
         <div className="pub-card" style={{ borderRadius: "12px" }}>
 
+          {/* セッション状態（デバッグ表示） */}
+          <p style={{ margin: "0 0 4px", fontSize: "10px", color: "#aaa", textAlign: "right" }}>
+            {session.status === "loading" && "⏳ セッション確認中..."}
+            {session.status === "guest"   && "⚪ 未ログイン"}
+            {session.status === "user"    && (
+              session.user.isGuest
+                ? `🟡 ゲスト (${session.user.id.slice(0, 8)})`
+                : `🟢 ${session.user.email} (${session.user.id.slice(0, 8)})`
+            )}
+          </p>
+
           {/* 交換ボタン（全ユーザー表示・未ログイン時は認証モーダルへ） */}
           <div className="pub-exchange-area">
             {exchanged ? (
@@ -282,6 +299,16 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
                       </Link>
                     )}
                   </div>
+                )}
+                {debugLog && (
+                  <pre style={{
+                    marginTop: "8px", padding: "8px", borderRadius: "6px",
+                    background: "#f5f5f5", fontSize: "10px", color: "#333",
+                    whiteSpace: "pre-wrap", wordBreak: "break-all",
+                    border: "1px solid #ddd",
+                  }}>
+                    {`session: ${session.status}\n${debugLog}`}
+                  </pre>
                 )}
               </>
             )}
