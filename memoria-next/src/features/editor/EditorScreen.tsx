@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { toPng } from "html-to-image";
 import { profilesApi } from "@/api/profiles";
@@ -248,6 +248,8 @@ export default function EditorScreen() {
   const [qrExporting,          setQrExporting]          = useState(false);
   const [qrExportError,        setQrExportError]        = useState<string | null>(null);
   const [qrCopied,             setQrCopied]             = useState(false);
+  const [qrImgSrc,             setQrImgSrc]             = useState("");
+  const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [qrFormatOpenId,       setQrFormatOpenId]       = useState<string | null>(null);
   const [qrAddPickerOpen,      setQrAddPickerOpen]      = useState(false);
 
@@ -266,6 +268,21 @@ export default function EditorScreen() {
 
   // keep latestDraft in sync
   useEffect(() => { latestDraft.current = draft; }, [draft]);
+
+  // QRコードURL（公開中なら実URL、未公開ならサンプル）
+  const qrUrl = useMemo(() =>
+    draft?.isPublic && draft?.publicSlug
+      ? `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}?via=qr`
+      : "https://profile.ac7.co.jp",
+    [draft?.isPublic, draft?.publicSlug]
+  );
+
+  // QRCodeCanvas（hidden）→ data URL → <img> に変換（html-to-imageはcanvasを取り込めないため）
+  useEffect(() => {
+    const canvas = qrCanvasRef.current;
+    if (!canvas) return;
+    try { setQrImgSrc(canvas.toDataURL("image/png")); } catch { /* ignore */ }
+  }, [qrUrl]);
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -957,9 +974,6 @@ export default function EditorScreen() {
 
   function renderQrCardView() {
     if (!draft) return null;
-    const qrUrl = draft.isPublic && draft.publicSlug
-      ? `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}?via=qr`
-      : "https://profile.ac7.co.jp";
     const avatarInitial = (qrItems[0]?.value || draft.patternName || "?")[0].toUpperCase();
     return (
       /* コンテナ: 実幅を ResizeObserver で計測してスケール係数を決定 */
@@ -1015,7 +1029,14 @@ export default function EditorScreen() {
           {/* 右エリア */}
           <div className="qr-card-right">
             <div className="qr-card-qr-wrap">
-              <QRCodeCanvas value={qrUrl} size={100} />
+              {/* hidden canvas: QRを描画してdata URLを取り出す用 */}
+              <QRCodeCanvas ref={qrCanvasRef} value={qrUrl} size={100}
+                style={{ position: "absolute", opacity: 0, pointerEvents: "none", top: -9999 }} />
+              {/* img として表示: html-to-image が確実に取り込める */}
+              {qrImgSrc
+                ? <img src={qrImgSrc} width={100} height={100} alt="QR" style={{ display: "block" }} /> // eslint-disable-line @next/next/no-img-element
+                : <QRCodeCanvas value={qrUrl} size={100} />
+              }
             </div>
             <p className="qr-card-tagline">Memoriaで見てね</p>
           </div>
