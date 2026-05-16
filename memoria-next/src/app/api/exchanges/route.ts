@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getExchangesByUser, insertExchange, ensureUserExists } from "@/lib/db";
+import { getExchangesByUser, insertExchange, ensureUserExists, findProfileOwner, getProfilesByUser } from "@/lib/db";
 import { ok, err, unauthorized, serverError } from "@/lib/response";
 import type { Exchange } from "@/types";
 
@@ -43,6 +43,42 @@ export async function POST(request: NextRequest) {
   try {
     await insertExchange(session.userId, body);
     console.log("[exchanges POST] ok →", body.id);
+
+    // ── リバース記録: 相手側にも交換記録を作成（best-effort）──
+    if (body.targetProfileId) {
+      void (async () => {
+        try {
+          const target = await findProfileOwner(body.targetProfileId!);
+          if (!target || target.ownerId === session.userId) return; // 自分自身はスキップ
+
+          // A（記録した側）のプロフィールをスナップショットとして使用
+          const aProfiles = await getProfilesByUser(session.userId);
+          const aProfile  = aProfiles.find((p) => p.isPublic) ?? aProfiles[0] ?? null;
+
+          await insertExchange(target.ownerId, {
+            id:              crypto.randomUUID(),
+            targetProfileId: aProfile?.id ?? null,
+            method:          body.method,
+            eventName:       body.eventName,
+            exchangedAt:     body.exchangedAt,
+            snapshot: aProfile ? {
+              patternName: aProfile.patternName,
+              audience:    aProfile.audience,
+              description: aProfile.description,
+              handle:      aProfile.handle,
+              slug:        aProfile.publicSlug,
+            } : {},
+            privateNote: "",
+            tags:        [],
+          });
+          console.log("[exchanges POST] reverse exchange created for", target.ownerId);
+        } catch (re) {
+          // リバース失敗は A 側の記録に影響させない
+          console.error("[exchanges POST] reverse exchange failed:", String(re));
+        }
+      })();
+    }
+
     return ok({ id: body.id }, 201);
   } catch (e) {
     const code = typeof e === "object" && e !== null ? (e as { code?: string }).code : undefined;

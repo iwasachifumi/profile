@@ -128,6 +128,20 @@ export async function findOrCreateGoogleUser(
   return rows[0] as { id: string; email: string };
 }
 
+// profileId からオーナーの userId とスナップショット用情報を取得する
+export async function findProfileOwner(
+  profileId: string
+): Promise<{ ownerId: string; profile: Profile } | null> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT * FROM memoria.profiles
+    WHERE id = ${profileId}
+    LIMIT 1
+  `;
+  if (!rows[0]) return null;
+  return { ownerId: rows[0].owner_id as string, profile: rowToProfile(rows[0]) };
+}
+
 export async function getProfilesByUser(userId: string): Promise<Profile[]> {
   const sql = getSql();
   const rows = await sql`
