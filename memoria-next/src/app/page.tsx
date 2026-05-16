@@ -1,21 +1,11 @@
-import AuthScreen from "@/features/auth/AuthScreen";
+import IndexScreen from "@/features/index/IndexScreen";
 
-interface HomeProps {
-  searchParams: Promise<{
-    google_error?: string;
-    return?: string;
-    mode?: string;
-  }>;
-}
+export const metadata = {
+  title: "Memoria — 人との出会いを、忘れないように。",
+  description:
+    "QRやリンクで出会った人を交換して、自分だけの交換帳に残せるサービス Memoria のトップページ。",
+};
 
-export default async function Home({ searchParams }: HomeProps) {
-  const { google_error, return: returnTo, mode } = await searchParams;
-
-  return (
-    <AuthScreen
-      redirectOnAuth={returnTo ?? "/mine"}
-      googleError={google_error}
-      defaultMode={mode === "register" ? "register" : "login"}
-    />
-  );
+export default function Home() {
+  return <IndexScreen />;
 }

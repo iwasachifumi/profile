@@ -33,11 +33,11 @@ export async function GET(request: NextRequest) {
 
   // ユーザーがキャンセルした場合
   if (error) {
-    return NextResponse.redirect(`${origin}/?google_error=${encodeURIComponent(error)}`);
+    return NextResponse.redirect(`${origin}/login?google_error=${encodeURIComponent(error)}`);
   }
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/?google_error=no_code`);
+    return NextResponse.redirect(`${origin}/login?google_error=no_code`);
   }
 
   const clientId     = process.env.GOOGLE_CLIENT_ID!;
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     if (!tokenRes.ok) {
       console.error("Google token exchange failed:", await tokenRes.text());
-      return NextResponse.redirect(`${origin}/?google_error=token_failed`);
+      return NextResponse.redirect(`${origin}/login?google_error=token_failed`);
     }
 
     const tokenData = (await tokenRes.json()) as GoogleTokenResponse;
@@ -72,14 +72,14 @@ export async function GET(request: NextRequest) {
 
     if (!userInfoRes.ok) {
       console.error("Google userinfo fetch failed:", await userInfoRes.text());
-      return NextResponse.redirect(`${origin}/?google_error=userinfo_failed`);
+      return NextResponse.redirect(`${origin}/login?google_error=userinfo_failed`);
     }
 
     const userInfo = (await userInfoRes.json()) as GoogleUserInfo;
 
     const emailVerified = userInfo.verified_email ?? userInfo.email_verified ?? false;
     if (!userInfo.email || !emailVerified) {
-      return NextResponse.redirect(`${origin}/?google_error=email_not_verified`);
+      return NextResponse.redirect(`${origin}/login?google_error=email_not_verified`);
     }
 
     // v2 API は "id"、OpenID Connect は "sub" でユーザーIDが返る
@@ -101,6 +101,6 @@ export async function GET(request: NextRequest) {
 
   } catch (e) {
     console.error("Google OAuth callback error:", e);
-    return NextResponse.redirect(`${origin}/?google_error=server_error`);
+    return NextResponse.redirect(`${origin}/login?google_error=server_error`);
   }
 }
