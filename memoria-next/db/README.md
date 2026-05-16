@@ -2,8 +2,6 @@
 
 Memoria のスキーマ定義を Supabase Self-hosted (api.ac7.co.jp) に適用するための SQL ファイル群。
 
-設計の背景は [decisions.md](../decisions.md) を参照。
-
 ## 構成
 
 ```
