@@ -218,7 +218,7 @@ export async function insertExchange(userId: string, exchange: Exchange) {
       (${exchange.id}, ${userId}, ${exchange.targetProfileId},
        ${exchange.method}, ${exchange.eventName}, ${exchange.exchangedAt},
        ${sql.json(j(exchange.snapshot))}, ${exchange.privateNote},
-       ${sql.json(j(exchange.tags))})
+       ${sql.array(exchange.tags ?? [])})
   `;
 }
 
@@ -227,7 +227,7 @@ export async function updateExchange(userId: string, id: string, exchange: Parti
   await sql`
     UPDATE memoria.exchanges SET
       private_note = COALESCE(${exchange.privateNote ?? null}, private_note),
-      tags         = COALESCE(${exchange.tags ? sql.json(j(exchange.tags)) : null}, tags),
+      tags         = COALESCE(${exchange.tags ? sql.array(exchange.tags) : null}, tags),
       event_name   = COALESCE(${exchange.eventName ?? null}, event_name),
       updated_at   = now()
     WHERE id = ${id} AND owner_id = ${userId}
