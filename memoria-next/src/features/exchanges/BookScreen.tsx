@@ -27,13 +27,12 @@ function initialOf(name: string) {
 export default function BookScreen() {
   const { session } = useSession();
   const { t } = useLang();
-  const [exchanges, setExchanges] = useState<Exchange[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Exchange | null>(null);
-  const [busy, setBusy] = useState<"load" | "save" | "delete" | null>("load");
-  const [error, setError] = useState<string | null>(null);
-
-  const selected = exchanges.find((e) => e.id === selectedId) ?? null;
+  const [exchanges,   setExchanges]   = useState<Exchange[]>([]);
+  const [expandedId,  setExpandedId]  = useState<string | null>(null);
+  const [editTarget,  setEditTarget]  = useState<Exchange | null>(null);  // モーダル用
+  const [draft,       setDraft]       = useState<Exchange | null>(null);
+  const [busy,        setBusy]        = useState<"load" | "save" | "delete" | null>("load");
+  const [error,       setError]       = useState<string | null>(null);
 
   const loadExchanges = useCallback(async () => {
     setBusy("load");
@@ -42,21 +41,27 @@ export default function BookScreen() {
     setBusy(null);
     if (!result.ok) { setError(result.error); return; }
     setExchanges(result.data);
-    setSelectedId((cur) => {
-      const nextId = cur ?? result.data[0]?.id ?? null;
-      const found = result.data.find((e) => e.id === nextId) ?? null;
-      setDraft(found ? cloneExchange(found) : null);
-      return nextId;
-    });
   }, []);
 
   useEffect(() => {
     if (session.status === "user") void loadExchanges();
   }, [loadExchanges, session.status]);
 
-  function handleSelect(item: Exchange) {
-    setSelectedId(item.id);
+  // 詳細の開閉
+  function handleToggleDetail(item: Exchange) {
+    setExpandedId((cur) => (cur === item.id ? null : item.id));
+  }
+
+  // 鉛筆アイコン → 編集モーダルを開く
+  function handleOpenEdit(item: Exchange) {
+    setEditTarget(item);
     setDraft(cloneExchange(item));
+  }
+
+  function handleCloseEdit() {
+    setEditTarget(null);
+    setDraft(null);
+    setError(null);
   }
 
   async function handleSave(event: FormEvent) {
@@ -65,29 +70,26 @@ export default function BookScreen() {
     setBusy("save");
     setError(null);
     const result = await exchangesApi.update(draft.id, {
-      eventName: draft.eventName,
+      eventName:   draft.eventName,
       privateNote: draft.privateNote,
-      tags: draft.tags,
+      tags:        draft.tags,
     });
     setBusy(null);
     if (!result.ok) { setError(result.error); return; }
-    setExchanges((current) => current.map((e) => (e.id === draft.id ? { ...draft } : e)));
+    setExchanges((cur) => cur.map((e) => (e.id === draft.id ? { ...draft } : e)));
+    handleCloseEdit();
   }
 
   async function handleDelete() {
-    if (!selectedId) return;
-    const removingId = selectedId;
+    if (!editTarget) return;
+    const removingId = editTarget.id;
     setBusy("delete");
     const result = await exchangesApi.remove(removingId);
     setBusy(null);
     if (!result.ok) { setError(result.error); return; }
-    setExchanges((current) => {
-      const next = current.filter((e) => e.id !== removingId);
-      const nextItem = next[0] ?? null;
-      setSelectedId(nextItem?.id ?? null);
-      setDraft(nextItem ? cloneExchange(nextItem) : null);
-      return next;
-    });
+    setExchanges((cur) => cur.filter((e) => e.id !== removingId));
+    setExpandedId((cur) => (cur === removingId ? null : cur));
+    handleCloseEdit();
   }
 
   if (session.status === "loading") {
@@ -99,7 +101,6 @@ export default function BookScreen() {
 
   return (
     <main className="app-shell">
-      {/* セクションタイトル */}
       <section className="section-title">
         <div>
           <h1>{t("人脈帳", "People")}</h1>
@@ -107,100 +108,142 @@ export default function BookScreen() {
         </div>
       </section>
 
-      {error && <p className="error-text">{error}</p>}
+      {error && !editTarget && <p className="error-text">{error}</p>}
 
-      <div className="book-layout">
-        {/* 交換履歴リスト */}
-        <aside className="panel pad stack">
-          <div className="section-title">
-            <h2 style={{ margin: 0 }}>{t("交換履歴", "History")}</h2>
-            <span className="muted small">{t(`${exchanges.length}件`, `${exchanges.length} records`)}</span>
-          </div>
+      {/* ── 一覧 ── */}
+      {busy === "load" ? (
+        <p className="muted small">{t("読み込み中...", "Loading...")}</p>
+      ) : exchanges.length === 0 ? (
+        <div className="empty-state stack">
+          <strong>{t("まだ交換記録がありません", "No exchanges yet")}</strong>
+          <p className="muted small">
+            {t(
+              "公開プロフィールを共有して、相手のプロフィールを交換しましょう。",
+              "Share your public profile to start exchanging."
+            )}
+          </p>
+        </div>
+      ) : (
+        <div className="exchange-list">
+          {exchanges.map((item) => {
+            const name = (item.snapshot.displayName as string)
+              || (item.snapshot.patternName as string)
+              || t("名前なし", "No name");
+            const isExpanded = expandedId === item.id;
 
-          {busy === "load" ? (
-            <p className="muted small">{t("読み込み中...", "Loading...")}</p>
-          ) : exchanges.length === 0 ? (
-            <div className="empty-state stack">
-              <strong>{t("まだ交換記録がありません", "No exchanges yet")}</strong>
-              <p className="muted small">
-                {t(
-                  "公開プロフィールを共有して、相手のプロフィールを交換しましょう。",
-                  "Share your public profile to start exchanging."
-                )}
-              </p>
-            </div>
-          ) : (
-            <div className="exchange-list">
-              {exchanges.map((item) => {
-                const snapshotName = (item.snapshot.displayName as string) || (item.snapshot.patternName as string) || t("名前なし", "No name");
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`exchange-card${selectedId === item.id ? " active" : ""}`}
-                    onClick={() => handleSelect(item)}
-                  >
-                    <strong>{snapshotName}</strong>
+            return (
+              <div key={item.id} className="exchange-list-item">
+                {/* カード行 */}
+                <div className="exchange-row">
+                  <div className="avatar avatar-sm">
+                    <span>{initialOf(name)}</span>
+                  </div>
+                  <div className="exchange-row-info">
+                    <strong>{name}</strong>
                     <span className="muted small">
-                      {formatDate(item.exchangedAt)} / {item.eventName || t("イベント未設定", "No event")}
+                      {formatDate(item.exchangedAt)}
+                      {item.eventName ? ` / ${item.eventName}` : ""}
                     </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </aside>
-
-        {/* 詳細パネル */}
-        <section className="panel pad">
-          {!selected || !draft ? (
-            <div className="empty-state">
-              <h2 style={{ margin: "0 0 8px" }}>{t("履歴を選択してください", "Select a record")}</h2>
-              <p className="muted">{t("左のリストから交換記録を選んでください。", "Select an exchange from the left list.")}</p>
-            </div>
-          ) : (
-            <form onSubmit={handleSave} className="stack">
-              {/* スナップショット */}
-              <div className="section-title">
-                <h2 style={{ margin: 0 }}>{t("交換したプロフィール", "Exchanged profile")}</h2>
-                {selected.targetProfileId && (
-                  <a
-                    className="button secondary"
-                    href={`/preview/${selected.targetProfileId}`}
-                  >
-                    {t("現在のプロフィール", "Current profile")}
-                  </a>
-                )}
-              </div>
-
-              <div className="snapshot">
-                <div className="avatar">
-                  <span>
-                    {initialOf((selected.snapshot.displayName as string) || (selected.snapshot.patternName as string) || "?")}
-                  </span>
-                </div>
-                <div>
-                  <h3 style={{ margin: "0 0 4px" }}>
-                    {(selected.snapshot.displayName as string) || (selected.snapshot.patternName as string) || t("名前なし", "No name")}
-                  </h3>
-                  <p className="muted" style={{ margin: "0 0 6px" }}>
-                    {(selected.snapshot.patternName as string) || ""}
-                  </p>
-                  <div className="tag-row">
-                    <span className="tag">{selected.method}</span>
-                    {selected.eventName && <span className="tag">{selected.eventName}</span>}
-                    <span className="tag">{formatDate(selected.exchangedAt)}</span>
+                  </div>
+                  <div className="exchange-row-actions">
+                    <button
+                      type="button"
+                      className="button secondary"
+                      style={{ padding: "4px 10px", fontSize: "13px" }}
+                      onClick={() => handleToggleDetail(item)}
+                    >
+                      {isExpanded ? t("閉じる", "Close") : t("詳細", "Detail")}
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      aria-label={t("編集", "Edit")}
+                      onClick={() => handleOpenEdit(item)}
+                    >
+                      ✏️
+                    </button>
                   </div>
                 </div>
-              </div>
 
-              {/* メモ・タグ */}
+                {/* 詳細（展開時のみ） */}
+                {isExpanded && (
+                  <div className="exchange-detail">
+                    <div className="tag-row">
+                      <span className="tag">{item.method === "qr" ? "QR" : t("手動", "Manual")}</span>
+                      {item.eventName && <span className="tag">{item.eventName}</span>}
+                      {item.tags.map((tag) => (
+                        <span key={tag} className="tag">{tag}</span>
+                      ))}
+                    </div>
+                    {item.snapshot.audience && (
+                      <p className="muted small" style={{ margin: "6px 0 0" }}>
+                        {item.snapshot.audience as string}
+                      </p>
+                    )}
+                    {item.snapshot.description && (
+                      <p style={{ margin: "4px 0 0" }}>
+                        {item.snapshot.description as string}
+                      </p>
+                    )}
+                    {item.privateNote && (
+                      <p className="muted small" style={{ margin: "8px 0 0", whiteSpace: "pre-wrap" }}>
+                        📝 {item.privateNote}
+                      </p>
+                    )}
+                    {item.targetProfileId && (
+                      <a
+                        className="button secondary"
+                        href={`/preview/${item.targetProfileId}`}
+                        style={{ display: "inline-block", marginTop: "10px", fontSize: "13px" }}
+                      >
+                        {t("現在のプロフィールを見る", "View current profile")}
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── 編集モーダル ── */}
+      {editTarget && draft && (
+        <div
+          className="auth-prompt-backdrop"
+          onClick={() => { if (busy !== "save" && busy !== "delete") handleCloseEdit(); }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("交換記録を編集", "Edit exchange")}
+        >
+          <div className="auth-prompt-sheet" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="auth-prompt-close"
+              onClick={handleCloseEdit}
+              disabled={busy === "save" || busy === "delete"}
+              aria-label={t("閉じる", "Close")}
+            >
+              ×
+            </button>
+
+            <div className="auth-prompt-icon">✏️</div>
+            <h2 className="auth-prompt-title">
+              {(editTarget.snapshot.displayName as string)
+                || (editTarget.snapshot.patternName as string)
+                || t("名前なし", "No name")}
+            </h2>
+
+            {error && <p className="error-text" style={{ marginBottom: "8px" }}>{error}</p>}
+
+            <form onSubmit={handleSave} className="stack" style={{ width: "100%", textAlign: "left" }}>
               <label>
                 {t("メモ（非公開）", "Private note")}
                 <textarea
                   value={draft.privateNote}
                   onChange={(e) => setDraft({ ...draft, privateNote: e.target.value })}
                   placeholder={t("気づいたことを書いておきましょう", "Add a private note...")}
+                  rows={3}
                 />
               </label>
 
@@ -219,23 +262,23 @@ export default function BookScreen() {
               </label>
 
               <div className="row">
-                <button type="submit" disabled={busy === "save"}>
+                <button type="submit" disabled={busy === "save" || busy === "delete"} style={{ flex: 1 }}>
                   {busy === "save" ? t("保存中...", "Saving...") : t("保存", "Save")}
                 </button>
                 <button
                   type="button"
                   className="secondary"
                   onClick={() => void handleDelete()}
-                  disabled={busy === "delete"}
+                  disabled={busy === "save" || busy === "delete"}
                   style={{ color: "var(--pink)" }}
                 >
                   {busy === "delete" ? t("削除中...", "Deleting...") : t("削除", "Delete")}
                 </button>
               </div>
             </form>
-          )}
-        </section>
-      </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

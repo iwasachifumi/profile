@@ -1416,6 +1416,75 @@ textarea {
   background: var(--green-soft);
 }
 
+/* ── 交換帳 一覧 UI ── */
+.exchange-list-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.exchange-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+}
+
+.exchange-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exchange-row-info strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exchange-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.exchange-detail {
+  border-top: 1px solid var(--line);
+  padding: 12px;
+  background: var(--bg, #fafafa);
+}
+
+.avatar-sm {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--green-soft, #e8f5e9);
+  place-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+  line-height: 1;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.icon-btn:hover {
+  background: var(--line);
+}
+
 .snapshot {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
