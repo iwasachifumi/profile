@@ -4836,3 +4836,21 @@ body:has(.lp-root) .topnav a.active {
 .idx-cta-banner-note .idx-cta-banner-arrow {
   color: #4a9b7e;
 }
+
+/* Override CTA banner when placed inside right pane */
+.idx-pane-right .idx-cta-banner-section {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.idx-pane-right .idx-cta-banner-grid {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 901px) {
+  .idx-pane-right .idx-cta-banner-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
