@@ -95,6 +95,22 @@ export async function createGuestUser() {
   return rows[0];
 }
 
+// セッションJWTは有効だがDBにユーザーレコードが存在しない場合に自動作成する。
+// FK制約エラー(23503)のリトライ用。ON CONFLICT DO NOTHING で冪等に動作する。
+export async function ensureUserExists(
+  userId: string,
+  email: string,
+  isGuest: boolean
+): Promise<void> {
+  const sql = getSql();
+  const emailVal = email && email.length > 0 ? email : null;
+  await sql`
+    INSERT INTO memoria.users (id, email, is_guest)
+    VALUES (${userId}, ${emailVal}, ${isGuest})
+    ON CONFLICT (id) DO NOTHING
+  `;
+}
+
 // Google OAuth: email + google_id でユーザーを find-or-create する。
 // 同じ email が既に存在する場合は google_id を紐づけて返す。
 export async function findOrCreateGoogleUser(

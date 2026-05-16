@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getExchangesByUser, insertExchange } from "@/lib/db";
+import { getExchangesByUser, insertExchange, ensureUserExists } from "@/lib/db";
 import { ok, err, unauthorized, serverError } from "@/lib/response";
 import type { Exchange } from "@/types";
 
@@ -22,15 +22,30 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getSession(request);
   if (!session) return unauthorized();
+
+  // body は一度しか読めないので先にパースする
+  let body: Exchange;
   try {
-    const body = await request.json() as Exchange;
-    if (!body.id) return err("id は必須です");
+    body = await request.json() as Exchange;
+  } catch {
+    return err("リクエストの形式が不正です");
+  }
+  if (!body.id) return err("id は必須です");
+
+  try {
     await insertExchange(session.userId, body);
     return ok({ id: body.id }, 201);
   } catch (e) {
-    // 外部キー制約違反 = セッションのユーザーIDがDBに存在しない（古いクッキー）
+    // 外部キー制約違反 = セッションのユーザーIDがDBに存在しない
+    // → ユーザーレコードを自動作成してリトライ（クッキー削除できない端末の救済）
     if (typeof e === "object" && e !== null && (e as { code?: string }).code === "23503") {
-      return err("セッションの有効期限が切れています。再ログインしてください。", 401);
+      try {
+        await ensureUserExists(session.userId, session.email, session.isGuest);
+        await insertExchange(session.userId, body);
+        return ok({ id: body.id }, 201);
+      } catch (e2) {
+        return serverError(e2);
+      }
     }
     return serverError(e);
   }
