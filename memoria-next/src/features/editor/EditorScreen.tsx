@@ -843,13 +843,13 @@ export default function EditorScreen() {
     });
     qrExportTrace(7, visibleCard, { handler: "editor_generateQrPng_before_toPng", nodeSource: "visibleRef" });
 
-    // scale transformを一時解除してフルサイズでキャプチャ
-    // 外側ラッパーが overflow:hidden のため、ユーザーへの視覚影響は最小
+    // position:absolute のまま toPng すると html-to-image が foreignObject 内で
+    // 幅を誤計算して 317px でクリップされる。position:relative に変えて回避する。
+    // React が再描画で上書きしないよう rAF を挟まず toPng を即呼び出す。
     const savedTransform = visibleCard.style.transform;
+    const savedPosition  = visibleCard.style.position;
     visibleCard.style.transform = "none";
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-    });
+    visibleCard.style.position  = "relative";
 
     let dataUrl: string;
     try {
@@ -863,6 +863,7 @@ export default function EditorScreen() {
       });
     } finally {
       visibleCard.style.transform = savedTransform;
+      visibleCard.style.position  = savedPosition;
     }
     return dataUrl;
   }
@@ -1344,6 +1345,11 @@ export default function EditorScreen() {
             {qrExporting ? t("生成中…", "Generating…") : "📤 シェア"}
           </button>
         </div>
+
+        {/* デプロイ確認用ビルドバージョン */}
+        <p style={{ margin: 0, fontSize: "10px", color: "var(--muted, #aaa)", textAlign: "right", opacity: 0.6 }}>
+          build: {process.env.NEXT_PUBLIC_BUILD_SHA ?? "dev"}
+        </p>
 
         {!draft?.isPublic && (
           <p className="muted small" style={{ margin: 0, fontSize: "11px" }}>

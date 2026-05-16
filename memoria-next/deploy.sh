@@ -16,6 +16,8 @@ echo "=== [2/4] npm ci (依存関係) ==="
 npm ci
 
 echo "=== [3/4] npm run build ==="
+export BUILD_SHA=$(git rev-parse --short HEAD)
+echo "BUILD_SHA=$BUILD_SHA"
 npm run build
 
 echo "=== [4/4] pm2 restart ==="
