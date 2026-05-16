@@ -175,12 +175,12 @@ export default function BookScreen() {
                         <span key={tag} className="tag">{tag}</span>
                       ))}
                     </div>
-                    {item.snapshot.audience && (
+                    {!!(item.snapshot.audience as string) && (
                       <p className="muted small" style={{ margin: "6px 0 0" }}>
                         {item.snapshot.audience as string}
                       </p>
                     )}
-                    {item.snapshot.description && (
+                    {!!(item.snapshot.description as string) && (
                       <p style={{ margin: "4px 0 0" }}>
                         {item.snapshot.description as string}
                       </p>
