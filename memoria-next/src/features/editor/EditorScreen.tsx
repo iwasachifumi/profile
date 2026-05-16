@@ -293,7 +293,7 @@ export default function EditorScreen() {
   const latestDraft    = useRef<Profile | null>(null);  // stale-closure guard for drag
   const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qrCardRef      = useRef<HTMLDivElement>(null);
-  const qrCardExportRef = useRef<HTMLDivElement>(null);
+  // qrCardExportRef廃止 → generateQrPngは可視カード(qrCardRef)を直接キャプチャ
   const qrCardWrapRef  = useRef<HTMLDivElement>(null);
   const qrDragState    = useRef<{ idx: number } | null>(null);
   const qrAutoSaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -830,40 +830,46 @@ export default function EditorScreen() {
   }
 
   async function generateQrPng(): Promise<string> {
-    const exportNode = qrCardExportRef.current ?? qrCardRef.current;
-    if (!exportNode) throw new Error("no card ref");
-    qrExportTrace(6, exportNode, {
-      handler: "editor_generateQrPng_start",
-      nodeSource: exportNode === qrCardExportRef.current ? "exportRef" : "visibleRef",
-    });
+    // 可視カードを使う（export用隠しカードはoff-screen描画スキップ問題あり）
+    const visibleCard = qrCardRef.current;
+    if (!visibleCard) throw new Error("no card ref");
+    qrExportTrace(6, visibleCard, { handler: "editor_generateQrPng_start", nodeSource: "visibleRef" });
+
     setQrSelectedStickerIdx(null);
     const freshQr = await QRCode.toDataURL(qrUrl, { width: 100, margin: 1, color: { dark: "#000000", light: "#ffffff" } });
     setQrImgSrc(freshQr);
     await new Promise<void>((resolve) => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
     });
-    qrExportTrace(7, exportNode, {
-      handler: "editor_generateQrPng_before_toPng",
-      nodeSource: exportNode === qrCardExportRef.current ? "exportRef" : "visibleRef",
+    qrExportTrace(7, visibleCard, { handler: "editor_generateQrPng_before_toPng", nodeSource: "visibleRef" });
+
+    // scale transformを一時解除してフルサイズでキャプチャ
+    // 外側ラッパーが overflow:hidden のため、ユーザーへの視覚影響は最小
+    const savedTransform = visibleCard.style.transform;
+    visibleCard.style.transform = "none";
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
     });
-    return toPng(exportNode, {
-      pixelRatio: 2,
-      cacheBust: true,
-      width: 480,
-      height: 290,
-      canvasWidth: 960,
-      canvasHeight: 580,
-      style: {
-        transform: "none",
-        width: "480px",
-        height: "290px",
-      },
-    });
+
+    let dataUrl: string;
+    try {
+      dataUrl = await toPng(visibleCard, {
+        pixelRatio: 2,
+        cacheBust: true,
+        width: 480,
+        height: 290,
+        canvasWidth: 960,
+        canvasHeight: 580,
+      });
+    } finally {
+      visibleCard.style.transform = savedTransform;
+    }
+    return dataUrl;
   }
 
   async function uploadQrOgImage(dataUrl: string): Promise<void> {
     if (!draft) return;
-    qrExportTrace(8, qrCardExportRef.current ?? qrCardRef.current, {
+    qrExportTrace(8, qrCardRef.current, {
       handler: "editor_uploadQrOgImage",
       dataUrlLength: dataUrl.length,
     });
@@ -880,7 +886,7 @@ export default function EditorScreen() {
   async function handleQrCardSave() {
     setQrExporting(true); setQrExportError(null);
     try {
-      qrExportTrace(1, qrCardExportRef.current ?? qrCardRef.current, { handler: "editor_handleQrCardSave" });
+      qrExportTrace(1, qrCardRef.current, { handler: "editor_handleQrCardSave" });
       const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);           // OG image を非同期でアップ
       const a = document.createElement("a");
@@ -894,7 +900,7 @@ export default function EditorScreen() {
   async function handleQrCardShare() {
     setQrExporting(true); setQrExportError(null);
     try {
-      qrExportTrace(2, qrCardExportRef.current ?? qrCardRef.current, { handler: "editor_handleQrCardShare" });
+      qrExportTrace(2, qrCardRef.current, { handler: "editor_handleQrCardShare" });
       const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);           // OG image を非同期でアップ
       const blob = await (await fetch(dataUrl)).blob();
@@ -917,7 +923,7 @@ export default function EditorScreen() {
     if (!draft?.isPublic || !draft.publicSlug) return;
     setQrExporting(true); setQrExportError(null);
     try {
-      qrExportTrace(3, qrCardExportRef.current ?? qrCardRef.current, { handler: "editor_handleQrXShare" });
+      qrExportTrace(3, qrCardRef.current, { handler: "editor_handleQrXShare" });
       const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);
       const profileUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}`;
@@ -934,7 +940,7 @@ export default function EditorScreen() {
     if (!draft?.isPublic || !draft.publicSlug) return;
     setQrExporting(true); setQrExportError(null);
     try {
-      qrExportTrace(4, qrCardExportRef.current ?? qrCardRef.current, { handler: "editor_handleQrCopyUrl" });
+      qrExportTrace(4, qrCardRef.current, { handler: "editor_handleQrCopyUrl" });
       const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);
       const profileUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}`;
@@ -1113,7 +1119,15 @@ export default function EditorScreen() {
                 <img src={qrImgSrc} width={100} height={100} alt="QR" style={{ display: "block" }} />
               )}
             </div>
-            <p className="qr-card-tagline">Memoriaで見てね</p>
+          </div>
+
+          {/* ウォーターマーク */}
+          <div style={{
+            position: "absolute", bottom: 6, right: 8, zIndex: 100,
+            fontSize: 9, color: "rgba(0,0,0,0.45)", pointerEvents: "none",
+            fontFamily: "sans-serif", letterSpacing: 0.2, lineHeight: 1,
+          }}>
+            [memoria] https://profile.ac7.co.jp
           </div>
 
           {/* シール */}
@@ -1161,21 +1175,7 @@ export default function EditorScreen() {
         }}>
           {renderQrCardPaper({ nodeRef: qrCardRef, scale: qrCardScale, interactive: true })}
         </div>
-        <div
-          aria-hidden="true"
-          style={{
-            position: "fixed",
-            left: 0,
-            top: 0,
-            width: 480,
-            height: 290,
-            overflow: "hidden",
-            pointerEvents: "none",
-            transform: "translate(-200vw, -200vh)",
-          }}
-        >
-          {renderQrCardPaper({ nodeRef: qrCardExportRef, exportMode: true })}
-        </div>
+        {/* export用隠しカードは廃止 → generateQrPng が可視カードを直接キャプチャ */}
       </div>
     );
   }
