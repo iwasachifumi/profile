@@ -287,10 +287,17 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
     setSelectedStickerIdx(null);
     // canvas から data URL を取り出して <img> を更新してから toPng する
     if (qrCanvasRef.current) {
-      try { setQrImgSrc(qrCanvasRef.current.toDataURL("image/png")); } catch { /* ignore */ }
+      try {
+        const dataUrl = qrCanvasRef.current.toDataURL("image/png");
+        console.log("[QR] generatePng toDataURL length=", dataUrl.length);
+        setQrImgSrc(dataUrl);
+      } catch { /* ignore */ }
     }
     await new Promise((r) => setTimeout(r, 200));
-    return toPng(cardRef.current, { pixelRatio: 2, cacheBust: true });
+    // width/height を明示して flex コンテナの右側が欠落する問題を防ぐ
+    const { offsetWidth, offsetHeight } = cardRef.current;
+    console.log("[QR] toPng cardRef size=", offsetWidth, "x", offsetHeight);
+    return toPng(cardRef.current, { pixelRatio: 2, cacheBust: true, width: offsetWidth, height: offsetHeight });
   }
 
   async function handleSave() {
