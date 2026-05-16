@@ -28,6 +28,10 @@ export async function POST(request: NextRequest) {
     await insertExchange(session.userId, body);
     return ok({ id: body.id }, 201);
   } catch (e) {
+    // 外部キー制約違反 = セッションのユーザーIDがDBに存在しない（古いクッキー）
+    if (typeof e === "object" && e !== null && (e as { code?: string }).code === "23503") {
+      return err("セッションの有効期限が切れています。再ログインしてください。", 401);
+    }
     return serverError(e);
   }
 }

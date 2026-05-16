@@ -98,7 +98,7 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
       tags: [],
     });
     setExchangeBusy(false);
-    if (!result.ok) { setExchangeError("記録できませんでした。もう一度お試しください。"); return; }
+    if (!result.ok) { setExchangeError(result.error ?? "記録できませんでした。もう一度お試しください。"); return; }
     setExchanged(true);
   }
 
