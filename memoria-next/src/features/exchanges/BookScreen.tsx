@@ -27,12 +27,13 @@ function initialOf(name: string) {
 export default function BookScreen() {
   const { session } = useSession();
   const { t } = useLang();
-  const [exchanges,   setExchanges]   = useState<Exchange[]>([]);
-  const [expandedId,  setExpandedId]  = useState<string | null>(null);
-  const [editTarget,  setEditTarget]  = useState<Exchange | null>(null);  // モーダル用
-  const [draft,       setDraft]       = useState<Exchange | null>(null);
-  const [busy,        setBusy]        = useState<"load" | "save" | "delete" | null>("load");
-  const [error,       setError]       = useState<string | null>(null);
+  const [exchanges,    setExchanges]    = useState<Exchange[]>([]);
+  const [expandedId,   setExpandedId]   = useState<string | null>(null);
+  const [editTarget,   setEditTarget]   = useState<Exchange | null>(null);
+  const [draft,        setDraft]        = useState<Exchange | null>(null);
+  const [busy,         setBusy]         = useState<"load" | "save" | "delete" | null>("load");
+  const [error,        setError]        = useState<string | null>(null);
+  const [ogFailed,     setOgFailed]     = useState<Set<string>>(new Set());
 
   const loadExchanges = useCallback(async () => {
     setBusy("load");
@@ -135,14 +136,30 @@ export default function BookScreen() {
               <div key={item.id} className="exchange-list-item">
                 {/* OGカード画像（あれば） */}
                 {item.targetProfileId && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={`/og/${item.targetProfileId}.png`}
-                    alt={name}
-                    className="exchange-og-card"
-                    onClick={() => handleToggleDetail(item)}
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                  />
+                  ogFailed.has(item.targetProfileId) ? (
+                    /* OG画像なし → 仮カード */
+                    <div className="exchange-og-card exchange-og-fallback" onClick={() => handleToggleDetail(item)}>
+                      <div className="exchange-og-fallback-initial">{initialOf(name)}</div>
+                      <div className="exchange-og-fallback-info">
+                        <strong>{name}</strong>
+                        {!!(item.snapshot.audience as string) && (
+                          <span>{item.snapshot.audience as string}</span>
+                        )}
+                        {!!(item.snapshot.description as string) && (
+                          <span>{item.snapshot.description as string}</span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`/og/${item.targetProfileId}.png`}
+                      alt={name}
+                      className="exchange-og-card"
+                      onClick={() => handleToggleDetail(item)}
+                      onError={() => setOgFailed((prev) => new Set(prev).add(item.targetProfileId!))}
+                    />
+                  )
                 )}
 
                 {/* カード行 */}

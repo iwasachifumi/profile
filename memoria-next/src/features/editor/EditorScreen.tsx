@@ -388,6 +388,16 @@ export default function EditorScreen() {
     setProfiles((prev) => prev.map((p) => p.id === target.id ? { ...target } : p));
     setSavedRecently(true);
     setTimeout(() => setSavedRecently(false), 2000);
+
+    // QRタブが表示中ならOG画像を自動生成・保存（バックグラウンド）
+    if (qrCardRef.current) {
+      void (async () => {
+        try {
+          const dataUrl = await generateQrPng();
+          await uploadQrOgImage(dataUrl);
+        } catch { /* OG自動生成は非クリティカル */ }
+      })();
+    }
   }
 
   function scheduleAutoSave(next: Profile) {
