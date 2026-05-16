@@ -4715,3 +4715,15 @@ body:has(.lp-root) .topnav a.active {
     position: static;
   }
 }
+
+/* Hero (no character) — centered single column */
+.idx-hero-inner-solo {
+  grid-template-columns: 1fr;
+  max-width: 720px;
+  text-align: center;
+  padding: 12px 0;
+}
+
+.idx-hero-inner-solo .idx-hero-actions {
+  justify-content: center;
+}
