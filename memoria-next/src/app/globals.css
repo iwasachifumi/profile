@@ -1417,6 +1417,14 @@ textarea {
 }
 
 /* ── 交換帳 一覧 UI ── */
+.exchange-og-card {
+  display: block;
+  width: 100%;
+  border-radius: 10px 10px 0 0;
+  cursor: pointer;
+  object-fit: cover;
+}
+
 .exchange-list-item {
   border: 1px solid var(--line);
   border-radius: 10px;

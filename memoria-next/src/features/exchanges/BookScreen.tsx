@@ -133,11 +133,25 @@ export default function BookScreen() {
 
             return (
               <div key={item.id} className="exchange-list-item">
+                {/* OGカード画像（あれば） */}
+                {item.targetProfileId && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/og/${item.targetProfileId}.png`}
+                    alt={name}
+                    className="exchange-og-card"
+                    onClick={() => handleToggleDetail(item)}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                )}
+
                 {/* カード行 */}
                 <div className="exchange-row">
-                  <div className="avatar avatar-sm">
-                    <span>{initialOf(name)}</span>
-                  </div>
+                  {!item.targetProfileId && (
+                    <div className="avatar avatar-sm">
+                      <span>{initialOf(name)}</span>
+                    </div>
+                  )}
                   <div className="exchange-row-info">
                     <strong>{name}</strong>
                     <span className="muted small">
