@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
             eventName:       body.eventName,
             exchangedAt:     body.exchangedAt,
             snapshot: aProfile ? {
+              name:        aProfile.fields?.find((f) => f.label === "名前")?.value || "",
               patternName: aProfile.patternName,
               audience:    aProfile.audience,
               description: aProfile.description,

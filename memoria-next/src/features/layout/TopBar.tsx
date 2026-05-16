@@ -28,7 +28,7 @@ export default function TopBar() {
             {t("マイページ", "My page")}
           </Link>
           <Link href="/book" className={pathname === "/book" ? "active" : ""}>
-            {t("人脈帳", "People")}
+            {t("プロフ交換帳", "Exchange")}
           </Link>
         </nav>
       )}

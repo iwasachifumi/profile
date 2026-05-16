@@ -104,8 +104,8 @@ export default function BookScreen() {
     <main className="app-shell">
       <section className="section-title">
         <div>
-          <h1>{t("人脈帳", "People")}</h1>
-          <p className="muted">{t("名刺交換の履歴を管理します", "Your profile exchange history")}</p>
+          <h1>{t("プロフ交換帳", "Exchange")}</h1>
+          <p className="muted">{t("プロフィール交換の履歴", "Your profile exchange history")}</p>
         </div>
       </section>
 
@@ -127,7 +127,9 @@ export default function BookScreen() {
       ) : (
         <div className="exchange-list">
           {exchanges.map((item) => {
-            const name = (item.snapshot.displayName as string)
+            const name = (item.snapshot.name as string)
+              || (item.snapshot.displayName as string)
+              || (item.snapshot.description as string)
               || (item.snapshot.patternName as string)
               || t("名前なし", "No name");
             const isExpanded = expandedId === item.id;
@@ -163,7 +165,11 @@ export default function BookScreen() {
                 )}
 
                 {/* カード行 */}
-                <div className="exchange-row">
+                <div
+                  className="exchange-row"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleToggleDetail(item)}
+                >
                   {!item.targetProfileId && (
                     <div className="avatar avatar-sm">
                       <span>{initialOf(name)}</span>
@@ -176,15 +182,7 @@ export default function BookScreen() {
                       {item.eventName ? ` / ${item.eventName}` : ""}
                     </span>
                   </div>
-                  <div className="exchange-row-actions">
-                    <button
-                      type="button"
-                      className="button secondary"
-                      style={{ padding: "4px 10px", fontSize: "13px" }}
-                      onClick={() => handleToggleDetail(item)}
-                    >
-                      {isExpanded ? t("閉じる", "Close") : t("詳細", "Detail")}
-                    </button>
+                  <div className="exchange-row-actions" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       className="icon-btn"

@@ -1600,6 +1600,8 @@ textarea {
 
 .modal-dialog {
   width: min(420px, 100%);
+  max-height: 90dvh;
+  overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 18px;
@@ -1759,7 +1761,7 @@ textarea {
   /* カードは mobile 幅（max 480px）固定なので列幅も絞る。残りをパネルへ渡す */
   .editor-card-area {
     flex: 0 0 auto;
-    width: clamp(300px, 38%, 528px); /* 480px card + 24px padding × 2 */
+    width: clamp(480px, 42%, 560px); /* カード480px + padding 48px → 最低 480px 確保 */
     padding: 24px;
     align-items: flex-start;
     overflow-y: auto;
@@ -1879,12 +1881,32 @@ textarea {
     max-height: calc(100svh - 58px - 66px); /* ビューポート - トップバー - フッタ */
   }
 
-  /* QRカードタブ: カード幅を広めに確保（480px card + 余白）*/
+  /* QRカードタブ: 幅は 100% にして card-wrap の min(480px,100%) に委ねる（overflow防止）*/
   .editor-workspace[data-tab="qr"] .editor-card-area {
-    width: clamp(300px, 46%, 560px);
+    width: 100%;
+    padding: 12px;
   }
 
-  /* シール・フレームタブ: カードへのWYSIWYG操作が必要なので両方表示（デフォルト） */
+  /* シール・フレームタブ: ビューポートを上下で分割しカード・パネルを両方見せる */
+  .editor-workspace[data-tab="stickers"],
+  .editor-workspace[data-tab="frame"] {
+    height: calc(100svh - 58px - 66px);
+  }
+  .editor-workspace[data-tab="stickers"] .editor-card-area,
+  .editor-workspace[data-tab="frame"] .editor-card-area {
+    flex: 0 0 38%;
+    padding: 8px 12px;
+    overflow: hidden;
+  }
+  .editor-workspace[data-tab="stickers"] .editor-panel-area,
+  .editor-workspace[data-tab="frame"] .editor-panel-area {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .editor-workspace[data-tab="stickers"] .editor-panel-content,
+  .editor-workspace[data-tab="frame"] .editor-panel-content {
+    max-height: none; /* 親要素で高さ管理 */
+  }
 
   /* プレビュータブ: カードのみ全画面・パネルは非表示 */
   .editor-workspace[data-tab="preview"] .editor-panel-area {
@@ -3373,6 +3395,8 @@ body:has(.lp-root) .topnav a.active {
   justify-items: center;
   max-width: 340px;
   width: 100%;
+  max-height: 90dvh;
+  overflow-y: auto;
   position: relative;
 }
 
@@ -3615,6 +3639,8 @@ body:has(.lp-root) .topnav a.active {
   padding: 28px 24px 36px;
   width: 100%;
   max-width: 480px;
+  max-height: 92dvh;   /* 画面からはみ出さない */
+  overflow-y: auto;
   display: grid;
   gap: 10px;
   text-align: center;

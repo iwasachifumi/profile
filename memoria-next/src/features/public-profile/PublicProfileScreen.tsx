@@ -88,6 +88,7 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
       eventName:       null,
       exchangedAt:     new Date().toISOString(),
       snapshot: {
+        name:        profile.fields.find((f) => f.label === "名前")?.value || "",
         patternName: profile.patternName,
         audience:    profile.audience,
         description: profile.description,
