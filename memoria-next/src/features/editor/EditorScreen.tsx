@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { QRCodeCanvas } from "qrcode.react";
+import QRCode from "qrcode";
 import { toPng } from "html-to-image";
 import { profilesApi } from "@/api/profiles";
 import { settingsApi } from "@/api/settings";
@@ -249,7 +249,6 @@ export default function EditorScreen() {
   const [qrExportError,        setQrExportError]        = useState<string | null>(null);
   const [qrCopied,             setQrCopied]             = useState(false);
   const [qrImgSrc,             setQrImgSrc]             = useState("");
-  const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [qrFormatOpenId,       setQrFormatOpenId]       = useState<string | null>(null);
   const [qrAddPickerOpen,      setQrAddPickerOpen]      = useState(false);
 
@@ -277,24 +276,11 @@ export default function EditorScreen() {
     [draft?.isPublic, draft?.publicSlug]
   );
 
-  // QRCodeCanvas（hidden）→ data URL → <img> に変換（html-to-imageはcanvasを取り込めないため）
-  // callback ref: キャンバスがDOMにマウントされた瞬間に発火
-  const handleQrCanvasRef = useCallback((canvas: HTMLCanvasElement | null) => {
-    qrCanvasRef.current = canvas;
-    if (!canvas) return;
-    // QRCodeCanvasが描画を完了するまで少し待つ
-    setTimeout(() => {
-      try { setQrImgSrc(canvas.toDataURL("image/png")); } catch { /* ignore */ }
-    }, 60);
-  }, []);
-
-  // qrUrl が変わったとき（公開スラッグ変更など）も更新
+  // qrUrl が変わるたびに QR data URL を生成（canvas 不要・タイミング依存なし）
   useEffect(() => {
-    const canvas = qrCanvasRef.current;
-    if (!canvas) return;
-    setTimeout(() => {
-      try { setQrImgSrc(canvas.toDataURL("image/png")); } catch { /* ignore */ }
-    }, 60);
+    QRCode.toDataURL(qrUrl, { width: 100, margin: 1, color: { dark: "#000000", light: "#ffffff" } })
+      .then(setQrImgSrc)
+      .catch(() => {});
   }, [qrUrl]);
 
   // ── Load ──────────────────────────────────────────────────────────────────
@@ -809,12 +795,19 @@ export default function EditorScreen() {
   async function generateQrPng(): Promise<string> {
     if (!qrCardRef.current) throw new Error("no card ref");
     setQrSelectedStickerIdx(null);
-    // キャンバスから data URL を取り出して <img> を更新してから toPng する
-    if (qrCanvasRef.current) {
-      try { setQrImgSrc(qrCanvasRef.current.toDataURL("image/png")); } catch { /* ignore */ }
+    // QR を最新化
+    const freshQr = await QRCode.toDataURL(qrUrl, { width: 100, margin: 1, color: { dark: "#000000", light: "#ffffff" } });
+    setQrImgSrc(freshQr);
+    // scale transform を一時除去してから toPng（transform があると html-to-image が視覚サイズで切り取る）
+    const el = qrCardRef.current;
+    const prevTransform = el.style.transform;
+    el.style.transform = "none";
+    await new Promise((r) => setTimeout(r, 80)); // transform 解除後の再描画を待つ
+    try {
+      return await toPng(el, { pixelRatio: 2, cacheBust: true, width: 480, height: 290 });
+    } finally {
+      el.style.transform = prevTransform;
     }
-    await new Promise((r) => setTimeout(r, 200)); // React 再レンダ完了を待つ
-    return toPng(qrCardRef.current, { pixelRatio: 2, cacheBust: true });
   }
 
   async function uploadQrOgImage(dataUrl: string): Promise<void> {
@@ -1046,14 +1039,11 @@ export default function EditorScreen() {
           {/* 右エリア */}
           <div className="qr-card-right">
             <div className="qr-card-qr-wrap">
-              {/* hidden canvas: QRを描画してdata URLを取り出す用 */}
-              <QRCodeCanvas ref={handleQrCanvasRef} value={qrUrl} size={100}
-                style={{ position: "absolute", opacity: 0, pointerEvents: "none", top: -9999 }} />
-              {/* img として表示: html-to-image が確実に取り込める */}
-              {qrImgSrc
-                ? <img src={qrImgSrc} width={100} height={100} alt="QR" style={{ display: "block" }} /> // eslint-disable-line @next/next/no-img-element
-                : <QRCodeCanvas value={qrUrl} size={100} />
-              }
+              {/* QRCode.toDataURL()で生成したdata URLをimgで表示。html-to-imageが確実に取り込める */}
+              {qrImgSrc && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={qrImgSrc} width={100} height={100} alt="QR" style={{ display: "block" }} />
+              )}
             </div>
             <p className="qr-card-tagline">Memoriaで見てね</p>
           </div>
@@ -1067,7 +1057,7 @@ export default function EditorScreen() {
               <div
                 key={s.id} data-sticker-el="1"
                 className={`placed-sticker${isSel ? " selected" : ""}`}
-                style={{ left: `${s.x}%`, top: `${s.y}%`, width: `${sz}px`, cursor: "grab", touchAction: "none", zIndex: 10 }}
+                style={{ left: `${(s.x / 100) * 480}px`, top: `${(s.y / 100) * 290}px`, width: `${sz}px`, cursor: "grab", touchAction: "none", zIndex: 10 }}
                 onPointerDown={(e) => onQrStickerPointerDown(e, idx)}
               >
                 {isSel && (
