@@ -119,40 +119,6 @@ const CARD_TEMPLATES = [
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const qrExportDebug = 1;
-
-function getQrExportDebugDetails(node?: HTMLElement | null) {
-  if (typeof document === "undefined") return {};
-  const scope: ParentNode = node ?? document;
-  const rect = node?.getBoundingClientRect();
-  const right = scope.querySelector(".qr-card-right");
-  const tagline = scope.querySelector(".qr-card-tagline");
-  return {
-    path: window.location.pathname,
-    nodeTag: node?.tagName ?? null,
-    nodeClass: node?.className ?? null,
-    rect: rect ? {
-      width: rect.width,
-      height: rect.height,
-      left: rect.left,
-      top: rect.top,
-    } : null,
-    qrCardRightCount: scope.querySelectorAll(".qr-card-right").length,
-    qrWrapCount: scope.querySelectorAll(".qr-card-qr-wrap").length,
-    qrImgCount: scope.querySelectorAll(".qr-card-qr-wrap img").length,
-    taglineCount: scope.querySelectorAll(".qr-card-tagline").length,
-    taglineText: tagline?.textContent ?? null,
-    placedStickerCount: scope.querySelectorAll("[data-sticker-el]").length,
-    rightHtml: right?.innerHTML.slice(0, 500) ?? null,
-  };
-}
-
-function qrExportTrace(id: number, node?: HTMLElement | null, extra?: Record<string, unknown>) {
-  if (!qrExportDebug || typeof window === "undefined") return;
-  const payload = { ...getQrExportDebugDetails(node), ...extra };
-  console.warn(`[QR_EXPORT ${id}]`, payload);
-  window.alert(`qr_export${id}`);
-}
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 function fileToLabel(f: string) {
@@ -745,7 +711,6 @@ export default function EditorScreen() {
       if (!qrCardRef.current) return;                                        // QRタブが非表示
       if (!latestDraft.current?.isPublic || !latestDraft.current?.publicSlug) return; // 非公開
       try {
-        qrExportTrace(5, qrCardRef.current, { handler: "editor_auto_og_timer" });
         const dataUrl = await generateQrPng();
         void uploadQrOgImage(dataUrl);
       } catch { /* silent: OG自動更新失敗は致命的でない */ }
@@ -833,16 +798,12 @@ export default function EditorScreen() {
     // 可視カードを使う（export用隠しカードはoff-screen描画スキップ問題あり）
     const visibleCard = qrCardRef.current;
     if (!visibleCard) throw new Error("no card ref");
-    qrExportTrace(6, visibleCard, { handler: "editor_generateQrPng_start", nodeSource: "visibleRef" });
-
     setQrSelectedStickerIdx(null);
     const freshQr = await QRCode.toDataURL(qrUrl, { width: 100, margin: 1, color: { dark: "#000000", light: "#ffffff" } });
     setQrImgSrc(freshQr);
     await new Promise<void>((resolve) => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
     });
-    qrExportTrace(7, visibleCard, { handler: "editor_generateQrPng_before_toPng", nodeSource: "visibleRef" });
-
     // style オプションはクローンにのみ適用される → 実際のDOMは変更しない
     // position:relative にしないと foreignObject 内で幅が 317px に誤計算される
     return toPng(visibleCard, {
@@ -863,10 +824,6 @@ export default function EditorScreen() {
 
   async function uploadQrOgImage(dataUrl: string): Promise<void> {
     if (!draft) return;
-    qrExportTrace(8, qrCardRef.current, {
-      handler: "editor_uploadQrOgImage",
-      dataUrlLength: dataUrl.length,
-    });
     try {
       const blob = await (await fetch(dataUrl)).blob();
       await fetch(`/api/og/${draft.id}`, {
@@ -880,8 +837,7 @@ export default function EditorScreen() {
   async function handleQrCardSave() {
     setQrExporting(true); setQrExportError(null);
     try {
-      qrExportTrace(1, qrCardRef.current, { handler: "editor_handleQrCardSave" });
-      const dataUrl = await generateQrPng();
+const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);           // OG image を非同期でアップ
       const a = document.createElement("a");
       a.href = dataUrl;
@@ -894,8 +850,7 @@ export default function EditorScreen() {
   async function handleQrCardShare() {
     setQrExporting(true); setQrExportError(null);
     try {
-      qrExportTrace(2, qrCardRef.current, { handler: "editor_handleQrCardShare" });
-      const dataUrl = await generateQrPng();
+const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);           // OG image を非同期でアップ
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], `memoria-card-${draft?.patternName ?? "card"}.png`, { type: "image/png" });
@@ -917,8 +872,7 @@ export default function EditorScreen() {
     if (!draft?.isPublic || !draft.publicSlug) return;
     setQrExporting(true); setQrExportError(null);
     try {
-      qrExportTrace(3, qrCardRef.current, { handler: "editor_handleQrXShare" });
-      const dataUrl = await generateQrPng();
+const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);
       const profileUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}`;
       const text = `${qrItems[0]?.value ?? draft.patternName}のプロフィール`;
@@ -934,8 +888,7 @@ export default function EditorScreen() {
     if (!draft?.isPublic || !draft.publicSlug) return;
     setQrExporting(true); setQrExportError(null);
     try {
-      qrExportTrace(4, qrCardRef.current, { handler: "editor_handleQrCopyUrl" });
-      const dataUrl = await generateQrPng();
+const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);
       const profileUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}`;
       await navigator.clipboard.writeText(profileUrl);
