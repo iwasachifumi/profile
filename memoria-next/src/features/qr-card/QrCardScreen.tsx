@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { QRCodeCanvas } from "qrcode.react";
+import QRCode from "qrcode";
 import { toPng } from "html-to-image";
 import { profilesApi } from "@/api/profiles";
 import { settingsApi } from "@/api/settings";
@@ -116,7 +116,6 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
   // ── Refs ──────────────────────────────────────────────────────────────────
 
   const cardRef       = useRef<HTMLDivElement>(null);
-  const qrCanvasRef   = useRef<HTMLCanvasElement | null>(null);
   const dragState     = useRef<{ idx: number } | null>(null);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -242,42 +241,16 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
     applyCardStickers(next);
   }
 
-  // ── QR canvas → img 変換（html-to-imageはcanvasを取り込めないため） ────────
+  // ── QR data URL 生成（qrcode パッケージで直接生成 → canvas/ref 不要） ────────
 
   const qrUrl = profile?.isPublic && profile.publicSlug
-    ? `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${profile.publicSlug}?via=qr`
+    ? `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://profile.ac7.co.jp"}/profile/${profile.publicSlug}?via=qr`
     : "https://profile.ac7.co.jp";
 
-  // callback ref: キャンバスがDOMにマウントされた瞬間に発火
-  const handleQrCanvasRef = useCallback((canvas: HTMLCanvasElement | null) => {
-    qrCanvasRef.current = canvas;
-    console.log("[QR] handleQrCanvasRef fired, canvas=", canvas, "size=", canvas?.width, "x", canvas?.height);
-    if (!canvas) return;
-    setTimeout(() => {
-      try {
-        const dataUrl = canvas.toDataURL("image/png");
-        console.log("[QR] toDataURL length=", dataUrl.length, "prefix=", dataUrl.slice(0, 60));
-        setQrImgSrc(dataUrl);
-      } catch (e) {
-        console.error("[QR] toDataURL threw:", e);
-      }
-    }, 200);
-  }, []);
-
-  // qrUrl が変わったときも更新
   useEffect(() => {
-    console.log("[QR] qrUrl changed:", qrUrl);
-    const canvas = qrCanvasRef.current;
-    if (!canvas) { console.log("[QR] canvas not ready yet"); return; }
-    setTimeout(() => {
-      try {
-        const dataUrl = canvas.toDataURL("image/png");
-        console.log("[QR] useEffect toDataURL length=", dataUrl.length, "prefix=", dataUrl.slice(0, 60));
-        setQrImgSrc(dataUrl);
-      } catch (e) {
-        console.error("[QR] useEffect toDataURL threw:", e);
-      }
-    }, 200);
+    QRCode.toDataURL(qrUrl, { width: 100, margin: 1, color: { dark: "#000000", light: "#ffffff" } })
+      .then(setQrImgSrc)
+      .catch(() => {});
   }, [qrUrl]);
 
   // ── Export ────────────────────────────────────────────────────────────────
@@ -285,18 +258,11 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
   async function generatePng(): Promise<string> {
     if (!cardRef.current) throw new Error("card not mounted");
     setSelectedStickerIdx(null);
-    // canvas から data URL を取り出して <img> を更新してから toPng する
-    if (qrCanvasRef.current) {
-      try {
-        const dataUrl = qrCanvasRef.current.toDataURL("image/png");
-        console.log("[QR] generatePng toDataURL length=", dataUrl.length);
-        setQrImgSrc(dataUrl);
-      } catch { /* ignore */ }
-    }
-    await new Promise((r) => setTimeout(r, 200));
-    // width/height を明示して flex コンテナの右側が欠落する問題を防ぐ
+    // QR data URL を最新化してから toPng する
+    const freshQr = await QRCode.toDataURL(qrUrl, { width: 100, margin: 1, color: { dark: "#000000", light: "#ffffff" } });
+    setQrImgSrc(freshQr);
+    await new Promise((r) => setTimeout(r, 100));
     const { offsetWidth, offsetHeight } = cardRef.current;
-    console.log("[QR] toPng cardRef size=", offsetWidth, "x", offsetHeight);
     return toPng(cardRef.current, { pixelRatio: 2, cacheBust: true, width: offsetWidth, height: offsetHeight });
   }
 
@@ -489,10 +455,6 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
   return (
     <main className="qr-card-page">
 
-      {/* hidden canvas: QR toDataURL()専用。カード外に置くことでCSS clipping/overflow の影響を受けない */}
-      <QRCodeCanvas ref={handleQrCanvasRef} value={qrUrl} size={100}
-        style={{ position: "fixed", left: -9999, top: 0, opacity: 0, pointerEvents: "none" }} />
-
       {/* ページヘッダー */}
       <div className="qr-card-page-header">
         <button
@@ -555,12 +517,6 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
 
       {/* コントロール */}
       <div className="qr-card-page-controls">
-
-        {/* DEBUG: QR状態確認（確認後に削除） */}
-        <p style={{ margin: 0, fontSize: 11, color: "#888", fontFamily: "monospace" }}>
-          [DEBUG] qrImgSrc: {qrImgSrc ? `✓ (${qrImgSrc.length}bytes)` : "空"}{" / "}
-          cardRef: {cardRef.current ? `${cardRef.current.offsetWidth}x${cardRef.current.offsetHeight}` : "未マウント"}
-        </p>
 
         {exportError && <p className="error-text" style={{ margin: 0 }}>{exportError}</p>}
 
