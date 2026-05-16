@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
     method: body.method,
   });
 
+  // 自分が登録したものは必ず outbound として保存（クライアント値は信用しない）
+  body.direction = "outbound";
+
   try {
     await insertExchange(session.userId, body);
     console.log("[exchanges POST] ok →", body.id);
@@ -71,6 +74,7 @@ export async function POST(request: NextRequest) {
             } : {},
             privateNote: "",
             tags:        [],
+            direction:   "inbound",
           });
           console.log("[exchanges POST] reverse exchange created for", target.ownerId);
         } catch (re) {

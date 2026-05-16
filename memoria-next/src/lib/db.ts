@@ -240,15 +240,16 @@ export async function getExchangesByUser(userId: string): Promise<Exchange[]> {
 
 export async function insertExchange(userId: string, exchange: Exchange) {
   const sql = getSql();
+  const direction = exchange.direction === "inbound" ? "inbound" : "outbound";
   await sql`
     INSERT INTO memoria.exchanges
       (id, owner_id, target_profile_id, method, event_name,
-       exchanged_at, snapshot, private_note, tags)
+       exchanged_at, snapshot, private_note, tags, direction)
     VALUES
       (${exchange.id}, ${userId}, ${exchange.targetProfileId},
        ${exchange.method}, ${exchange.eventName}, ${exchange.exchangedAt},
        ${sql.json(j(exchange.snapshot))}, ${exchange.privateNote},
-       ${sql.array(exchange.tags ?? [])})
+       ${sql.array(exchange.tags ?? [])}, ${direction})
   `;
 }
 
@@ -497,6 +498,7 @@ function rowToProfile(row: Record<string, unknown>): Profile {
 }
 
 function rowToExchange(row: Record<string, unknown>): Exchange {
+  const dir = row.direction === "inbound" ? "inbound" : "outbound";
   return {
     id: row.id as string,
     targetProfileId: row.target_profile_id as string | null,
@@ -506,5 +508,6 @@ function rowToExchange(row: Record<string, unknown>): Exchange {
     snapshot: (row.snapshot as Record<string, unknown>) ?? {},
     privateNote: (row.private_note as string) ?? "",
     tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
+    direction: dir,
   };
 }
