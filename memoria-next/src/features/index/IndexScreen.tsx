@@ -290,13 +290,12 @@ export default function IndexScreen() {
         {/* Right: Memoria-tan profile */}
         <aside className="idx-pane idx-pane-right">
           <section className="lp-section idx-chara-section">
-            <p className="lp-section-lead">
-              {t("本サービスの公式キャラクター、メモリアです。", "Meet Memoria, the official character of this service.")}
-              <br />
-              {t("このサービスでは、自分のプロフを作成・交換できます。", "Memoria lets you create and exchange your own profile.")}
-            </p>
-
             <div className="idx-chara-profile">
+              <p className="idx-chara-intro">
+                {t("本サービスの公式キャラクター、メモリアです。", "Meet Memoria, the official character of this service.")}
+                <br />
+                {t("このサービスでは、自分のプロフを作成・交換できます。", "Memoria lets you create and exchange your own profile.")}
+              </p>
               <div className="idx-chara-profile-head">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/memoria.png" alt={t("めもりあたん", "Memoria-tan")} className="idx-chara-profile-img" />
