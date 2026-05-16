@@ -119,6 +119,41 @@ const CARD_TEMPLATES = [
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+const qrExportDebug = 1;
+
+function getQrExportDebugDetails(node?: HTMLElement | null) {
+  if (typeof document === "undefined") return {};
+  const scope: ParentNode = node ?? document;
+  const rect = node?.getBoundingClientRect();
+  const right = scope.querySelector(".qr-card-right");
+  const tagline = scope.querySelector(".qr-card-tagline");
+  return {
+    path: window.location.pathname,
+    nodeTag: node?.tagName ?? null,
+    nodeClass: node?.className ?? null,
+    rect: rect ? {
+      width: rect.width,
+      height: rect.height,
+      left: rect.left,
+      top: rect.top,
+    } : null,
+    qrCardRightCount: scope.querySelectorAll(".qr-card-right").length,
+    qrWrapCount: scope.querySelectorAll(".qr-card-qr-wrap").length,
+    qrImgCount: scope.querySelectorAll(".qr-card-qr-wrap img").length,
+    taglineCount: scope.querySelectorAll(".qr-card-tagline").length,
+    taglineText: tagline?.textContent ?? null,
+    placedStickerCount: scope.querySelectorAll("[data-sticker-el]").length,
+    rightHtml: right?.innerHTML.slice(0, 500) ?? null,
+  };
+}
+
+function qrExportTrace(id: number, node?: HTMLElement | null, extra?: Record<string, unknown>) {
+  if (!qrExportDebug || typeof window === "undefined") return;
+  const payload = { ...getQrExportDebugDetails(node), ...extra };
+  console.warn(`[QR_EXPORT ${id}]`, payload);
+  window.alert(`qr_export${id}`);
+}
+
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 function fileToLabel(f: string) {
   return f.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").replace(/ color$/, "").trim();
@@ -258,6 +293,7 @@ export default function EditorScreen() {
   const latestDraft    = useRef<Profile | null>(null);  // stale-closure guard for drag
   const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qrCardRef      = useRef<HTMLDivElement>(null);
+  const qrCardExportRef = useRef<HTMLDivElement>(null);
   const qrCardWrapRef  = useRef<HTMLDivElement>(null);
   const qrDragState    = useRef<{ idx: number } | null>(null);
   const qrAutoSaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -709,6 +745,7 @@ export default function EditorScreen() {
       if (!qrCardRef.current) return;                                        // QRタブが非表示
       if (!latestDraft.current?.isPublic || !latestDraft.current?.publicSlug) return; // 非公開
       try {
+        qrExportTrace(5, qrCardRef.current, { handler: "editor_auto_og_timer" });
         const dataUrl = await generateQrPng();
         void uploadQrOgImage(dataUrl);
       } catch { /* silent: OG自動更新失敗は致命的でない */ }
@@ -793,25 +830,43 @@ export default function EditorScreen() {
   }
 
   async function generateQrPng(): Promise<string> {
-    if (!qrCardRef.current) throw new Error("no card ref");
+    const exportNode = qrCardExportRef.current ?? qrCardRef.current;
+    if (!exportNode) throw new Error("no card ref");
+    qrExportTrace(6, exportNode, {
+      handler: "editor_generateQrPng_start",
+      nodeSource: exportNode === qrCardExportRef.current ? "exportRef" : "visibleRef",
+    });
     setQrSelectedStickerIdx(null);
-    // QR を最新化
     const freshQr = await QRCode.toDataURL(qrUrl, { width: 100, margin: 1, color: { dark: "#000000", light: "#ffffff" } });
     setQrImgSrc(freshQr);
-    // scale transform を一時除去してから toPng（transform があると html-to-image が視覚サイズで切り取る）
-    const el = qrCardRef.current;
-    const prevTransform = el.style.transform;
-    el.style.transform = "none";
-    await new Promise((r) => setTimeout(r, 80)); // transform 解除後の再描画を待つ
-    try {
-      return await toPng(el, { pixelRatio: 2, cacheBust: true, width: 480, height: 290 });
-    } finally {
-      el.style.transform = prevTransform;
-    }
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+    qrExportTrace(7, exportNode, {
+      handler: "editor_generateQrPng_before_toPng",
+      nodeSource: exportNode === qrCardExportRef.current ? "exportRef" : "visibleRef",
+    });
+    return toPng(exportNode, {
+      pixelRatio: 2,
+      cacheBust: true,
+      width: 480,
+      height: 290,
+      canvasWidth: 960,
+      canvasHeight: 580,
+      style: {
+        transform: "none",
+        width: "480px",
+        height: "290px",
+      },
+    });
   }
 
   async function uploadQrOgImage(dataUrl: string): Promise<void> {
     if (!draft) return;
+    qrExportTrace(8, qrCardExportRef.current ?? qrCardRef.current, {
+      handler: "editor_uploadQrOgImage",
+      dataUrlLength: dataUrl.length,
+    });
     try {
       const blob = await (await fetch(dataUrl)).blob();
       await fetch(`/api/og/${draft.id}`, {
@@ -825,6 +880,7 @@ export default function EditorScreen() {
   async function handleQrCardSave() {
     setQrExporting(true); setQrExportError(null);
     try {
+      qrExportTrace(1, qrCardExportRef.current ?? qrCardRef.current, { handler: "editor_handleQrCardSave" });
       const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);           // OG image を非同期でアップ
       const a = document.createElement("a");
@@ -838,6 +894,7 @@ export default function EditorScreen() {
   async function handleQrCardShare() {
     setQrExporting(true); setQrExportError(null);
     try {
+      qrExportTrace(2, qrCardExportRef.current ?? qrCardRef.current, { handler: "editor_handleQrCardShare" });
       const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);           // OG image を非同期でアップ
       const blob = await (await fetch(dataUrl)).blob();
@@ -860,6 +917,7 @@ export default function EditorScreen() {
     if (!draft?.isPublic || !draft.publicSlug) return;
     setQrExporting(true); setQrExportError(null);
     try {
+      qrExportTrace(3, qrCardExportRef.current ?? qrCardRef.current, { handler: "editor_handleQrXShare" });
       const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);
       const profileUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}`;
@@ -876,6 +934,7 @@ export default function EditorScreen() {
     if (!draft?.isPublic || !draft.publicSlug) return;
     setQrExporting(true); setQrExportError(null);
     try {
+      qrExportTrace(4, qrCardExportRef.current ?? qrCardRef.current, { handler: "editor_handleQrCopyUrl" });
       const dataUrl = await generateQrPng();
       void uploadQrOgImage(dataUrl);
       const profileUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}`;
@@ -982,29 +1041,38 @@ export default function EditorScreen() {
 
   // ── QRカードビュー（カードエリアに表示） ─────────────────────────────────
 
-  function renderQrCardView() {
+  function renderQrCardPaper({
+    nodeRef,
+    scale = 1,
+    interactive = false,
+    exportMode = false,
+  }: {
+    nodeRef?: React.Ref<HTMLDivElement>;
+    scale?: number;
+    interactive?: boolean;
+    exportMode?: boolean;
+  }) {
     if (!draft) return null;
     const avatarInitial = (qrItems[0]?.value || draft.patternName || "?")[0].toUpperCase();
+    const paperStyle: React.CSSProperties = { touchAction: "none" };
+    if (!exportMode) {
+      paperStyle.transform = `scale(${scale})`;
+      paperStyle.transformOrigin = "top left";
+      paperStyle.position = "absolute";
+    }
+
     return (
-      /* コンテナ: 実幅を ResizeObserver で計測してスケール係数を決定 */
-      <div ref={qrCardWrapRef} style={{ width: "100%", overflow: "hidden" }}>
-        {/* スケール用ラッパー: transform-origin top left で縮小するとcollapse対策に高さも明示 */}
-        <div style={{
-          width: 480 * qrCardScale,
-          height: 290 * qrCardScale,
-          position: "relative",
-        }}>
-        <div
-          ref={qrCardRef}
-          className="qr-card-paper"
-          style={{ touchAction: "none", transform: `scale(${qrCardScale})`, transformOrigin: "top left", position: "absolute" }}
-          onPointerMove={onQrCardPointerMove}
-          onPointerUp={onQrCardPointerUp}
-          onClick={(e) => {
+      <div
+        ref={nodeRef}
+        className="qr-card-paper"
+        style={paperStyle}
+        onPointerMove={interactive ? onQrCardPointerMove : undefined}
+        onPointerUp={interactive ? onQrCardPointerUp : undefined}
+        onClick={interactive ? (e) => {
             if ((e.target as HTMLElement).closest("[data-sticker-el]")) return;
             setQrSelectedStickerIdx(null);
-          }}
-        >
+          } : undefined}
+      >
           {/* 背景 */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`/card/${qrTemplateFile}`} alt="" className="qr-card-bg" crossOrigin="anonymous" />
@@ -1051,14 +1119,14 @@ export default function EditorScreen() {
           {/* シール */}
           {qrCardStickers.map((s, idx) => {
             const sz    = Math.round(52 * (s.scale ?? 1));
-            const isSel = qrSelectedStickerIdx === idx;
+            const isSel = interactive && qrSelectedStickerIdx === idx;
             const src   = s.stickerId.startsWith("data:") ? s.stickerId : `/stamp/${s.stickerId}`;
             return (
               <div
                 key={s.id} data-sticker-el="1"
                 className={`placed-sticker${isSel ? " selected" : ""}`}
-                style={{ left: `${(s.x / 100) * 480}px`, top: `${(s.y / 100) * 290}px`, width: `${sz}px`, cursor: "grab", touchAction: "none", zIndex: 10 }}
-                onPointerDown={(e) => onQrStickerPointerDown(e, idx)}
+                style={{ left: `${(s.x / 100) * 480}px`, top: `${(s.y / 100) * 290}px`, width: `${sz}px`, cursor: interactive ? "grab" : "default", touchAction: "none", zIndex: 10 }}
+                onPointerDown={interactive ? (e) => onQrStickerPointerDown(e, idx) : undefined}
               >
                 {isSel && (
                   <div className="placed-sticker-controls" data-sticker-control="true">
@@ -1076,8 +1144,38 @@ export default function EditorScreen() {
               </div>
             );
           })}
+      </div>
+    );
+  }
+
+  function renderQrCardView() {
+    if (!draft) return null;
+    return (
+      /* コンテナ: 実幅を ResizeObserver で計測してスケール係数を決定 */
+      <div ref={qrCardWrapRef} style={{ width: "100%", overflow: "hidden" }}>
+        {/* スケール用ラッパー: transform-origin top left で縮小するとcollapse対策に高さも明示 */}
+        <div style={{
+          width: 480 * qrCardScale,
+          height: 290 * qrCardScale,
+          position: "relative",
+        }}>
+          {renderQrCardPaper({ nodeRef: qrCardRef, scale: qrCardScale, interactive: true })}
         </div>
-        </div> {/* /scale wrapper */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            left: 0,
+            top: 0,
+            width: 480,
+            height: 290,
+            overflow: "hidden",
+            pointerEvents: "none",
+            transform: "translate(-200vw, -200vh)",
+          }}
+        >
+          {renderQrCardPaper({ nodeRef: qrCardExportRef, exportMode: true })}
+        </div>
       </div>
     );
   }

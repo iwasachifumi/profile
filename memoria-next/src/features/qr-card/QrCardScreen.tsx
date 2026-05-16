@@ -65,6 +65,41 @@ const STICKERS_PER_PAGE = 16;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+const qrExportDebug = 1;
+
+function getQrExportDebugDetails(node?: HTMLElement | null) {
+  if (typeof document === "undefined") return {};
+  const scope: ParentNode = node ?? document;
+  const rect = node?.getBoundingClientRect();
+  const right = scope.querySelector(".qr-card-right");
+  const tagline = scope.querySelector(".qr-card-tagline");
+  return {
+    path: window.location.pathname,
+    nodeTag: node?.tagName ?? null,
+    nodeClass: node?.className ?? null,
+    rect: rect ? {
+      width: rect.width,
+      height: rect.height,
+      left: rect.left,
+      top: rect.top,
+    } : null,
+    qrCardRightCount: scope.querySelectorAll(".qr-card-right").length,
+    qrWrapCount: scope.querySelectorAll(".qr-card-qr-wrap").length,
+    qrImgCount: scope.querySelectorAll(".qr-card-qr-wrap img").length,
+    taglineCount: scope.querySelectorAll(".qr-card-tagline").length,
+    taglineText: tagline?.textContent ?? null,
+    placedStickerCount: scope.querySelectorAll("[data-sticker-el]").length,
+    rightHtml: right?.innerHTML.slice(0, 500) ?? null,
+  };
+}
+
+function qrExportTrace(id: number, node?: HTMLElement | null, extra?: Record<string, unknown>) {
+  if (!qrExportDebug || typeof window === "undefined") return;
+  const payload = { ...getQrExportDebugDetails(node), ...extra };
+  console.warn(`[QR_EXPORT ${id}]`, payload);
+  window.alert(`qr_export${id}`);
+}
+
 function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
 }
@@ -257,12 +292,18 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
 
   async function generatePng(): Promise<string> {
     if (!cardRef.current) throw new Error("card not mounted");
+    qrExportTrace(11, cardRef.current, { handler: "card_generatePng_start" });
     setSelectedStickerIdx(null);
     // QR data URL を最新化してから toPng する
     const freshQr = await QRCode.toDataURL(qrUrl, { width: 100, margin: 1, color: { dark: "#000000", light: "#ffffff" } });
     setQrImgSrc(freshQr);
     await new Promise((r) => setTimeout(r, 100));
     const { offsetWidth, offsetHeight } = cardRef.current;
+    qrExportTrace(12, cardRef.current, {
+      handler: "card_generatePng_before_toPng",
+      offsetWidth,
+      offsetHeight,
+    });
     return toPng(cardRef.current, { pixelRatio: 2, cacheBust: true, width: offsetWidth, height: offsetHeight });
   }
 
@@ -270,6 +311,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
     setExporting(true);
     setExportError(null);
     try {
+      qrExportTrace(9, cardRef.current, { handler: "card_handleSave" });
       const dataUrl = await generatePng();
       const a = document.createElement("a");
       a.href = dataUrl;
@@ -287,6 +329,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
     setExporting(true);
     setExportError(null);
     try {
+      qrExportTrace(10, cardRef.current, { handler: "card_handleShare" });
       const dataUrl = await generatePng();
       const res   = await fetch(dataUrl);
       const blob  = await res.blob();
