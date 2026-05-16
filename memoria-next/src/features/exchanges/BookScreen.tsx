@@ -289,16 +289,19 @@ export default function BookScreen() {
               </label>
 
               <label>
-                {t("タグ（カンマ区切り）", "Tags (comma separated)")}
+                {t("タグ（空白またはカンマ区切り）", "Tags (space or comma separated)")}
                 <input
-                  value={draft.tags.join(", ")}
+                  value={draft.tags.join(" ")}
                   onChange={(e) =>
                     setDraft({
                       ...draft,
-                      tags: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                      tags: e.target.value
+                        .split(/[\s,、，]+/u)
+                        .map((s) => s.trim())
+                        .filter(Boolean),
                     })
                   }
-                  placeholder={t("例: 勉強会, React, 2026", "e.g. meetup, React, 2026")}
+                  placeholder={t("例: 勉強会 React 2026", "e.g. meetup React 2026")}
                 />
               </label>
 
