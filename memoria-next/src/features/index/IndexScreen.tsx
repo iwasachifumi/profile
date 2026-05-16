@@ -1,10 +1,8 @@
 import Link from "next/link";
 
 const CHANGELOG: { date: string; tag?: string; text: string }[] = [
-  { date: "2026-05-16", tag: "NEW", text: "トップページ（このページ）を新設しました。" },
-  { date: "2026-05-15", tag: "改善", text: "交換帳一覧にOGカード画像を表示。" },
-  { date: "2026-05-14", tag: "改善", text: "プロフィール保存時にOG画像を自動生成。" },
-  { date: "2026-05-13", tag: "UI", text: "ヘッダ文言・スマホレイアウト等を調整。" },
+  { date: "2026-05-16", tag: "公開", text: "開発ベータ公開" },
+  { date: "2026-05-08", tag: "開始", text: "開発開始" },
 ];
 
 const FEATURES = [
@@ -24,6 +22,63 @@ const FEATURES = [
     text: "コメントや再交換の履歴を重ねて、関係を育てられます。",
   },
 ];
+
+type ProfileSection = {
+  heading: string;
+  items: { label: string; value: string }[];
+};
+
+const CHARA_BASIC: { label: string; value: string }[] = [
+  { label: "ニックネーム", value: "めもりあたん" },
+  { label: "本名", value: "メモリア・ノートリア（ちょっとだけそれっぽく）" },
+  { label: "出身地", value: "にっぽんのどこかの勉強会" },
+  { label: "属性", value: "出会いを集めるのが好きなひと" },
+];
+
+const CHARA_SECTIONS: ProfileSection[] = [
+  {
+    heading: "基本系",
+    items: [
+      { label: "性格を一言で", value: "人の話を覚えていたいタイプ" },
+      { label: "第一印象で言われること", value: "話しやすそう" },
+      { label: "仲良くなるとどうなる？", value: "あとから「あの時の話」をちゃんと覚えてる" },
+    ],
+  },
+  {
+    heading: "趣味・嗜好",
+    items: [
+      { label: "趣味", value: "ノートにメモすること / シール集め / 勉強会めぐり" },
+      { label: "好きな音楽", value: "やさしいインスト / lo-fi / 作業用BGM" },
+      { label: "最近のはまってること", value: "会った人のメモをあとで読み返すこと" },
+      { label: "やめられないこと", value: "話した内容をすぐメモしちゃう" },
+      { label: "つい熱く語ってしまうこと", value: "「人って面白いよね」って話" },
+      { label: "一日のスマホ時間", value: "3〜4時間くらい（でもSNSよりメモが多い）" },
+      { label: "最近会った人", value: "・Rust好きの人\n・猫の話で盛り上がった人\n・初LTした人" },
+    ],
+  },
+  {
+    heading: "コミュニケーション",
+    items: [
+      { label: "話しかけてほしいこと", value: "最近参加したイベント / 作ってるもの" },
+      { label: "人見知りする？", value: "ちょっとするけど、話しかけられると嬉しい" },
+      { label: "好きなタイプ", value: "なにか好きなものを持ってる人" },
+    ],
+  },
+  {
+    heading: "価値観",
+    items: [
+      { label: "大切にしていること", value: "一度会った人を忘れないこと" },
+      { label: "座右の銘", value: "会った人を、忘れないように。" },
+    ],
+  },
+];
+
+const CHARA_NOTES = [
+  "この前の勉強会、すごく楽しかった",
+  "また話したい人が増えた",
+];
+
+const CHARA_MESSAGE = "またどこかで会えたらうれしいな";
 
 export default function IndexScreen() {
   return (
@@ -84,20 +139,51 @@ export default function IndexScreen() {
         </div>
       </section>
 
-      {/* ── Memoria-tan section ── */}
+      {/* ── Memoria-tan profile ── */}
       <section className="lp-section idx-chara-section">
-        <h2 className="lp-h2">Memoria のキャラクター</h2>
-        <div className="idx-chara-card">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/memoria.png" alt="めもりあたん" className="idx-chara-card-img" />
-          <div className="idx-chara-card-body">
-            <h3>めもりあたん</h3>
-            <p className="idx-chara-role">Memoria 公式マスコット</p>
-            <p className="idx-chara-desc">
-              {/* キャラ設定はユーザーがあとで差し替え */}
-              ※キャラクター設定は準備中です。
-            </p>
+        <h2 className="lp-h2">めもりあたん プロフィール</h2>
+        <p className="lp-section-lead">
+          Memoria の公式キャラクター。「人を覚えていたい」を体現した存在です。
+        </p>
+
+        <div className="idx-chara-profile">
+          <div className="idx-chara-profile-head">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/memoria.png" alt="めもりあたん" className="idx-chara-profile-img" />
+            <dl className="idx-chara-basic">
+              {CHARA_BASIC.map((it) => (
+                <div key={it.label} className="idx-chara-basic-row">
+                  <dt>{it.label}</dt>
+                  <dd>{it.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
+
+          {CHARA_SECTIONS.map((sec) => (
+            <div key={sec.heading} className="idx-chara-block">
+              <h3 className="idx-chara-block-title">{sec.heading}</h3>
+              <dl className="idx-chara-list">
+                {sec.items.map((it) => (
+                  <div key={it.label} className="idx-chara-list-row">
+                    <dt>{it.label}</dt>
+                    <dd>{it.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ))}
+
+          <div className="idx-chara-block">
+            <h3 className="idx-chara-block-title">最近のメモ</h3>
+            <ul className="idx-chara-notes">
+              {CHARA_NOTES.map((n, i) => (
+                <li key={i}>{n}</li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="idx-chara-message">「{CHARA_MESSAGE}」</p>
         </div>
       </section>
 
