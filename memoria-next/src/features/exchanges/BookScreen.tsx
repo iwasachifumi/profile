@@ -24,16 +24,18 @@ function initialOf(name: string) {
   return (name || "?")[0].toUpperCase();
 }
 
+type DirectionFilter = "all" | "outbound" | "inbound";
+
 export default function BookScreen() {
   const { session } = useSession();
   const { t } = useLang();
   const [exchanges,    setExchanges]    = useState<Exchange[]>([]);
-  const [expandedId,   setExpandedId]   = useState<string | null>(null);
   const [editTarget,   setEditTarget]   = useState<Exchange | null>(null);
   const [draft,        setDraft]        = useState<Exchange | null>(null);
   const [busy,         setBusy]         = useState<"load" | "save" | "delete" | null>("load");
   const [error,        setError]        = useState<string | null>(null);
   const [ogFailed,     setOgFailed]     = useState<Set<string>>(new Set());
+  const [filter,       setFilter]       = useState<DirectionFilter>("all");
 
   const loadExchanges = useCallback(async () => {
     setBusy("load");
@@ -47,11 +49,6 @@ export default function BookScreen() {
   useEffect(() => {
     if (session.status === "user") void loadExchanges();
   }, [loadExchanges, session.status]);
-
-  // 詳細の開閉
-  function handleToggleDetail(item: Exchange) {
-    setExpandedId((cur) => (cur === item.id ? null : item.id));
-  }
 
   // 鉛筆アイコン → 編集モーダルを開く
   function handleOpenEdit(item: Exchange) {
@@ -89,7 +86,6 @@ export default function BookScreen() {
     setBusy(null);
     if (!result.ok) { setError(result.error); return; }
     setExchanges((cur) => cur.filter((e) => e.id !== removingId));
-    setExpandedId((cur) => (cur === removingId ? null : cur));
     handleCloseEdit();
   }
 
@@ -100,6 +96,13 @@ export default function BookScreen() {
     return <AuthScreen redirectOnAuth="/book" />;
   }
 
+  const filtered = exchanges.filter((e) => filter === "all" ? true : (e.direction ?? "outbound") === filter);
+  const counts = {
+    all: exchanges.length,
+    outbound: exchanges.filter((e) => (e.direction ?? "outbound") === "outbound").length,
+    inbound: exchanges.filter((e) => e.direction === "inbound").length,
+  };
+
   return (
     <main className="app-shell">
       <section className="section-title">
@@ -108,6 +111,39 @@ export default function BookScreen() {
           <p className="muted">{t("プロフィール交換の履歴", "Your profile exchange history")}</p>
         </div>
       </section>
+
+      {/* ── 方向フィルタ ── */}
+      {exchanges.length > 0 && (
+        <div className="exchange-filter-row" role="tablist" aria-label={t("方向で絞り込み", "Filter by direction")}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={filter === "all"}
+            className={`exchange-filter-btn${filter === "all" ? " active" : ""}`}
+            onClick={() => setFilter("all")}
+          >
+            {t("すべて", "All")} <span className="exchange-filter-count">{counts.all}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={filter === "outbound"}
+            className={`exchange-filter-btn${filter === "outbound" ? " active" : ""}`}
+            onClick={() => setFilter("outbound")}
+          >
+            {t("自分から", "I added")} <span className="exchange-filter-count">{counts.outbound}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={filter === "inbound"}
+            className={`exchange-filter-btn${filter === "inbound" ? " active" : ""}`}
+            onClick={() => setFilter("inbound")}
+          >
+            {t("相手から", "Received")} <span className="exchange-filter-count">{counts.inbound}</span>
+          </button>
+        </div>
+      )}
 
       {error && !editTarget && <p className="error-text">{error}</p>}
 
@@ -124,113 +160,89 @@ export default function BookScreen() {
             )}
           </p>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state stack">
+          <p className="muted small">{t("該当する記録がありません", "No matching records.")}</p>
+        </div>
       ) : (
-        <div className="exchange-list">
-          {exchanges.map((item) => {
+        <div className="exchange-card-list">
+          {filtered.map((item) => {
             const name = (item.snapshot.name as string)
               || (item.snapshot.displayName as string)
               || (item.snapshot.description as string)
               || (item.snapshot.patternName as string)
               || t("名前なし", "No name");
-            const isExpanded = expandedId === item.id;
+            const direction = item.direction ?? "outbound";
+            const ogUnavailable = !item.targetProfileId || ogFailed.has(item.targetProfileId);
 
             return (
-              <div key={item.id} className="exchange-list-item">
-                {/* OGカード画像（あれば） */}
-                {item.targetProfileId && (
-                  ogFailed.has(item.targetProfileId) ? (
-                    /* OG画像なし → 仮カード */
-                    <div className="exchange-og-card exchange-og-fallback" onClick={() => handleToggleDetail(item)}>
-                      <div className="exchange-og-fallback-initial">{initialOf(name)}</div>
-                      <div className="exchange-og-fallback-info">
-                        <strong>{name}</strong>
-                        {!!(item.snapshot.audience as string) && (
-                          <span>{item.snapshot.audience as string}</span>
-                        )}
-                        {!!(item.snapshot.description as string) && (
-                          <span>{item.snapshot.description as string}</span>
-                        )}
-                      </div>
+              <article key={item.id} className="exchange-card">
+                <div className="exchange-card-left">
+                  <header className="exchange-card-head">
+                    <time className="exchange-card-date">{formatDate(item.exchangedAt)}</time>
+                    <span
+                      className={`exchange-direction-badge dir-${direction}`}
+                      title={direction === "outbound" ? t("自分が登録", "I added") : t("相手から届いた", "Received")}
+                    >
+                      {direction === "outbound" ? t("自分から", "I added") : t("相手から", "Received")}
+                    </span>
+                  </header>
+
+                  <h3 className="exchange-card-name">{name}</h3>
+
+                  {(item.eventName || item.tags.length > 0) && (
+                    <div className="exchange-card-tags">
+                      {item.eventName && <span className="tag">{item.eventName}</span>}
+                      {item.tags.map((tag) => (
+                        <span key={tag} className="tag">{tag}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="exchange-card-note">
+                    <button
+                      type="button"
+                      className="exchange-card-note-edit"
+                      aria-label={t("メモを編集", "Edit note")}
+                      onClick={() => handleOpenEdit(item)}
+                    >
+                      ✏️
+                    </button>
+                    {item.privateNote ? (
+                      <p className="exchange-card-note-body">{item.privateNote}</p>
+                    ) : (
+                      <p className="exchange-card-note-empty">
+                        {t("メモはまだありません", "No note yet")}
+                      </p>
+                    )}
+                  </div>
+
+                  {item.targetProfileId && (
+                    <a
+                      className="exchange-card-link"
+                      href={`/preview/${item.targetProfileId}`}
+                    >
+                      {t("現在のプロフィールを見る →", "View current profile →")}
+                    </a>
+                  )}
+                </div>
+
+                <div className="exchange-card-right">
+                  {ogUnavailable ? (
+                    <div className="exchange-card-qr-fallback">
+                      <div className="exchange-card-qr-initial">{initialOf(name)}</div>
                     </div>
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={`/og/${item.targetProfileId}.png`}
                       alt={name}
-                      className="exchange-og-card"
-                      onClick={() => handleToggleDetail(item)}
+                      className="exchange-card-qr"
                       onError={() => setOgFailed((prev) => new Set(prev).add(item.targetProfileId!))}
                     />
-                  )
-                )}
-
-                {/* カード行 */}
-                <div
-                  className="exchange-row"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleToggleDetail(item)}
-                >
-                  {!item.targetProfileId && (
-                    <div className="avatar avatar-sm">
-                      <span>{initialOf(name)}</span>
-                    </div>
                   )}
-                  <div className="exchange-row-info">
-                    <strong>{name}</strong>
-                    <span className="muted small">
-                      {formatDate(item.exchangedAt)}
-                      {item.eventName ? ` / ${item.eventName}` : ""}
-                    </span>
-                  </div>
-                  <div className="exchange-row-actions" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      aria-label={t("編集", "Edit")}
-                      onClick={() => handleOpenEdit(item)}
-                    >
-                      ✏️
-                    </button>
-                  </div>
                 </div>
-
-                {/* 詳細（展開時のみ） */}
-                {isExpanded && (
-                  <div className="exchange-detail">
-                    <div className="tag-row">
-                      <span className="tag">{item.method === "qr" ? "QR" : t("手動", "Manual")}</span>
-                      {item.eventName && <span className="tag">{item.eventName}</span>}
-                      {item.tags.map((tag) => (
-                        <span key={tag} className="tag">{tag}</span>
-                      ))}
-                    </div>
-                    {!!(item.snapshot.audience as string) && (
-                      <p className="muted small" style={{ margin: "6px 0 0" }}>
-                        {item.snapshot.audience as string}
-                      </p>
-                    )}
-                    {!!(item.snapshot.description as string) && (
-                      <p style={{ margin: "4px 0 0" }}>
-                        {item.snapshot.description as string}
-                      </p>
-                    )}
-                    {item.privateNote && (
-                      <p className="muted small" style={{ margin: "8px 0 0", whiteSpace: "pre-wrap" }}>
-                        📝 {item.privateNote}
-                      </p>
-                    )}
-                    {item.targetProfileId && (
-                      <a
-                        className="button secondary"
-                        href={`/preview/${item.targetProfileId}`}
-                        style={{ display: "inline-block", marginTop: "10px", fontSize: "13px" }}
-                      >
-                        {t("現在のプロフィールを見る", "View current profile")}
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
+              </article>
             );
           })}
         </div>

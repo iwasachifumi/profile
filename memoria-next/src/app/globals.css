@@ -4936,3 +4936,234 @@ body:has(.lp-root) .topnav a.active {
   color: #5a4a36;
   text-align: center;
 }
+
+/* ===========================================================
+   交換帳カード (BookScreen) — 320px 2カラム
+   =========================================================== */
+
+.exchange-filter-row {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 14px;
+  flex-wrap: wrap;
+}
+
+.exchange-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 13px;
+  color: #5a4a36;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.exchange-filter-btn:hover {
+  background: #fff8ec;
+}
+
+.exchange-filter-btn.active {
+  background: #2f6e58;
+  border-color: #2f6e58;
+  color: #fff;
+}
+
+.exchange-filter-count {
+  font-size: 11px;
+  padding: 1px 7px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.exchange-filter-btn.active .exchange-filter-count {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.exchange-card-list {
+  display: grid;
+  gap: 14px;
+}
+
+.exchange-card {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 0;
+  height: 320px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 720px) {
+  .exchange-card {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+}
+
+.exchange-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  min-width: 0;
+}
+
+.exchange-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.exchange-card-date {
+  font-size: 12px;
+  color: #8a6b48;
+  font-variant-numeric: tabular-nums;
+}
+
+.exchange-direction-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.exchange-direction-badge.dir-outbound {
+  background: #f0e2c9;
+  color: #6a4f2f;
+}
+
+.exchange-direction-badge.dir-inbound {
+  background: #d8ece3;
+  color: #2f6e58;
+}
+
+.exchange-card-name {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2f2418;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exchange-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.exchange-card-note {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 12px 14px;
+  padding-right: 40px;
+  background: #fffaf2;
+  border: 1px dashed rgba(120, 100, 80, 0.3);
+  border-radius: 8px;
+  overflow: auto;
+}
+
+.exchange-card-note-edit {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.exchange-card-note-edit:hover {
+  background: rgba(120, 100, 80, 0.08);
+}
+
+.exchange-card-note-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #2f2418;
+  white-space: pre-wrap;
+}
+
+.exchange-card-note-empty {
+  margin: 0;
+  font-size: 13px;
+  color: #b09a78;
+  font-style: italic;
+}
+
+.exchange-card-link {
+  font-size: 12px;
+  color: #2f6e58;
+  text-decoration: none;
+  align-self: flex-start;
+}
+
+.exchange-card-link:hover {
+  text-decoration: underline;
+}
+
+.exchange-card-right {
+  background: #f7f1e3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-left: 1px solid var(--line);
+}
+
+@media (max-width: 720px) {
+  .exchange-card-right {
+    border-left: none;
+    border-top: 1px solid var(--line);
+    height: 220px;
+  }
+}
+
+.exchange-card-qr {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.exchange-card-qr-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exchange-card-qr-initial {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 700;
+  color: #8a6b48;
+}

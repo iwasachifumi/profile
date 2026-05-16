@@ -63,6 +63,8 @@ export interface StickerItem {
   scale: number;
 }
 
+export type ExchangeDirection = "outbound" | "inbound";
+
 export interface Exchange {
   id: string;
   targetProfileId: string | null;
@@ -72,6 +74,8 @@ export interface Exchange {
   snapshot: Record<string, unknown>;
   privateNote: string;
   tags: string[];
+  /** outbound = 自分で記録 / inbound = 相手の記録経由で自動生成。クライアント送信時は省略可（サーバ側で outbound に正規化） */
+  direction?: ExchangeDirection;
 }
 
 export interface CustomSticker {
