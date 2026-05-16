@@ -278,10 +278,23 @@ export default function EditorScreen() {
   );
 
   // QRCodeCanvas（hidden）→ data URL → <img> に変換（html-to-imageはcanvasを取り込めないため）
+  // callback ref: キャンバスがDOMにマウントされた瞬間に発火
+  const handleQrCanvasRef = useCallback((canvas: HTMLCanvasElement | null) => {
+    qrCanvasRef.current = canvas;
+    if (!canvas) return;
+    // QRCodeCanvasが描画を完了するまで少し待つ
+    setTimeout(() => {
+      try { setQrImgSrc(canvas.toDataURL("image/png")); } catch { /* ignore */ }
+    }, 60);
+  }, []);
+
+  // qrUrl が変わったとき（公開スラッグ変更など）も更新
   useEffect(() => {
     const canvas = qrCanvasRef.current;
     if (!canvas) return;
-    try { setQrImgSrc(canvas.toDataURL("image/png")); } catch { /* ignore */ }
+    setTimeout(() => {
+      try { setQrImgSrc(canvas.toDataURL("image/png")); } catch { /* ignore */ }
+    }, 60);
   }, [qrUrl]);
 
   // ── Load ──────────────────────────────────────────────────────────────────
@@ -796,7 +809,11 @@ export default function EditorScreen() {
   async function generateQrPng(): Promise<string> {
     if (!qrCardRef.current) throw new Error("no card ref");
     setQrSelectedStickerIdx(null);
-    await new Promise((r) => setTimeout(r, 80));
+    // キャンバスから data URL を取り出して <img> を更新してから toPng する
+    if (qrCanvasRef.current) {
+      try { setQrImgSrc(qrCanvasRef.current.toDataURL("image/png")); } catch { /* ignore */ }
+    }
+    await new Promise((r) => setTimeout(r, 200)); // React 再レンダ完了を待つ
     return toPng(qrCardRef.current, { pixelRatio: 2, cacheBust: true });
   }
 
@@ -1030,7 +1047,7 @@ export default function EditorScreen() {
           <div className="qr-card-right">
             <div className="qr-card-qr-wrap">
               {/* hidden canvas: QRを描画してdata URLを取り出す用 */}
-              <QRCodeCanvas ref={qrCanvasRef} value={qrUrl} size={100}
+              <QRCodeCanvas ref={handleQrCanvasRef} value={qrUrl} size={100}
                 style={{ position: "absolute", opacity: 0, pointerEvents: "none", top: -9999 }} />
               {/* img として表示: html-to-image が確実に取り込める */}
               {qrImgSrc
