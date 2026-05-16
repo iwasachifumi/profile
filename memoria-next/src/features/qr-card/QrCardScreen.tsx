@@ -251,19 +251,33 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
   // callback ref: キャンバスがDOMにマウントされた瞬間に発火
   const handleQrCanvasRef = useCallback((canvas: HTMLCanvasElement | null) => {
     qrCanvasRef.current = canvas;
+    console.log("[QR] handleQrCanvasRef fired, canvas=", canvas, "size=", canvas?.width, "x", canvas?.height);
     if (!canvas) return;
     setTimeout(() => {
-      try { setQrImgSrc(canvas.toDataURL("image/png")); } catch { /* ignore */ }
-    }, 60);
+      try {
+        const dataUrl = canvas.toDataURL("image/png");
+        console.log("[QR] toDataURL length=", dataUrl.length, "prefix=", dataUrl.slice(0, 60));
+        setQrImgSrc(dataUrl);
+      } catch (e) {
+        console.error("[QR] toDataURL threw:", e);
+      }
+    }, 200);
   }, []);
 
   // qrUrl が変わったときも更新
   useEffect(() => {
+    console.log("[QR] qrUrl changed:", qrUrl);
     const canvas = qrCanvasRef.current;
-    if (!canvas) return;
+    if (!canvas) { console.log("[QR] canvas not ready yet"); return; }
     setTimeout(() => {
-      try { setQrImgSrc(canvas.toDataURL("image/png")); } catch { /* ignore */ }
-    }, 60);
+      try {
+        const dataUrl = canvas.toDataURL("image/png");
+        console.log("[QR] useEffect toDataURL length=", dataUrl.length, "prefix=", dataUrl.slice(0, 60));
+        setQrImgSrc(dataUrl);
+      } catch (e) {
+        console.error("[QR] useEffect toDataURL threw:", e);
+      }
+    }, 200);
   }, [qrUrl]);
 
   // ── Export ────────────────────────────────────────────────────────────────
@@ -534,6 +548,11 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
 
       {/* コントロール */}
       <div className="qr-card-page-controls">
+
+        {/* DEBUG: QR状態確認（確認後に削除） */}
+        <p style={{ margin: 0, fontSize: 11, color: "#888", fontFamily: "monospace" }}>
+          [DEBUG] qrImgSrc: {qrImgSrc ? `✓ (${qrImgSrc.length}bytes)` : "空 - QRコード未生成"}
+        </p>
 
         {exportError && <p className="error-text" style={{ margin: 0 }}>{exportError}</p>}
 
