@@ -86,7 +86,7 @@ export default function IndexScreen() {
 
       {/* ── Hero ── */}
       <section className="idx-hero">
-        <div className="idx-hero-inner idx-hero-inner-solo">
+        <div className="idx-hero-inner">
           <div className="idx-hero-copy">
             <p className="idx-hero-eyebrow">人との出会いを、忘れないように。</p>
             <h1 className="idx-hero-title">
@@ -100,11 +100,43 @@ export default function IndexScreen() {
               <Link className="button lp-btn-main lp-btn-lg" href="/login?mode=register">
                 はじめる
               </Link>
-              <Link className="button secondary lp-btn-lg" href="/lp">
-                サービス紹介を見る
-              </Link>
             </div>
           </div>
+          <div className="idx-hero-visual">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/eyecatch1_notext.png"
+              alt="Memoria — QRでプロフィールを交換するシーン"
+              className="idx-hero-photo"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── 大きい導線バナー (LP / note) ── */}
+      <section className="idx-cta-banner-section">
+        <div className="idx-cta-banner-grid">
+          <Link href="/lp" className="idx-cta-banner idx-cta-banner-lp">
+            <span className="idx-cta-banner-tag">サービス紹介</span>
+            <strong className="idx-cta-banner-title">Memoria でできること</strong>
+            <span className="idx-cta-banner-desc">
+              交換から記録まで、使い方をビジュアルで紹介します。
+            </span>
+            <span className="idx-cta-banner-arrow">LPを見る →</span>
+          </Link>
+          <a
+            href="https://note.com/torataka/n/n5df397c395c1"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="idx-cta-banner idx-cta-banner-note"
+          >
+            <span className="idx-cta-banner-tag">開発秘話</span>
+            <strong className="idx-cta-banner-title">なぜ Memoria をつくったか</strong>
+            <span className="idx-cta-banner-desc">
+              開発の背景や想いを、note にまとめています。
+            </span>
+            <span className="idx-cta-banner-arrow">noteで読む →</span>
+          </a>
         </div>
       </section>
 
@@ -178,9 +210,6 @@ export default function IndexScreen() {
                   </div>
                 </article>
               ))}
-            </div>
-            <div className="idx-about-more">
-              <Link className="button secondary" href="/lp">サービス紹介をくわしく見る →</Link>
             </div>
           </section>
 
