@@ -109,12 +109,14 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
   const [savedRecently,     setSavedRecently]     = useState(false);
   const [exporting,         setExporting]         = useState(false);
   const [exportError,       setExportError]       = useState<string | null>(null);
+  const [qrImgSrc,          setQrImgSrc]          = useState("");
 
   const previewWrapRef = useRef<HTMLDivElement>(null);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
 
   const cardRef       = useRef<HTMLDivElement>(null);
+  const qrCanvasRef   = useRef<HTMLCanvasElement | null>(null);
   const dragState     = useRef<{ idx: number } | null>(null);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -240,12 +242,40 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
     applyCardStickers(next);
   }
 
+  // ── QR canvas → img 変換（html-to-imageはcanvasを取り込めないため） ────────
+
+  const qrUrl = profile?.isPublic && profile.publicSlug
+    ? `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${profile.publicSlug}?via=qr`
+    : "https://profile.ac7.co.jp";
+
+  // callback ref: キャンバスがDOMにマウントされた瞬間に発火
+  const handleQrCanvasRef = useCallback((canvas: HTMLCanvasElement | null) => {
+    qrCanvasRef.current = canvas;
+    if (!canvas) return;
+    setTimeout(() => {
+      try { setQrImgSrc(canvas.toDataURL("image/png")); } catch { /* ignore */ }
+    }, 60);
+  }, []);
+
+  // qrUrl が変わったときも更新
+  useEffect(() => {
+    const canvas = qrCanvasRef.current;
+    if (!canvas) return;
+    setTimeout(() => {
+      try { setQrImgSrc(canvas.toDataURL("image/png")); } catch { /* ignore */ }
+    }, 60);
+  }, [qrUrl]);
+
   // ── Export ────────────────────────────────────────────────────────────────
 
   async function generatePng(): Promise<string> {
     if (!cardRef.current) throw new Error("card not mounted");
     setSelectedStickerIdx(null);
-    await new Promise((r) => setTimeout(r, 80));
+    // canvas から data URL を取り出して <img> を更新してから toPng する
+    if (qrCanvasRef.current) {
+      try { setQrImgSrc(qrCanvasRef.current.toDataURL("image/png")); } catch { /* ignore */ }
+    }
+    await new Promise((r) => setTimeout(r, 200));
     return toPng(cardRef.current, { pixelRatio: 2, cacheBust: true });
   }
 
@@ -305,9 +335,6 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
   // ── Card render ───────────────────────────────────────────────────────────
 
   const avatarInitial = ((items[0]?.value || profile?.patternName) ?? "?")[0].toUpperCase();
-  const qrUrl = profile?.isPublic && profile.publicSlug
-    ? `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${profile.publicSlug}?via=qr`
-    : "https://profile.ac7.co.jp"; // 非公開の場合はダミーURL
 
   function renderCard(forExport = false) {
     return (
@@ -357,7 +384,15 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
         {/* 右エリア */}
         <div className="qr-card-right">
           <div className="qr-card-qr-wrap">
-            <QRCodeCanvas value={qrUrl} size={100} />
+            {/* hidden canvas: data URL 生成用 */}
+            <QRCodeCanvas ref={handleQrCanvasRef} value={qrUrl} size={100}
+              style={{ position: "absolute", opacity: 0, pointerEvents: "none", top: -9999 }} />
+            {/* img として表示: html-to-image が確実に取り込める */}
+            {qrImgSrc
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={qrImgSrc} width={100} height={100} alt="QR" style={{ display: "block" }} />
+              : <QRCodeCanvas value={qrUrl} size={100} />
+            }
           </div>
           <p className="qr-card-tagline">Memoriaで見てね</p>
         </div>
