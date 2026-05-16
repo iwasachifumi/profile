@@ -116,90 +116,96 @@ export default function IndexScreen() {
         </div>
       </section>
 
-      {/* ── Service overview ── */}
-      <section className="lp-section idx-about-section">
-        <h2 className="lp-h2">Memoria とは</h2>
-        <p className="lp-section-lead">
-          イベントや SNS で出会った人を、QRやリンクで交換して、
-          自分だけの「交換帳」に残せるサービスです。
-        </p>
-        <div className="lp-reason-grid">
-          {FEATURES.map((f) => (
-            <article key={f.label} className="lp-reason-card">
-              <span className="lp-reason-label">{f.label}</span>
-              <div>
-                <h3>{f.title}</h3>
-                <p>{f.text}</p>
+      {/* ── 2-pane (PC) / stacked (mobile) ── */}
+      <div className="idx-two-pane">
+        {/* Left: Memoria-tan profile */}
+        <aside className="idx-pane idx-pane-left">
+          <section className="lp-section idx-chara-section">
+            <h2 className="lp-h2">めもりあたん プロフィール</h2>
+            <p className="lp-section-lead">
+              Memoria の公式キャラクター。「人を覚えていたい」を体現した存在です。
+            </p>
+
+            <div className="idx-chara-profile">
+              <div className="idx-chara-profile-head">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/memoria.png" alt="めもりあたん" className="idx-chara-profile-img" />
+                <dl className="idx-chara-basic">
+                  {CHARA_BASIC.map((it) => (
+                    <div key={it.label} className="idx-chara-basic-row">
+                      <dt>{it.label}</dt>
+                      <dd>{it.value}</dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
-            </article>
-          ))}
-        </div>
-        <div className="idx-about-more">
-          <Link className="button secondary" href="/lp">サービス紹介をくわしく見る →</Link>
-        </div>
-      </section>
 
-      {/* ── Memoria-tan profile ── */}
-      <section className="lp-section idx-chara-section">
-        <h2 className="lp-h2">めもりあたん プロフィール</h2>
-        <p className="lp-section-lead">
-          Memoria の公式キャラクター。「人を覚えていたい」を体現した存在です。
-        </p>
-
-        <div className="idx-chara-profile">
-          <div className="idx-chara-profile-head">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/memoria.png" alt="めもりあたん" className="idx-chara-profile-img" />
-            <dl className="idx-chara-basic">
-              {CHARA_BASIC.map((it) => (
-                <div key={it.label} className="idx-chara-basic-row">
-                  <dt>{it.label}</dt>
-                  <dd>{it.value}</dd>
+              {CHARA_SECTIONS.map((sec) => (
+                <div key={sec.heading} className="idx-chara-block">
+                  <h3 className="idx-chara-block-title">{sec.heading}</h3>
+                  <dl className="idx-chara-list">
+                    {sec.items.map((it) => (
+                      <div key={it.label} className="idx-chara-list-row">
+                        <dt>{it.label}</dt>
+                        <dd>{it.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
                 </div>
               ))}
-            </dl>
-          </div>
 
-          {CHARA_SECTIONS.map((sec) => (
-            <div key={sec.heading} className="idx-chara-block">
-              <h3 className="idx-chara-block-title">{sec.heading}</h3>
-              <dl className="idx-chara-list">
-                {sec.items.map((it) => (
-                  <div key={it.label} className="idx-chara-list-row">
-                    <dt>{it.label}</dt>
-                    <dd>{it.value}</dd>
-                  </div>
-                ))}
-              </dl>
+              <div className="idx-chara-block">
+                <h3 className="idx-chara-block-title">最近のメモ</h3>
+                <ul className="idx-chara-notes">
+                  {CHARA_NOTES.map((n, i) => (
+                    <li key={i}>{n}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <p className="idx-chara-message">「{CHARA_MESSAGE}」</p>
             </div>
-          ))}
+          </section>
+        </aside>
 
-          <div className="idx-chara-block">
-            <h3 className="idx-chara-block-title">最近のメモ</h3>
-            <ul className="idx-chara-notes">
-              {CHARA_NOTES.map((n, i) => (
-                <li key={i}>{n}</li>
+        {/* Right: Service overview + Changelog */}
+        <div className="idx-pane idx-pane-right">
+          <section className="lp-section idx-about-section">
+            <h2 className="lp-h2">Memoria とは</h2>
+            <p className="lp-section-lead">
+              イベントや SNS で出会った人を、QRやリンクで交換して、
+              自分だけの「交換帳」に残せるサービスです。
+            </p>
+            <div className="lp-reason-grid">
+              {FEATURES.map((f) => (
+                <article key={f.label} className="lp-reason-card">
+                  <span className="lp-reason-label">{f.label}</span>
+                  <div>
+                    <h3>{f.title}</h3>
+                    <p>{f.text}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className="idx-about-more">
+              <Link className="button secondary" href="/lp">サービス紹介をくわしく見る →</Link>
+            </div>
+          </section>
+
+          <section className="lp-section idx-changelog-section">
+            <h2 className="lp-h2">更新履歴</h2>
+            <ul className="idx-changelog">
+              {CHANGELOG.map((c, i) => (
+                <li key={i} className="idx-changelog-item">
+                  <time className="idx-changelog-date">{c.date}</time>
+                  {c.tag && <span className="idx-changelog-tag">{c.tag}</span>}
+                  <span className="idx-changelog-text">{c.text}</span>
+                </li>
               ))}
             </ul>
-          </div>
-
-          <p className="idx-chara-message">「{CHARA_MESSAGE}」</p>
+          </section>
         </div>
-      </section>
-
-      {/* ── Changelog ── */}
-      <section className="lp-section idx-changelog-section">
-        <h2 className="lp-h2">更新履歴</h2>
-        <ul className="idx-changelog">
-          {CHANGELOG.map((c, i) => (
-            <li key={i} className="idx-changelog-item">
-              <time className="idx-changelog-date">{c.date}</time>
-              {c.tag && <span className="idx-changelog-tag">{c.tag}</span>}
-              <span className="idx-changelog-text">{c.text}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      </div>
 
       {/* ── Final CTA ── */}
       <section className="lp-section lp-final-section">
