@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const language: Lang = lang === "en" ? "en" : "ja";
     await sendVerificationEmail(email.toLowerCase().trim(), token, language);
 
-    return NextResponse.json({ ok: true, requiresVerification: true }, { status: 201 });
+    return NextResponse.json({ ok: true, data: { requiresVerification: true } }, { status: 201 });
   } catch (e) {
     return serverError(e);
   }
