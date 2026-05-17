@@ -1230,6 +1230,16 @@ function authErrorMessage(error, isEn) {
   if (msg.includes("network") || msg.includes("fetch")) {
     return isEn ? "Network error. Please retry." : "通信エラーです。もう一度お試しください。";
   }
+  if (msg.includes("sending confirmation email") || msg.includes("confirmation email")) {
+    return isEn
+      ? "Failed to send confirmation email. Please contact support."
+      : "確認メールの送信に失敗しました。Supabase の SMTP 設定をご確認ください。";
+  }
+  if (msg.includes("email not confirmed") || code.includes("email_not_confirmed")) {
+    return isEn
+      ? "Please verify your email before signing in."
+      : "サインイン前にメールアドレスの確認をしてください。";
+  }
   return error.message || (isEn ? "Authentication failed." : "認証に失敗しました。");
 }
 

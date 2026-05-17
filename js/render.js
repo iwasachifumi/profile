@@ -82,7 +82,7 @@ function authCopy() {
       : "おためし利用では、この端末の現在セッションにのみデータが保存されます。",
     trialButton: isEn ? "Start trial" : "おためし開始",
     soon: isEn ? "Google / Apple login will be added later." : "Google / Apple ログインは今後追加予定です。",
-    localOnly: isEn ? "MVP note: account data is stored only in your browser." : "MVP注記: アカウント情報はブラウザ内保存です。"
+    localOnly: isEn ? "Registered accounts are stored securely in the cloud." : "登録アカウントのデータはクラウドに保存されます。"
   };
 }
 
