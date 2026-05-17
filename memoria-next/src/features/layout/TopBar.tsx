@@ -44,6 +44,13 @@ export default function TopBar() {
         </span>
       </Link>
 
+      <span
+        className="build-sha"
+        title={t("ビルドリビジョン", "build revision")}
+      >
+        {process.env.NEXT_PUBLIC_BUILD_SHA ?? "dev"}
+      </span>
+
       {isLoggedIn && (
         <nav className="topnav" aria-label={t("ナビゲーション", "navigation")}>
           <Link href="/mine" className={pathname === "/mine" ? "active" : ""}>
