@@ -7,4 +7,7 @@ export const settingsApi = {
 
   update: (settings: UserSettings) =>
     apiCall<null>("PUT", "/settings", settings),
+
+  setPlan: (plan: "free" | "pro") =>
+    apiCall<{ plan: "free" | "pro" }>("PUT", "/settings/plan", { plan }),
 };
