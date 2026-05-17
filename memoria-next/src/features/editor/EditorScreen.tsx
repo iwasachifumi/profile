@@ -155,7 +155,8 @@ function buildDefaultCardItems(p: Profile): CardInfoItem[] {
   ];
 }
 
-/** 新規プロフィールのデフォルト構造（初回自動作成・手動追加で共用） */
+
+/** 手動でパターンを追加するときのデフォルト構造 */
 function buildDefaultProfile(name: string): Profile {
   const mf = (groupId: string, label: string, value: string): Field =>
     ({ id: crypto.randomUUID(), groupId, label, value, visible: true });
@@ -295,20 +296,6 @@ export default function EditorScreen() {
 
     if (settingsRes.ok) setSettings(settingsRes.data);
     if (!res.ok) { setBusy(null); setError(res.error); return; }
-
-    // ── 初回ログイン: プロフィールが 0 件なら自動作成 ─────────────────────
-    if (res.data.length === 0) {
-      const newProfile = buildDefaultProfile("プロフィール");
-      const createRes  = await profilesApi.create(newProfile);
-      setBusy(null);
-      if (!createRes.ok) { setError(createRes.error); return; }
-      setProfiles([newProfile]);
-      setActiveId(newProfile.id);
-      setDraft(cloneProfile(newProfile));
-      setActiveTab("settings");
-      setMetaOpen(true);
-      return;
-    }
 
     setBusy(null);
     setProfiles(res.data);
