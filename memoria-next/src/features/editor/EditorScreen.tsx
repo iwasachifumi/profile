@@ -219,7 +219,6 @@ export default function EditorScreen() {
   const [settings,  setSettings]  = useState<UserSettings>(DEFAULT_SETTINGS);
   const [activeTab, setActiveTab] = useState<Tab>("settings");
   const [selectedStickerIdx, setSelectedStickerIdx] = useState<number | null>(null);
-  const [savedRecently,      setSavedRecently]      = useState(false);
   const [editingLabelId,     setEditingLabelId]     = useState<string | null>(null);
   const [editingLinkId,      setEditingLinkId]      = useState<string | null>(null);
   const [giftToHandle,       setGiftToHandle]       = useState("");
@@ -385,8 +384,6 @@ export default function EditorScreen() {
     setBusy(null);
     if (!res.ok) { setError(res.error); return; }
     setProfiles((prev) => prev.map((p) => p.id === target.id ? { ...target } : p));
-    setSavedRecently(true);
-    setTimeout(() => setSavedRecently(false), 2000);
 
     // QRタブが表示中ならOG画像を自動生成・保存（バックグラウンド）
     if (qrCardRef.current) {
@@ -664,13 +661,6 @@ export default function EditorScreen() {
   }
 
   // ── Design ────────────────────────────────────────────────────────────────
-
-  function handleSetTheme(themeId: string) {
-    if (!draft) return; applyAndSave({ ...draft, themeId });
-  }
-  function handleSetFrame(frameId: string) {
-    if (!draft) return; applyAndSave({ ...draft, frameId });
-  }
 
   // フレーム確認モーダル：選択した瞬間はまだ保存せず、プレビューを見せてから確定
   function handlePreviewTheme(themeId: string) {
