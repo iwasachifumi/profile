@@ -56,7 +56,7 @@ export function getSql() {
 export async function findUserByEmail(email: string) {
   const sql = getSql();
   const rows = await sql`
-    SELECT id, email, password_hash, created_at
+    SELECT id, email, password_hash, is_guest, email_verified, created_at
     FROM memoria.users
     WHERE email = ${email}
     LIMIT 1
@@ -75,14 +75,44 @@ export async function findUserById(id: string) {
   return rows[0] ?? null;
 }
 
-export async function createUser(email: string, passwordHash: string) {
+export async function createUser(
+  email: string,
+  passwordHash: string,
+  verificationToken: string,
+  verificationExpiresAt: Date
+) {
   const sql = getSql();
   const rows = await sql`
-    INSERT INTO memoria.users (email, password_hash)
-    VALUES (${email}, ${passwordHash})
+    INSERT INTO memoria.users
+      (email, password_hash, email_verified, email_verification_token, email_verification_expires_at)
+    VALUES
+      (${email}, ${passwordHash}, false, ${verificationToken}, ${verificationExpiresAt})
     RETURNING id, email, is_guest, created_at
   `;
   return rows[0];
+}
+
+export async function findUserByVerificationToken(token: string) {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT id, email, email_verification_expires_at
+    FROM memoria.users
+    WHERE email_verification_token = ${token}
+      AND email_verified = false
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
+export async function markEmailVerified(userId: string) {
+  const sql = getSql();
+  await sql`
+    UPDATE memoria.users
+    SET email_verified = true,
+        email_verification_token = null,
+        email_verification_expires_at = null
+    WHERE id = ${userId}
+  `;
 }
 
 export async function createGuestUser() {

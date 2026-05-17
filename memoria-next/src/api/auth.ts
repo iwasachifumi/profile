@@ -1,10 +1,11 @@
 import { apiCall } from "./_client";
 import type { User } from "@/types";
+import type { Lang } from "@/store/language";
 
 export const authApi = {
-  /** 新規登録。成功時は自動ログイン済み（Cookie セット済み）*/
-  register: (email: string, password: string) =>
-    apiCall<User>("POST", "/auth/register", { email, password }),
+  /** 新規登録。成功時は確認メールを送信（requiresVerification: true を返す） */
+  register: (email: string, password: string, lang: Lang = "ja") =>
+    apiCall<{ requiresVerification: boolean }>("POST", "/auth/register", { email, password, lang }),
 
   /** ログイン */
   login: (email: string, password: string) =>

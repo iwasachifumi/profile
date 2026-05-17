@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "@/store/session";
+import { useSession, VERIFY_EMAIL_SENT } from "@/store/session";
 import { useUi } from "@/store/ui";
 import { useLang } from "@/store/language";
 
@@ -16,14 +16,15 @@ type BusyKind = "login" | "register" | "logout" | "guest" | null;
 interface AuthScreenProps {
   redirectOnAuth?: string;
   googleError?:    string;
+  verifyError?:    string;
   defaultMode?:    "login" | "register";
 }
 
-export default function AuthScreen({ redirectOnAuth, googleError, defaultMode }: AuthScreenProps) {
+export default function AuthScreen({ redirectOnAuth, googleError, verifyError, defaultMode }: AuthScreenProps) {
   const router = useRouter();
   const { session, startGuest, login, register, logout } = useSession();
   const { ui, dispatch } = useUi();
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   // defaultMode が "register" なら初回マウント時にタブを切り替える
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function AuthScreen({ redirectOnAuth, googleError, defaultMode }:
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<BusyKind>(null);
   const [showGuestWarning, setShowGuestWarning] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   useEffect(() => {
     if (session.status === "user" && redirectOnAuth) {
@@ -86,8 +88,12 @@ export default function AuthScreen({ redirectOnAuth, googleError, defaultMode }:
       return;
     }
     setBusy("register");
-    const result = await register(registerEmail.trim(), registerPassword);
+    const result = await register(registerEmail.trim(), registerPassword, lang);
     setBusy(null);
+    if (result === VERIFY_EMAIL_SENT) {
+      setVerificationSent(true);
+      return;
+    }
     if (result) { setError(result); return; }
     if (redirectOnAuth) router.push(redirectOnAuth);
   }
@@ -247,10 +253,41 @@ export default function AuthScreen({ redirectOnAuth, googleError, defaultMode }:
 
           {error && <p className="error-text">{error}</p>}
 
+          {verificationSent && (
+            <div className="verify-email-notice">
+              <p>
+                {t(
+                  "確認メールを送信しました。メール内のリンクをクリックしてメールアドレスの確認を完了してください。",
+                  "We've sent you a verification email. Please click the link in the email to verify your address."
+                )}
+              </p>
+              <p className="muted small">
+                {t(
+                  "メールが届かない場合は迷惑メールフォルダもご確認ください。",
+                  "If you don't see it, please check your spam folder."
+                )}
+              </p>
+            </div>
+          )}
+
           {/* Google ログイン */}
           <div className="auth-divider">
             <span>{t("または", "or")}</span>
           </div>
+
+          {verifyError && (
+            <p className="error-text">
+              {verifyError === "expired"
+                ? t(
+                    "確認リンクの有効期限が切れています。再度登録してください。",
+                    "The verification link has expired. Please register again."
+                  )
+                : t(
+                    "無効な確認リンクです。再度登録してください。",
+                    "Invalid verification link. Please register again."
+                  )}
+            </p>
+          )}
 
           {googleError && (
             <p className="error-text">

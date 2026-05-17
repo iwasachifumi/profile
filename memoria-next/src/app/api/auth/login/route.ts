@@ -16,6 +16,10 @@ export async function POST(request: NextRequest) {
     const valid = await verifyPassword(password, user.password_hash);
     if (!valid) return err("メールアドレスまたはパスワードが正しくありません", 401);
 
+    if (!user.email_verified) {
+      return err("メールアドレスの確認が完了していません。登録時に送信したメールをご確認ください。", 403);
+    }
+
     const token = await createSessionToken(user.id, user.email);
     const response = NextResponse.json(
       { ok: true, data: { id: user.id, email: user.email, isGuest: false } },

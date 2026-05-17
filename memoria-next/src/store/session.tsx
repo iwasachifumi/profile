@@ -9,6 +9,10 @@ import { createContext, useContext, useState, useCallback, useEffect } from "rea
 import type { ReactNode } from "react";
 import { authApi } from "@/api/auth";
 import type { User } from "@/types";
+import type { Lang } from "@/store/language";
+
+/** register() がこの値を返したとき「確認メール送信済み」を示す */
+export const VERIFY_EMAIL_SENT = "__VERIFY_EMAIL_SENT__";
 
 // ── 型 ───────────────────────────────────────────────────────────────────────
 
@@ -21,7 +25,7 @@ interface SessionContext {
   session: SessionState;
   startGuest: () => Promise<string | null>;
   login: (email: string, password: string) => Promise<string | null>;
-  register: (email: string, password: string) => Promise<string | null>;
+  register: (email: string, password: string, lang?: Lang) => Promise<string | null>;
   logout: () => Promise<void>;
 }
 
@@ -58,10 +62,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return null;
   }, []);
 
-  const register = useCallback(async (email: string, password: string): Promise<string | null> => {
-    const result = await authApi.register(email, password);
+  const register = useCallback(async (email: string, password: string, lang?: Lang): Promise<string | null> => {
+    const result = await authApi.register(email, password, lang ?? "ja");
     if (!result.ok) return result.error;
-    setSession({ status: "user", user: result.data });
+    // 確認メール送信済み（セッションは発行しない）
+    if (result.data.requiresVerification) return VERIFY_EMAIL_SENT;
     return null;
   }, []);
 
