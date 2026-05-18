@@ -1779,24 +1779,6 @@ const dataUrl = await generateQrPng();
               );
             })}
 
-            {hiddenGroups.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", paddingTop: "4px" }}>
-                <span className="muted small" style={{ width: "100%", fontSize: "11px" }}>
-                  {t("非表示のグループ:", "Hidden groups:")}
-                </span>
-                {hiddenGroups.map((gid) => {
-                  const [lJa, lEn] = GROUP_LABELS[gid] ?? [gid, gid];
-                  return (
-                    <button key={gid} type="button" className="button secondary"
-                      style={{ fontSize: "12px", padding: "3px 10px", minHeight: "auto" }}
-                      onClick={() => addFieldToGroup(gid)}>
-                      + {t(lJa, lEn)}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
             {/* テンプレートから質問グループを追加 */}
             <button
               type="button"
@@ -1814,6 +1796,24 @@ const dataUrl = await generateQrPng();
             >
               ✦ {t("推し・趣味の質問グループを追加", "Add interest question group")}
             </button>
+
+            {hiddenGroups.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", paddingTop: "4px" }}>
+                <span className="muted small" style={{ width: "100%", fontSize: "11px" }}>
+                  {t("非表示のグループ:", "Hidden groups:")}
+                </span>
+                {hiddenGroups.map((gid) => {
+                  const [lJa, lEn] = GROUP_LABELS[gid] ?? [gid, gid];
+                  return (
+                    <button key={gid} type="button" className="button secondary"
+                      style={{ fontSize: "12px", padding: "3px 10px", minHeight: "auto" }}
+                      onClick={() => addFieldToGroup(gid)}>
+                      + {t(lJa, lEn)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1825,47 +1825,44 @@ const dataUrl = await generateQrPng();
           </div>
           <div className="link-list">
             {draft.links.map((link) => (
-              <div key={link.id} className="field-card link-card">
-                <div className="field-card-head">
-                  <strong>{LINK_TYPE_LABELS[link.type] ?? link.type}</strong>
-                  <button type="button" className="icon-button more-button"
-                    onClick={() => setEditingLinkId(editingLinkId === link.id ? null : link.id)}>
-                    &#9998;
-                  </button>
+              <div key={link.id} className={`field-row${link.visible ? "" : " field-row--hidden"}`}>
+                <div className="field-row-head">
+                  <select
+                    value={link.type}
+                    style={{ fontSize: "13px", fontWeight: 600, border: "none", background: "transparent", padding: 0, cursor: "pointer", flex: 1, minWidth: 0 }}
+                    onChange={(e) => updateLink(link.id, { type: e.target.value, label: LINK_TYPE_LABELS[e.target.value] ?? e.target.value })}
+                  >
+                    {LINK_TYPE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                  </select>
+                  <span className="field-row-icons">
+                    <button
+                      type="button"
+                      className={`field-icon-btn${link.visible ? "" : " field-icon-btn--off"}`}
+                      onClick={() => updateLink(link.id, { visible: !link.visible })}
+                      title={link.visible ? t("非表示にする", "Hide") : t("表示にする", "Show")}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="field-icon-btn field-icon-btn--delete"
+                      onClick={() => removeLink(link.id)}
+                      title={t("削除", "Delete")}
+                    >
+                      ×
+                    </button>
+                  </span>
                 </div>
-                {editingLinkId === link.id ? (
-                  <div className="stack" style={{ gap: "6px" }}>
-                    <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-                      {t("種類", "Type")}
-                      <select value={link.type}
-                        onChange={(e) => updateLink(link.id, { type: e.target.value, label: LINK_TYPE_LABELS[e.target.value] ?? e.target.value })}>
-                        {LINK_TYPE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                      </select>
-                    </label>
-                    <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-                      URL
-                      <input type="url" value={link.url} placeholder="https://"
-                        onChange={(e) => updateLink(link.id, { url: e.target.value })} />
-                    </label>
-                    <div className="row" style={{ gap: "8px" }}>
-                      <label className="checkline" style={{ fontSize: "12px" }}>
-                        <input type="checkbox" checked={link.visible} style={{ width: "auto" }}
-                          onChange={(e) => updateLink(link.id, { visible: e.target.checked })} />
-                        {t("公開", "Visible")}
-                      </label>
-                      <button type="button" onClick={() => removeLink(link.id)}
-                        style={{ background: "none", border: "none", color: "var(--pink)", fontSize: "12px", cursor: "pointer", padding: "2px 4px", minHeight: "auto" }}>
-                        {t("削除", "Remove")}
-                      </button>
-                    </div>
-                  </div>
-                ) : link.url ? (
-                  <a className="link-card-url" href={link.url} target="_blank" rel="noreferrer">
-                    {link.url.replace(/^https?:\/\//, "").slice(0, 50)}
-                  </a>
-                ) : (
-                  <p className="muted small" style={{ margin: 0 }}>{t("（URL未設定）", "(no URL)")}</p>
-                )}
+                <input
+                  type="url"
+                  value={link.url}
+                  placeholder="https://"
+                  style={{ fontSize: "13px", marginTop: "4px" }}
+                  onChange={(e) => updateLink(link.id, { url: e.target.value })}
+                />
               </div>
             ))}
           </div>
