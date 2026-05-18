@@ -2201,12 +2201,12 @@ insert into memoria.template_nodes (name, path, questions) values
 ]');
 
 -- ============================================================
--- [0] 汎用セット（グループ別）
+-- [0] 定番質問セット（グループ別）
 -- ============================================================
 
 insert into memoria.template_nodes (name, path, questions) values
 
-('基本', array['汎用'], '[
+('基本', array['定番質問'], '[
   {"label":"名前","placeholder":"例：山田太郎"},
   {"label":"ニックネーム","placeholder":"例：たろちゃん"},
   {"label":"呼ばれたい名前","placeholder":"例：好きに呼んで！"},
@@ -2219,7 +2219,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"一言自己紹介","placeholder":"例：よろしくお願いします！"}
 ]'),
 
-('生活', array['汎用'], '[
+('生活', array['定番質問'], '[
   {"label":"朝型 or 夜型？","placeholder":"例：完全に夜型"},
   {"label":"睡眠時間は？","placeholder":"例：6時間くらい"},
   {"label":"休日の過ごし方","placeholder":"例：昼まで寝てカフェに行く"},
@@ -2232,7 +2232,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"最近の小さな幸せ","placeholder":"例：コンビニで好きなデザートが残ってた"}
 ]'),
 
-('仕事・学び', array['汎用'], '[
+('仕事・学び', array['定番質問'], '[
   {"label":"職種・仕事内容","placeholder":"例：Webエンジニア、営業、学生"},
   {"label":"働き方","placeholder":"例：フルリモート、週3出社"},
   {"label":"仕事でやりがいを感じる瞬間","placeholder":"例：ユーザーに喜ばれた時"},
@@ -2244,7 +2244,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"5年後どうなっていたい？","placeholder":"例：独立してる"}
 ]'),
 
-('趣味・エンタメ', array['汎用'], '[
+('趣味・エンタメ', array['定番質問'], '[
   {"label":"最近ハマってること","placeholder":"例：サウナ、ボードゲーム"},
   {"label":"昔ハマってたこと","placeholder":"例：バスケ、ニコ動"},
   {"label":"推し","placeholder":"例：秘密！"},
@@ -2257,7 +2257,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"旅行先で一番よかった場所","placeholder":"例：屋久島、台湾"}
 ]'),
 
-('食・好み', array['汎用'], '[
+('食・好み', array['定番質問'], '[
   {"label":"好きな食べ物","placeholder":"例：ラーメン、チョコ、唐揚げ"},
   {"label":"苦手な食べ物","placeholder":"例：パクチー、レバー"},
   {"label":"好きな飲み物","placeholder":"例：コーヒー（ブラック）、ほうじ茶"},
@@ -2269,7 +2269,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"コンビニで必ず買うもの","placeholder":"例：ファミマのメロンパン"}
 ]'),
 
-('人間関係', array['汎用'], '[
+('人間関係', array['定番質問'], '[
   {"label":"家族構成","placeholder":"例：一人暮らし、実家暮らし・3人家族"},
   {"label":"兄弟姉妹の中での順番","placeholder":"例：長男、末っ子、一人っ子"},
   {"label":"友達との過ごし方","placeholder":"例：ご飯食べてだらだらする"},
@@ -2282,7 +2282,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"最近感謝したこと","placeholder":"例：友達が話を聞いてくれた"}
 ]'),
 
-('ネット・デジタル', array['汎用'], '[
+('ネット・デジタル', array['定番質問'], '[
   {"label":"よく使うSNSは？","placeholder":"例：X（Twitter）、Instagram"},
   {"label":"SNSのアカウントを教えて","placeholder":"例：@xxxx"},
   {"label":"スマホのOSは？","placeholder":"例：iPhone、Android"},
@@ -2295,7 +2295,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"おすすめのアプリ・サービス","placeholder":"例：Notionは人生変わった"}
 ]'),
 
-('価値観・内面', array['汎用'], '[
+('価値観・内面', array['定番質問'], '[
   {"label":"尊敬する人","placeholder":"例：エジソン、祖父"},
   {"label":"座右の銘・好きな言葉","placeholder":"例：「案ずるより産むが易し」"},
   {"label":"自分の長所","placeholder":"例：行動力がある"},
@@ -2308,7 +2308,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"もし世界を変えられるなら何をする？","placeholder":"例：全人類に昼寝タイムを作る"}
 ]'),
 
-('もしも系', array['汎用'], '[
+('もしも系', array['定番質問'], '[
   {"label":"自分を動物に例えると","placeholder":"例：猫（自由に生きてる）"},
   {"label":"無人島に一つ持っていくなら","placeholder":"例：スマホ（電波はある前提）"},
   {"label":"宝くじ1億円当たったら","placeholder":"例：全部投資、家を買う、世界一周"},
@@ -2321,7 +2321,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"今日が最後の日だったら何をする？","placeholder":"例：好きな人と好きなものを食べる"}
 ]'),
 
-('フリー', array['汎用'], '[
+('フリー', array['定番質問'], '[
   {"label":"自由記入欄","placeholder":"例：なんでも書いていいよ！"},
   {"label":"今の一言","placeholder":"例：よろしく！"},
   {"label":"最近の出来事","placeholder":"例：ちょっといいことがあった"},

@@ -12,6 +12,9 @@ type CategoryNode = {
   templates: TemplateNode[];
 };
 
+// トップレベルカテゴリの表示順（先頭に固定したいものを並べる）
+const TOP_CATEGORY_ORDER = ["定番質問", "スポーツ", "音楽・アイドル", "アニメ・ゲーム", "ライフスタイル・エンタメ"];
+
 type BuildNode = { cat: CategoryNode; children: Map<string, BuildNode> };
 
 function buildTree(nodes: TemplateNode[]): CategoryNode[] {
@@ -77,7 +80,18 @@ export default function TemplatePickerModal({ onClose, onAdd }: Props) {
     });
   }, []);
 
-  const tree = useMemo(() => buildTree(nodes), [nodes]);
+  const tree = useMemo(() => {
+    const built = buildTree(nodes);
+    // TOP_CATEGORY_ORDER に従って先頭固定ソート
+    return [...built].sort((a, b) => {
+      const ai = TOP_CATEGORY_ORDER.indexOf(a.label);
+      const bi = TOP_CATEGORY_ORDER.indexOf(b.label);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return 0;
+    });
+  }, [nodes]);
 
   function toggleKey(key: string) {
     setOpenKeys((prev) => {
