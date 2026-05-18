@@ -1019,14 +1019,14 @@ const dataUrl = await generateQrPng();
             <div className="avatar">
               {d.avatarSrc
                 ? <img src={d.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} /> // eslint-disable-line @next/next/no-img-element
-                : <span>{initialOf(d.patternName)}</span>
+                : <span>{initialOf(d.fields.find((f) => f.label === "名前")?.value || d.patternName)}</span>
               }
             </div>
             <div>
               <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
                 {d.patternName}{d.audience ? ` / ${d.audience}` : ""}
               </p>
-              <h2 className="profile-name">{d.description || d.patternName}</h2>
+              <h2 className="profile-name">{d.fields.find((f) => f.label === "名前")?.value || d.description || d.patternName}</h2>
             </div>
           </header>
           {d.fields.filter((f) => f.visible && f.value).map((f) => (
@@ -2005,7 +2005,7 @@ const dataUrl = await generateQrPng();
                     {draft.avatarSrc
                       // eslint-disable-next-line @next/next/no-img-element
                       ? <img src={draft.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
-                      : <span>{initialOf(draft.patternName)}</span>
+                      : <span>{initialOf(draft.fields.find((f) => f.label === "名前")?.value || draft.patternName)}</span>
                     }
                   </div>
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
@@ -2126,7 +2126,7 @@ const dataUrl = await generateQrPng();
                     <label className="avatar avatar-upload" title={t("タップして画像を変更", "Tap to change photo")}>
                       {draft.avatarSrc
                         ? <img src={draft.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} /> // eslint-disable-line @next/next/no-img-element
-                        : <span>{initialOf(draft.patternName)}</span>
+                        : <span>{initialOf(draft.fields.find((f) => f.label === "名前")?.value || draft.patternName)}</span>
                       }
                       <span className="avatar-upload-overlay">
                         <span>📷</span>
@@ -2148,7 +2148,7 @@ const dataUrl = await generateQrPng();
                       <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
                         {draft.patternName}{draft.audience ? ` / ${draft.audience}` : ""}
                       </p>
-                      <h2 className="profile-name">{draft.description || draft.patternName}</h2>
+                      <h2 className="profile-name">{draft.fields.find((f) => f.label === "名前")?.value || draft.description || draft.patternName}</h2>
                     </div>
                   </header>
                   {draft.fields.filter((f) => f.visible && f.value).map((f) => (
