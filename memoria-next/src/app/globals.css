@@ -1721,6 +1721,10 @@ textarea {
   overflow-y: auto;
   overflow-x: hidden; /* 横スクロール防止 */
   max-height: 44vh;
+  scrollbar-width: none; /* Firefox */
+}
+.editor-panel-content::-webkit-scrollbar {
+  display: none; /* Chrome / Safari */
 }
 
 .editor-tabs-bar {

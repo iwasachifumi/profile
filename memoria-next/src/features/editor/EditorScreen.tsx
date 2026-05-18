@@ -1929,6 +1929,7 @@ const dataUrl = await generateQrPng();
                 <span>{t("公開設定", "Public sharing")}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <input
+                    id="isPublicCheck"
                     type="checkbox"
                     checked={draft.isPublic}
                     onChange={(e) => {
@@ -1940,12 +1941,27 @@ const dataUrl = await generateQrPng();
                     }}
                     style={{ flexShrink: 0, cursor: "pointer", width: "16px", height: "16px" }}
                   />
-                  <span style={{ cursor: "pointer" }}>{t("公開する（URLシェア・QRコード有効）", "Make public (URL sharing & QR enabled)")}</span>
+                  <label htmlFor="isPublicCheck" style={{ cursor: "pointer", margin: 0, padding: 0, display: "inline", color: "inherit", fontSize: "inherit", gap: 0 }}>
+                    {t("公開する（URLシェア・QRコード有効）", "Make public (URL sharing & QR enabled)")}
+                  </label>
                 </div>
                 {draft.isPublic && draft.publicSlug && (
-                  <p className="muted small" style={{ margin: 0 }}>
-                    URL: {process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/{draft.publicSlug}
-                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                    <span className="muted small" style={{ wordBreak: "break-all" }}>
+                      {`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}`}
+                    </span>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      style={{ fontSize: "11px", padding: "2px 10px", minHeight: "auto", flexShrink: 0 }}
+                      onClick={() => {
+                        const url = `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/${draft.publicSlug}`;
+                        void navigator.clipboard.writeText(url);
+                      }}
+                    >
+                      {t("コピー", "Copy")}
+                    </button>
+                  </div>
                 )}
               </div>
 
