@@ -151,7 +151,6 @@ function buildDefaultCardItems(p: Profile): CardInfoItem[] {
     { id: crypto.randomUUID(), label: "名前",         value: getField("名前") || p.patternName },
     { id: crypto.randomUUID(), label: "ニックネーム", value: getField("ニックネーム") },
     { id: crypto.randomUUID(), label: "ひとこと",     value: p.description },
-    { id: crypto.randomUUID(), label: "ハンドル",     value: p.handle ? `@${p.handle}` : "" },
   ];
 }
 
@@ -1964,23 +1963,6 @@ const dataUrl = await generateQrPng();
                   </div>
                 )}
               </div>
-
-              {/* ハンドル */}
-              <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
-                {t("ハンドル（@）", "Handle (@)")}
-                <input
-                  value={draft.handle ?? ""}
-                  placeholder={t("例：taro_memo", "e.g. taro_memo")}
-                  onChange={(e) => {
-                    const handle = e.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 30) || null;
-                    const n = { ...draft, handle };
-                    setDraft(n); scheduleAutoSave(n);
-                  }}
-                />
-                <span className="muted small" style={{ fontSize: "11px" }}>
-                  {t("英数字・アンダースコアのみ（プロフ交換帳・シールギフトで使用）", "Letters, numbers, underscores only (used in exchange book & sticker gifts)")}
-                </span>
-              </label>
 
               {/* アバター画像アップロード */}
               <div style={{ fontSize: "13px", color: "var(--muted)", display: "grid", gap: "6px" }}>
