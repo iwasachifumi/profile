@@ -8,8 +8,10 @@ import { settingsApi } from "@/api/settings";
 import { stickerGiftsApi } from "@/api/stickerGifts";
 import { PLAN_LIMITS } from "@/config/planLimits";
 import AuthScreen from "@/features/auth/AuthScreen";
+import TemplatePickerModal from "@/features/editor/TemplatePickerModal";
 import { useSession } from "@/store/session";
 import { useLang } from "@/store/language";
+import type { TemplateNode } from "@/api/templateNodes";
 import type {
   CardInfoItem,
   CustomSticker,
@@ -235,6 +237,7 @@ export default function EditorScreen() {
   const [stickerModalOpen,   setStickerModalOpen]   = useState(false);
   const [stickerModalPage,   setStickerModalPage]   = useState(0);
   const [stickerToast,       setStickerToast]       = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
 
   // ── QRカードビルダー state ──────────────────────────────────────────────────
   const [qrTemplateFile,       setQrTemplateFile]       = useState(CARD_TEMPLATES[0].file);
@@ -438,6 +441,18 @@ export default function EditorScreen() {
     if (!draft) return;
     applyAndSave({ ...draft, fields: draft.fields.map((f) => f.id === id ? { ...f, ...patch } : f) });
   }
+  function addTemplateToPattern(node: TemplateNode) {
+    if (!draft) return;
+    const newFields: Field[] = node.questions.map((q) => ({
+      id: crypto.randomUUID(),
+      groupId: node.name,   // テンプレート名をグループIDとして使用
+      label: q.label,
+      value: "",
+      visible: true,
+    }));
+    applyAndSave({ ...draft, fields: [...draft.fields, ...newFields] });
+  }
+
   function addFieldToGroup(groupId: string) {
     if (!draft) return;
     if (draft.fields.length >= planLimits.fieldsPerPattern) {
@@ -1684,7 +1699,17 @@ const dataUrl = await generateQrPng();
 
         {/* フィールド */}
         <div>
-          <h3 style={{ margin: "0 0 8px", fontSize: "14px" }}>{t("プロフィール項目", "Profile fields")}</h3>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+            <h3 style={{ margin: 0, fontSize: "14px" }}>{t("プロフィール項目", "Profile fields")}</h3>
+            <button
+              type="button"
+              className="button secondary"
+              style={{ fontSize: "12px", padding: "3px 10px", minHeight: "auto" }}
+              onClick={() => setTemplatePickerOpen(true)}
+            >
+              ＋ {t("質問グループを追加", "Add question group")}
+            </button>
+          </div>
           <div className="stack" style={{ gap: "6px" }}>
             {allGroups.map((groupId) => {
               const fields = fieldsByGroup[groupId] || [];
@@ -2365,6 +2390,13 @@ const dataUrl = await generateQrPng();
         <div className="sticker-toast" role="status" aria-live="polite">
           🏷 {t("シールをはりました", "Sticker added!")}
         </div>
+      )}
+
+      {templatePickerOpen && (
+        <TemplatePickerModal
+          onClose={() => setTemplatePickerOpen(false)}
+          onAdd={addTemplateToPattern}
+        />
       )}
     </div>
   );

@@ -556,3 +556,30 @@ function rowToExchange(row: Record<string, unknown>): Exchange {
     direction: dir,
   };
 }
+
+// ── Template Nodes ─────────────────────────────────────────────────────────────
+
+export type TemplateNodeRow = {
+  id: string;
+  name: string;
+  path: string[];
+  questions: { label: string; placeholder: string }[];
+};
+
+export async function getTemplateNodes(): Promise<TemplateNodeRow[]> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT id, name, path, questions
+    FROM memoria.template_nodes
+    WHERE status = 'active'
+    ORDER BY path, name
+  `;
+  return rows.map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+    path: Array.isArray(r.path) ? (r.path as string[]) : [],
+    questions: Array.isArray(r.questions)
+      ? (r.questions as { label: string; placeholder: string }[])
+      : [],
+  }));
+}
