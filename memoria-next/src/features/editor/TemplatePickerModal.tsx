@@ -69,7 +69,7 @@ export default function TemplatePickerModal({ onClose, onAdd }: Props) {
       onClick={onClose}
     >
       <div
-        className="sticker-picker-sheet"
+        className="sticker-picker-modal"
         onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth: "480px",
@@ -77,6 +77,7 @@ export default function TemplatePickerModal({ onClose, onAdd }: Props) {
           display: "flex",
           flexDirection: "column",
           padding: 0,
+          overflow: "hidden",
         }}
       >
         {/* ヘッダー */}

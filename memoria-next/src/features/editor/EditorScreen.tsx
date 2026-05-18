@@ -1699,17 +1699,7 @@ const dataUrl = await generateQrPng();
 
         {/* フィールド */}
         <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-            <h3 style={{ margin: 0, fontSize: "14px" }}>{t("プロフィール項目", "Profile fields")}</h3>
-            <button
-              type="button"
-              className="button secondary"
-              style={{ fontSize: "12px", padding: "3px 10px", minHeight: "auto" }}
-              onClick={() => setTemplatePickerOpen(true)}
-            >
-              ＋ {t("質問グループを追加", "Add question group")}
-            </button>
-          </div>
+          <h3 style={{ margin: "0 0 8px", fontSize: "14px" }}>{t("プロフィール項目", "Profile fields")}</h3>
           <div className="stack" style={{ gap: "6px" }}>
             {allGroups.map((groupId) => {
               const fields = fieldsByGroup[groupId] || [];
@@ -1806,6 +1796,16 @@ const dataUrl = await generateQrPng();
                 })}
               </div>
             )}
+
+            {/* テンプレートから質問グループを追加 */}
+            <button
+              type="button"
+              className="button secondary"
+              style={{ width: "100%", marginTop: "4px", fontSize: "13px" }}
+              onClick={() => setTemplatePickerOpen(true)}
+            >
+              ＋ {t("推し・趣味の質問グループを追加", "Add interest question group")}
+            </button>
           </div>
         </div>
 
