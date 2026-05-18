@@ -1800,11 +1800,19 @@ const dataUrl = await generateQrPng();
             {/* テンプレートから質問グループを追加 */}
             <button
               type="button"
-              className="button secondary"
-              style={{ width: "100%", marginTop: "4px", fontSize: "13px" }}
+              className="button"
+              style={{
+                width: "100%",
+                marginTop: "8px",
+                fontSize: "13px",
+                background: "var(--green, #4caf7d)",
+                color: "#fff",
+                border: "none",
+                gap: "6px",
+              }}
               onClick={() => setTemplatePickerOpen(true)}
             >
-              ＋ {t("推し・趣味の質問グループを追加", "Add interest question group")}
+              ✦ {t("推し・趣味の質問グループを追加", "Add interest question group")}
             </button>
           </div>
         </div>
