@@ -1302,16 +1302,13 @@ const dataUrl = await generateQrPng();
           </div>
         </div>
 
-        {/* 保存・シェア・X */}
-        {qrExportError && <p className="error-text" style={{ margin: 0 }}>{qrExportError}</p>}
-
-        {/* SNS シェア行 */}
+        {/* SNSシェア */}
         <div style={{ display: "flex", gap: "8px" }}>
           <button type="button" className="button secondary" style={{ flex: 1 }}
             onClick={() => void handleQrXShare()}
             disabled={qrExporting || !draft?.isPublic}
             title={draft?.isPublic ? undefined : t("公開設定が必要です", "Make profile public first")}>
-            {qrExporting ? t("生成中…", "…") : "𝕏 でシェア"}
+            {qrExporting ? "…" : "𝕏 でシェア"}
           </button>
           <button type="button" className="button secondary" style={{ flex: 1 }}
             onClick={() => void handleQrCopyUrl()}
@@ -1319,31 +1316,15 @@ const dataUrl = await generateQrPng();
             {qrCopied ? "✓ " + t("コピー済み", "Copied!") : "🔗 " + t("URLをコピー", "Copy URL")}
           </button>
         </div>
-
-        {/* PNG保存・端末シェア行 */}
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button type="button" className="button secondary" style={{ flex: 1 }}
-            onClick={() => void handleQrCardSave()} disabled={qrExporting}>
-            {qrExporting ? t("生成中…", "Generating…") : "💾 PNG保存"}
-          </button>
-          <button type="button" className="button" style={{ flex: 1 }}
-            onClick={() => void handleQrCardShare()} disabled={qrExporting}>
-            {qrExporting ? t("生成中…", "Generating…") : "📤 シェア"}
-          </button>
-        </div>
+        {!draft?.isPublic && (
+          <p className="muted small" style={{ margin: 0, fontSize: "11px" }}>
+            ⚠️ {t("X/URLシェアには公開設定が必要です", "Publish your profile to enable X share & URL copy")}
+          </p>
+        )}
 
         {/* デプロイ確認用ビルドバージョン */}
         <p style={{ margin: 0, fontSize: "10px", color: "var(--muted, #aaa)", textAlign: "right", opacity: 0.6 }}>
           build: {process.env.NEXT_PUBLIC_BUILD_SHA ?? "dev"}
-        </p>
-
-        {!draft?.isPublic && (
-          <p className="muted small" style={{ margin: 0, fontSize: "11px" }}>
-            ⚠️ {t("X/URLシェアには公開設定が必要です（「項目」タブから）", "Publish your profile to enable X share & URL copy")}
-          </p>
-        )}
-        <p className="muted small" style={{ margin: 0, textAlign: "center", fontSize: "11px" }}>
-          {t("シェア・保存時にOG画像が自動生成されます", "OG image is auto-generated on share/save")}
         </p>
 
         {/* QRカード専用ページへ */}
@@ -1578,51 +1559,8 @@ const dataUrl = await generateQrPng();
             </p>
           )}
         </div>
-        <div className="sticker-upload-box">
-          <strong>{t("シールをあげる", "Gift sticker")}</strong>
-          {planLimits.customStickerUpload && customStickers.length > 0 ? (
-            <div className="stack" style={{ gap: "6px" }}>
-              <label style={{ display: "grid", gap: "4px" }}>
-                <span className="muted small">{t("贈るシール", "Sticker")}</span>
-                <select
-                  value={giftStickerSrc}
-                  onChange={(e) => setGiftStickerSrc(e.target.value)}
-                  disabled={giftBusy}
-                >
-                  <option value="">{t("選択してください", "Select sticker")}</option>
-                  {customStickers.map((sticker) => (
-                    <option key={sticker.id} value={sticker.assetSrc}>
-                      {sticker.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label style={{ display: "grid", gap: "4px" }}>
-                <span className="muted small">{t("相手のhandle", "Recipient handle")}</span>
-                <input
-                  value={giftToHandle}
-                  placeholder="@handle"
-                  onChange={(e) => setGiftToHandle(e.target.value)}
-                  disabled={giftBusy}
-                />
-              </label>
-              <button
-                type="button"
-                className="button secondary"
-                onClick={() => void handleSendStickerGift()}
-                disabled={giftBusy}
-              >
-                {giftBusy ? t("送信中...", "Sending...") : t("シールを送る", "Send sticker")}
-              </button>
-            </div>
-          ) : (
-            <p className="muted small" style={{ margin: 0 }}>
-              {t("カスタムシールを持っているProユーザーが利用できます。", "Available for pro users with custom stickers.")}
-            </p>
-          )}
-          {giftNotice && <p className="muted small" style={{ margin: 0 }}>{giftNotice}</p>}
-        </div>
-        <div className="sticker-upload-box">
+        {/* シールをあげる・受け取りBOX は交換帳実装後に有効化 */}
+        {false && <div className="sticker-upload-box">
           <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" }}>
             <strong>{t("受け取りBOX", "Inbox")}</strong>
             <button
@@ -1681,7 +1619,7 @@ const dataUrl = await generateQrPng();
               ))}
             </div>
           )}
-        </div>
+        </div>}
       </div>
     );
   }
@@ -2083,6 +2021,28 @@ const dataUrl = await generateQrPng();
           {draft && activeTab === "qr" ? (
             <div className="editor-card-wrap">
               {renderQrCardView()}
+              {/* QRカードをダウンロード・シェア */}
+              <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                <button
+                  type="button"
+                  className="button"
+                  style={{ flex: 1, minHeight: "40px", fontSize: "13px" }}
+                  onClick={() => void handleQrCardSave()}
+                  disabled={qrExporting}
+                >
+                  {qrExporting ? t("生成中…", "Generating…") : "💾 " + t("QRカードを保存", "Save QR card")}
+                </button>
+                <button
+                  type="button"
+                  className="button secondary"
+                  style={{ flex: 1, minHeight: "40px", fontSize: "13px" }}
+                  onClick={() => void handleQrCardShare()}
+                  disabled={qrExporting}
+                >
+                  {qrExporting ? "…" : "📤 " + t("シェア", "Share")}
+                </button>
+              </div>
+              {qrExportError && <p className="error-text" style={{ margin: "6px 0 0" }}>{qrExportError}</p>}
             </div>
           ) : draft ? (
             <div className="editor-card-wrap">
