@@ -1275,6 +1275,11 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.answer strong {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
 .profile-links {
   display: flex;
   flex-wrap: wrap;

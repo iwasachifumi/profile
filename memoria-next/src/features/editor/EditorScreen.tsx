@@ -1127,7 +1127,14 @@ const dataUrl = await generateQrPng();
         {/* 非公開警告 */}
         {!draft.isPublic && (
           <p className="muted small" style={{ margin: 0, background: "var(--pink-soft)", padding: "8px 10px", borderRadius: "6px" }}>
-            ⚠️ このプロフィールは非公開です。QRコードを有効にするには「項目」タブから公開設定してください。
+            ⚠️ {t("このプロフィールは非公開です。", "This profile is private. ")}
+            <button
+              type="button"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--blue, #3b82f6)", textDecoration: "underline", padding: 0, fontSize: "inherit" }}
+              onClick={() => setMetaOpen(true)}
+            >
+              {t("▼ 公開設定を開く", "Open sharing settings ▼")}
+            </button>
           </p>
         )}
 
@@ -1410,7 +1417,7 @@ const dataUrl = await generateQrPng();
                   {usedGroups.map((gid) => {
                     const [lJa, lEn] = GROUP_LABELS[gid] ?? [gid, gid];
                     return (
-                      <details key={gid} open={gid === "basic"} className="field-group">
+                      <details key={gid} open className="field-group">
                         <summary>
                           <span>{t(lJa, lEn)}</span>
                         </summary>
@@ -1474,10 +1481,10 @@ const dataUrl = await generateQrPng();
         )}
 
         <div className="sticker-upload-box">
-          <strong>{t("Custom sticker", "Custom sticker")}</strong>
+          <strong>{t("カスタムシール", "Custom sticker")}</strong>
           {planLimits.customStickerUpload ? (
             <label className="file-button">
-              <span>{t("Upload image", "Upload image")}</span>
+              <span>{t("画像をアップロード", "Upload image")}</span>
               <input
                 type="file"
                 accept="image/*"
@@ -1490,7 +1497,7 @@ const dataUrl = await generateQrPng();
             </label>
           ) : (
             <p className="muted small" style={{ margin: 0 }}>
-              {t("Pro plan can upload custom sticker images.", "Pro plan can upload custom sticker images.")}
+              {t("カスタムシールのアップロードはProプランで使えます。", "Custom sticker upload is available on the Pro plan.")}
             </p>
           )}
         </div>
@@ -1893,6 +1900,47 @@ const dataUrl = await generateQrPng();
                 {t("ひとこと", "Description")}
                 <input value={draft.description}
                   onChange={(e) => { const n = { ...draft, description: e.target.value }; setDraft(n); scheduleAutoSave(n); }} />
+              </label>
+
+              {/* 公開設定 */}
+              <div style={{ fontSize: "13px", color: "var(--muted)", display: "grid", gap: "6px" }}>
+                <span>{t("公開設定", "Public sharing")}</span>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={draft.isPublic}
+                    onChange={(e) => {
+                      const isPublic = e.target.checked;
+                      const publicSlug = isPublic && !draft.publicSlug
+                        ? crypto.randomUUID().replace(/-/g, "").slice(0, 12)
+                        : draft.publicSlug;
+                      applyAndSave({ ...draft, isPublic, publicSlug });
+                    }}
+                  />
+                  <span>{t("公開する（URLシェア・QRコード有効）", "Make public (URL sharing & QR enabled)")}</span>
+                </label>
+                {draft.isPublic && draft.publicSlug && (
+                  <p className="muted small" style={{ margin: 0 }}>
+                    URL: {process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/{draft.publicSlug}
+                  </p>
+                )}
+              </div>
+
+              {/* ハンドル */}
+              <label style={{ fontSize: "13px", color: "var(--muted)", gap: "4px", display: "grid" }}>
+                {t("ハンドル（@）", "Handle (@)")}
+                <input
+                  value={draft.handle ?? ""}
+                  placeholder={t("例：taro_memo", "e.g. taro_memo")}
+                  onChange={(e) => {
+                    const handle = e.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 30) || null;
+                    const n = { ...draft, handle };
+                    setDraft(n); scheduleAutoSave(n);
+                  }}
+                />
+                <span className="muted small" style={{ fontSize: "11px" }}>
+                  {t("英数字・アンダースコアのみ（プロフ交換帳・シールギフトで使用）", "Letters, numbers, underscores only (used in exchange book & sticker gifts)")}
+                </span>
               </label>
 
               {/* アバター画像アップロード */}
