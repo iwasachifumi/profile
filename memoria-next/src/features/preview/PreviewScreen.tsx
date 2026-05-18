@@ -96,7 +96,7 @@ export default function PreviewScreen({ id }: PreviewScreenProps) {
               <header className="profile-head">
                 {(() => {
                   const nameField = profile.fields.find((f) => f.label === "名前")?.value ?? "";
-                  const displayName = nameField || profile.description || profile.patternName;
+                  const displayName = nameField || profile.description;
                   const initial = (nameField || profile.patternName)[0]?.toUpperCase() ?? "M";
                   return (
                     <>
@@ -108,7 +108,7 @@ export default function PreviewScreen({ id }: PreviewScreenProps) {
                           ? <p className="muted">{profile.patternName} / {profile.audience}</p>
                           : <p className="muted">{profile.patternName}</p>
                         }
-                        <h2 className="profile-name">{displayName}</h2>
+                        {displayName && <h2 className="profile-name">{displayName}</h2>}
                       </div>
                     </>
                   );

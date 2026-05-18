@@ -1026,7 +1026,9 @@ const dataUrl = await generateQrPng();
               <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
                 {d.patternName}{d.audience ? ` / ${d.audience}` : ""}
               </p>
-              <h2 className="profile-name">{d.fields.find((f) => f.label === "名前")?.value || d.description || d.patternName}</h2>
+              {(d.fields.find((f) => f.label === "名前")?.value || d.description) && (
+                <h2 className="profile-name">{d.fields.find((f) => f.label === "名前")?.value || d.description}</h2>
+              )}
             </div>
           </header>
           {d.fields.filter((f) => f.visible && f.value).map((f) => (
@@ -2148,7 +2150,9 @@ const dataUrl = await generateQrPng();
                       <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
                         {draft.patternName}{draft.audience ? ` / ${draft.audience}` : ""}
                       </p>
-                      <h2 className="profile-name">{draft.fields.find((f) => f.label === "名前")?.value || draft.description || draft.patternName}</h2>
+                      {(draft.fields.find((f) => f.label === "名前")?.value || draft.description) && (
+                        <h2 className="profile-name">{draft.fields.find((f) => f.label === "名前")?.value || draft.description}</h2>
+                      )}
                     </div>
                   </header>
                   {draft.fields.filter((f) => f.visible && f.value).map((f) => (

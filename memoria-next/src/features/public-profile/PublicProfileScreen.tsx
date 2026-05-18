@@ -244,7 +244,7 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
             <header className="profile-head">
               {(() => {
                 const nameField = profile.fields.find((f) => f.label === "名前")?.value ?? "";
-                const displayName = nameField || profile.description || profile.patternName;
+                const displayName = nameField || profile.description;
                 const initial = initialOf(nameField || profile.patternName);
                 return (
                   <>
@@ -259,7 +259,7 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
                       <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
                         {profile.patternName}{profile.audience ? ` / ${profile.audience}` : ""}
                       </p>
-                      <h2 className="profile-name">{displayName}</h2>
+                      {displayName && <h2 className="profile-name">{displayName}</h2>}
                     </div>
                   </>
                 );
