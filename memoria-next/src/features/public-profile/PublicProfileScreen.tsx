@@ -242,19 +242,28 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
           {/* プロフィール内容 */}
           <div className="profile-content">
             <header className="profile-head">
-              <div className="avatar">
-                {profile.avatarSrc
-                  // eslint-disable-next-line @next/next/no-img-element
-                  ? <img src={profile.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
-                  : <span>{initialOf(profile.patternName)}</span>
-                }
-              </div>
-              <div>
-                <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
-                  {profile.patternName}{profile.audience ? ` / ${profile.audience}` : ""}
-                </p>
-                <h2 className="profile-name">{profile.description || profile.patternName}</h2>
-              </div>
+              {(() => {
+                const nameField = profile.fields.find((f) => f.label === "名前")?.value ?? "";
+                const displayName = nameField || profile.description || profile.patternName;
+                const initial = initialOf(nameField || profile.patternName);
+                return (
+                  <>
+                    <div className="avatar">
+                      {profile.avatarSrc
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={profile.avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                        : <span>{initial}</span>
+                      }
+                    </div>
+                    <div>
+                      <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
+                        {profile.patternName}{profile.audience ? ` / ${profile.audience}` : ""}
+                      </p>
+                      <h2 className="profile-name">{displayName}</h2>
+                    </div>
+                  </>
+                );
+              })()}
             </header>
 
             {/* フィールド */}

@@ -94,13 +94,25 @@ export default function PreviewScreen({ id }: PreviewScreenProps) {
             {/* プロフィール内容 */}
             <div className="profile-content">
               <header className="profile-head">
-                <div className="avatar">
-                  <span>{(profile.patternName[0] ?? "M").toUpperCase()}</span>
-                </div>
-                <div>
-                  <p className="muted">{profile.patternName} / {profile.audience}</p>
-                  <h2 className="profile-name">{profile.description || profile.patternName}</h2>
-                </div>
+                {(() => {
+                  const nameField = profile.fields.find((f) => f.label === "名前")?.value ?? "";
+                  const displayName = nameField || profile.description || profile.patternName;
+                  const initial = (nameField || profile.patternName)[0]?.toUpperCase() ?? "M";
+                  return (
+                    <>
+                      <div className="avatar">
+                        <span>{initial}</span>
+                      </div>
+                      <div>
+                        {profile.audience
+                          ? <p className="muted">{profile.patternName} / {profile.audience}</p>
+                          : <p className="muted">{profile.patternName}</p>
+                        }
+                        <h2 className="profile-name">{displayName}</h2>
+                      </div>
+                    </>
+                  );
+                })()}
               </header>
 
               {profile.fields.filter((f) => f.visible && f.value).map((f) => (
