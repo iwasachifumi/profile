@@ -1895,6 +1895,15 @@ const dataUrl = await generateQrPng();
             <button
               type="button"
               className="icon-button mini-button"
+              onClick={() => setMetaOpen(!metaOpen)}
+              title={t("パターン情報の設定", "Pattern settings")}
+              style={{ flexShrink: 0, fontSize: "11px", padding: "0 8px", letterSpacing: "0.02em" }}
+            >
+              {t("設定", "Settings")}
+            </button>
+            <button
+              type="button"
+              className="icon-button mini-button"
               onClick={() => { setNewPatternName(""); setShowAddModal(true); }}
               disabled={busy === "create"}
               title={t("新しいパターンを追加", "Add new pattern")}
