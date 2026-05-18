@@ -1141,7 +1141,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"Mr.Childrenの魅力を一言","placeholder":"例：日本のロックバンドの頂点"}
 ]'),
 
-('B\'z', array['音楽・アイドル','邦楽アーティスト'], '[
+('B''z', array['音楽・アイドル','邦楽アーティスト'], '[
   {"label":"B''zを好きになったのは？","placeholder":"例：「ultra soul」で目覚めた"},
   {"label":"ライブに行ったことある？","placeholder":"例：B''z LIVEに年1回"},
   {"label":"好きな曲は？","placeholder":"例：「ultra soul」「さまよえる蒼い弾丸」「稲葉さんの声が好き」"},
@@ -1150,7 +1150,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"B''zの魅力を一言","placeholder":"例：日本のロックの金字塔"}
 ]'),
 
-('L\'Arc-en-Ciel', array['音楽・アイドル','邦楽アーティスト'], '[
+('L''Arc-en-Ciel', array['音楽・アイドル','邦楽アーティスト'], '[
   {"label":"ラルクを好きになったのは？","placeholder":"例：「虹」「HONEY」で沼落ち"},
   {"label":"ライブに行ったことある？","placeholder":"例：年1〜2回"},
   {"label":"好きな曲は？","placeholder":"例：「flower」「HONEY」「Driver''s High」"},
