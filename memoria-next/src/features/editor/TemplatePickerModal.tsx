@@ -162,20 +162,25 @@ export default function TemplatePickerModal({ onClose, onAdd }: Props) {
             onClick={() => setPreviewId(isPreviewing ? null : tmpl.id)}
             style={{
               flex: 1,
+              display: "flex",
+              justifyContent: "flex-start",
+              alignItems: "center",
               textAlign: "left",
               background: "none",
               border: "none",
               cursor: "pointer",
               fontSize: "13px",
               padding: 0,
+              minHeight: "auto",
               color: "var(--fg)",
+              gap: "4px",
             }}
           >
-            <span style={{ fontSize: "10px", opacity: 0.5, marginRight: "4px" }}>
+            <span style={{ fontSize: "10px", opacity: 0.5, flexShrink: 0 }}>
               {isPreviewing ? "▼" : "▶"}
             </span>
-            {tmpl.name}
-            <span style={{ fontSize: "11px", color: "var(--muted, #888)", marginLeft: "6px" }}>
+            <span>{tmpl.name}</span>
+            <span style={{ fontSize: "11px", color: "var(--muted, #888)" }}>
               {tmpl.questions.length}問
             </span>
           </button>
@@ -194,6 +199,7 @@ export default function TemplatePickerModal({ onClose, onAdd }: Props) {
               cursor: "pointer",
               flexShrink: 0,
               fontWeight: 600,
+              minHeight: "auto",
             }}
           >
             追加
