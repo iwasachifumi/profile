@@ -161,7 +161,7 @@ function buildDefaultProfile(name: string): Profile {
   const mf = (groupId: string, label: string, value: string): Field =>
     ({ id: crypto.randomUUID(), groupId, label, value, visible: true });
   return {
-    id: crypto.randomUUID(), publicSlug: null, handle: null, isPublic: false,
+    id: crypto.randomUUID(), publicSlug: crypto.randomUUID().replace(/-/g, "").slice(0, 12), handle: null, isPublic: true,
     patternName: name, audience: "", description: "",
     themeId: "default", frameId: "none",
     fields: [
@@ -1867,7 +1867,7 @@ const dataUrl = await generateQrPng();
                 </select>
               ) : (
                 <span className="pattern-meta-name">
-                  {t("パターン名", "Pattern")}：{draft.patternName}
+                  {t("パターン情報の設定", "Pattern settings")}：{draft.patternName}
                 </span>
               )}
             </button>
@@ -1903,9 +1903,9 @@ const dataUrl = await generateQrPng();
               </label>
 
               {/* 公開設定 */}
-              <div style={{ fontSize: "13px", color: "var(--muted)", display: "grid", gap: "6px" }}>
+              <div style={{ fontSize: "13px", color: "var(--muted)", display: "flex", flexDirection: "column", gap: "6px" }}>
                 <span>{t("公開設定", "Public sharing")}</span>
-                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <input
                     type="checkbox"
                     checked={draft.isPublic}
@@ -1916,9 +1916,10 @@ const dataUrl = await generateQrPng();
                         : draft.publicSlug;
                       applyAndSave({ ...draft, isPublic, publicSlug });
                     }}
+                    style={{ flexShrink: 0, cursor: "pointer", width: "16px", height: "16px" }}
                   />
-                  <span>{t("公開する（URLシェア・QRコード有効）", "Make public (URL sharing & QR enabled)")}</span>
-                </label>
+                  <span style={{ cursor: "pointer" }}>{t("公開する（URLシェア・QRコード有効）", "Make public (URL sharing & QR enabled)")}</span>
+                </div>
                 {draft.isPublic && draft.publicSlug && (
                   <p className="muted small" style={{ margin: 0 }}>
                     URL: {process.env.NEXT_PUBLIC_BASE_URL ?? ""}/profile/{draft.publicSlug}

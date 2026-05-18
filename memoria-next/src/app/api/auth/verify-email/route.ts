@@ -15,9 +15,9 @@ function f(groupId: string, label: string, value: string = ""): Field {
 function buildInitialProfile(): Profile {
   return {
     id: randomUUID(),
-    publicSlug: null,
+    publicSlug: randomUUID().replace(/-/g, "").slice(0, 12),
     handle: null,
-    isPublic: false,
+    isPublic: true,
     patternName: "プロフィール",
     audience: "",
     description: "",
