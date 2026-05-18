@@ -485,13 +485,39 @@ export default function EditorScreen() {
     setSelectedStickerIdx(next.stickers.length - 1);
     applyAndSave(next);
   }
+  async function handleDeleteCustomSticker(id: string) {
+    const nextCustomStickers = customStickers.filter((s) => s.id !== id);
+    const nextSettings: UserSettings = { ...settings, customStickers: nextCustomStickers };
+    const res = await settingsApi.update(nextSettings);
+    if (res.ok) setSettings(nextSettings);
+  }
+
   async function handleCustomStickerUpload(file: File) {
     if (!planLimits.customStickerUpload) {
-      setError(t("Pro plan required for custom sticker upload.", "Pro plan required for custom sticker upload."));
+      setError(t("カスタムシールのアップロードはProプランで使えます。", "Custom sticker upload requires Pro plan."));
       return;
     }
     try {
-      const assetSrc = await readFileAsDataUrl(file);
+      const raw = await readFileAsDataUrl(file);
+      // canvas でリサイズ（最大長辺 100px、透明保持のため PNG）
+      const assetSrc = await new Promise<string>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 100;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width  * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width  = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) { reject(new Error("canvas")); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = () => reject(new Error("img load failed"));
+        img.src = raw;
+      });
       const nextCustomStickers: CustomSticker[] = [
         { id: crypto.randomUUID(), label: fileToLabel(file.name || "custom"), assetSrc },
         ...customStickers,
@@ -508,7 +534,7 @@ export default function EditorScreen() {
       setSettings(nextSettings);
       setError(null);
     } catch {
-      setError(t("Failed to load the sticker image.", "Failed to load the sticker image."));
+      setError(t("画像の読み込みに失敗しました。", "Failed to load the sticker image."));
     }
   }
   async function handleAvatarUpload(file: File) {
@@ -1503,9 +1529,39 @@ const dataUrl = await generateQrPng();
 
         <div className="sticker-upload-box">
           <strong>{t("カスタムシール", "Custom sticker")}</strong>
+          {customStickers.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", margin: "4px 0" }}>
+              {customStickers.map((sticker) => (
+                <div key={sticker.id} style={{ position: "relative", display: "inline-flex" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={sticker.assetSrc}
+                    alt={sticker.label}
+                    title={sticker.label}
+                    style={{ width: "52px", height: "52px", objectFit: "contain", borderRadius: "6px", background: "var(--bg)", border: "1px solid var(--line)" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteCustomSticker(sticker.id)}
+                    title={t("削除", "Delete")}
+                    style={{
+                      position: "absolute", top: "-6px", right: "-6px",
+                      width: "18px", height: "18px", borderRadius: "50%",
+                      background: "var(--pink)", color: "#fff", border: "none",
+                      fontSize: "11px", lineHeight: 1, cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      padding: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           {planLimits.customStickerUpload ? (
             <label className="file-button">
-              <span>{t("画像をアップロード", "Upload image")}</span>
+              <span>{t("＋ 画像をアップロード", "＋ Upload image")}</span>
               <input
                 type="file"
                 accept="image/*"
