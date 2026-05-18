@@ -875,7 +875,7 @@ insert into memoria.template_nodes (name, path, questions) values
   {"label":"コンサートに年何回行く？","placeholder":"例：年2回、ドームも行く"},
   {"label":"推しメンは？","placeholder":"例：ウジ、ジョシュア"},
   {"label":"SEVENTEENのここが好き！","placeholder":"例：自作曲・自己プロデュースと13人の多様性"},
-  {"label":"好きな曲は？","placeholder":"例：「Pretty U」「Don't Wanna Cry」「Left & Right」"},
+  {"label":"好きな曲は？","placeholder":"例：「Pretty U」「Don''t Wanna Cry」「Left & Right」"},
   {"label":"ユニット（ボーカル・ヒップホップ・パフォーマンス）はどれが好き？","placeholder":"例：パフォーマンスチームのダンスが好き"},
   {"label":"韓国語は勉強してる？","placeholder":"例：セブチのために頑張ってる"},
   {"label":"グッズは？","placeholder":"例：クラッカー（ペンライト）は必需品"},
