@@ -249,6 +249,42 @@ export default function IndexScreen() {
             </ul>
           </section>
 
+          {/* ── イベント主催者向け ── */}
+          <section className="lp-section">
+            <h2 className="lp-h2">{t("主催者の方へ", "For event organizers")}</h2>
+            <div style={{
+              background: "var(--green-soft, #f0faf4)",
+              border: "1.5px solid var(--green, #4caf7d)",
+              borderRadius: "12px",
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+            }}>
+              <p style={{ margin: 0, fontSize: "12px", fontWeight: 700, color: "var(--green, #4caf7d)", letterSpacing: "0.05em" }}>
+                {t("🏷 街コン・勉強会・社内イベントに", "Street mixers, study groups, corporate events")}
+              </p>
+              <h3 style={{ margin: 0, fontSize: "17px", lineHeight: 1.4 }}>
+                {t("参加者のプロフをまとめて用意できます", "Bulk-generate participant profiles")}
+              </h3>
+              <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.7, color: "var(--muted)" }}>
+                {t(
+                  "事前に参加者データをご提供いただければ、プロフィールをまとめて作成してお渡しします。当日はQRを読み取るだけ。自然な自己紹介・名刺交換のきっかけになります。",
+                  "Send us participant data in advance and we'll create profiles in bulk. On the day, just scan QRs — a natural icebreaker for introductions."
+                )}
+              </p>
+              <a
+                href="https://x.com/Aci2t66187"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="button secondary"
+                style={{ alignSelf: "flex-start", fontSize: "13px" }}
+              >
+                {t("Xでお問い合わせ →", "Contact via X →")}
+              </a>
+            </div>
+          </section>
+
           <section className="lp-section idx-cta-banner-section">
             <h2 className="lp-h2">{t("もっと知る", "Learn more")}</h2>
             <div className="idx-cta-banner-grid">

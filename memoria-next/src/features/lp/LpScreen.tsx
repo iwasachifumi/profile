@@ -145,7 +145,48 @@ export default function LpScreen() {
         </div>
       </section>
 
-      {/* ── 6. Final CTA ── */}
+      {/* ── 6. イベント主催者向け ── */}
+      <section className="lp-section">
+        <h2 className="lp-h2">主催者の方へ</h2>
+        <p className="lp-section-lead">
+          街コン・勉強会・社内交流会でご活用いただけます。
+        </p>
+        <div style={{
+          background: "var(--green-soft, #f0faf4)",
+          border: "1.5px solid var(--green, #4caf7d)",
+          borderRadius: "12px",
+          padding: "24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+          maxWidth: "560px",
+          margin: "0 auto",
+        }}>
+          <p style={{ margin: 0, fontSize: "12px", fontWeight: 700, color: "var(--green, #4caf7d)", letterSpacing: "0.05em" }}>
+            💡 まとめてプロフ作成サービス
+          </p>
+          <h3 style={{ margin: 0, fontSize: "18px", lineHeight: 1.4 }}>
+            参加者データをいただければ、<br />プロフをまとめて生成してお渡しします
+          </h3>
+          <ul style={{ margin: 0, paddingLeft: "1.4em", fontSize: "13px", lineHeight: 1.8, color: "var(--muted)" }}>
+            <li>事前に参加者情報（名前・ニックネーム等）をご提供ください</li>
+            <li>当日配布できる状態でプロフィールを一括作成します</li>
+            <li>参加者はその場でQRを読み取るだけで交換完了</li>
+            <li>イベント後の交流もそのまま Memoria で続けられます</li>
+          </ul>
+          <a
+            href="https://x.com/Aci2t66187"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="button secondary"
+            style={{ alignSelf: "flex-start", fontSize: "13px" }}
+          >
+            Xでお問い合わせ →
+          </a>
+        </div>
+      </section>
+
+      {/* ── 7. Final CTA ── */}
       <section className="lp-section lp-final-section">
         <h2 className="lp-final-catch">
           人との出会いを、<br />忘れないように。
