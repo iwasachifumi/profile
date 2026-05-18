@@ -10,4 +10,7 @@ export const settingsApi = {
 
   setPlan: (plan: "free" | "pro") =>
     apiCall<{ plan: "free" | "pro" }>("PUT", "/settings/plan", { plan }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiCall<null>("POST", "/auth/change-password", { currentPassword, newPassword }),
 };

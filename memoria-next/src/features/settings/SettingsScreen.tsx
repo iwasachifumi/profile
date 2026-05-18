@@ -72,15 +72,10 @@ export default function SettingsScreen() {
       return;
     }
     setBusy("password");
-    const res = await fetch("/api/auth/change-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
+    const result = await settingsApi.changePassword(currentPassword, newPassword);
     setBusy(null);
-    const json = await res.json() as { ok?: boolean; error?: string };
-    if (!json.ok) {
-      setPasswordError(json.error ?? t("エラーが発生しました", "An error occurred"));
+    if (!result.ok) {
+      setPasswordError(result.error);
       return;
     }
     setCurrentPassword("");

@@ -115,6 +115,21 @@ export async function markEmailVerified(userId: string) {
   `;
 }
 
+export async function getUserPasswordHash(userId: string): Promise<string | null> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT password_hash FROM memoria.users WHERE id = ${userId} LIMIT 1
+  `;
+  return (rows[0]?.password_hash as string) ?? null;
+}
+
+export async function updateUserPassword(userId: string, newPasswordHash: string) {
+  const sql = getSql();
+  await sql`
+    UPDATE memoria.users SET password_hash = ${newPasswordHash} WHERE id = ${userId}
+  `;
+}
+
 export async function createGuestUser() {
   const sql = getSql();
   const rows = await sql`
