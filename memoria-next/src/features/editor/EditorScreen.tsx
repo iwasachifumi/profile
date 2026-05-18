@@ -253,14 +253,14 @@ export default function EditorScreen() {
   const [qrAddPickerOpen,      setQrAddPickerOpen]      = useState(false);
 
   const paperRef       = useRef<HTMLDivElement>(null);
-  const dragState      = useRef<{ idx: number } | null>(null);
+  const dragState      = useRef<{ idx: number; ox: number; oy: number } | null>(null);
   const autoSaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestDraft    = useRef<Profile | null>(null);  // stale-closure guard for drag
   const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qrCardRef      = useRef<HTMLDivElement>(null);
   // qrCardExportRef廃止 → generateQrPngは可視カード(qrCardRef)を直接キャプチャ
   const qrCardWrapRef  = useRef<HTMLDivElement>(null);
-  const qrDragState    = useRef<{ idx: number } | null>(null);
+  const qrDragState    = useRef<{ idx: number; ox: number; oy: number } | null>(null);
   const qrAutoSaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qrOgUploadTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initDraftIdRef  = useRef<string | null>(null);  // prevents re-init on same profile
@@ -620,7 +620,18 @@ export default function EditorScreen() {
     e.preventDefault(); e.stopPropagation();
     setSelectedStickerIdx(idx);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    dragState.current = { idx };
+    let ox = 0, oy = 0;
+    if (paperRef.current && draft) {
+      const rect = paperRef.current.getBoundingClientRect();
+      const s = draft.stickers[idx];
+      if (s) {
+        const curX = ((e.clientX - rect.left) / rect.width)  * 100;
+        const curY = ((e.clientY - rect.top)  / rect.height) * 100;
+        ox = curX - s.x;
+        oy = curY - s.y;
+      }
+    }
+    dragState.current = { idx, ox, oy };
   }
 
   function onPaperPointerMove(e: React.PointerEvent) {
@@ -628,8 +639,8 @@ export default function EditorScreen() {
     if (!ds || !paperRef.current) return;
     e.preventDefault();
     const rect = paperRef.current.getBoundingClientRect();
-    const x = clamp(((e.clientX - rect.left) / rect.width)  * 100, 0, 92);
-    const y = clamp(((e.clientY - rect.top)  / rect.height) * 100, 0, 92);
+    const x = clamp(((e.clientX - rect.left) / rect.width)  * 100 - ds.ox, 0, 92);
+    const y = clamp(((e.clientY - rect.top)  / rect.height) * 100 - ds.oy, 0, 92);
     setDraft((prev) =>
       prev ? { ...prev, stickers: prev.stickers.map((s, i) => i === ds.idx ? { ...s, x, y } : s) } : prev
     );
@@ -761,7 +772,18 @@ export default function EditorScreen() {
     e.preventDefault(); e.stopPropagation();
     setQrSelectedStickerIdx(idx);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    qrDragState.current = { idx };
+    let ox = 0, oy = 0;
+    if (qrCardRef.current) {
+      const rect = qrCardRef.current.getBoundingClientRect();
+      const s = qrCardStickers[idx];
+      if (s) {
+        const curX = ((e.clientX - rect.left) / rect.width)  * 100;
+        const curY = ((e.clientY - rect.top)  / rect.height) * 100;
+        ox = curX - s.x;
+        oy = curY - s.y;
+      }
+    }
+    qrDragState.current = { idx, ox, oy };
   }
 
   function onQrCardPointerMove(e: React.PointerEvent) {
@@ -769,8 +791,8 @@ export default function EditorScreen() {
     if (!ds || !qrCardRef.current) return;
     e.preventDefault();
     const rect = qrCardRef.current.getBoundingClientRect();
-    const x = clamp(((e.clientX - rect.left) / rect.width)  * 100, 0, 92);
-    const y = clamp(((e.clientY - rect.top)  / rect.height) * 100, 0, 92);
+    const x = clamp(((e.clientX - rect.left) / rect.width)  * 100 - ds.ox, 0, 92);
+    const y = clamp(((e.clientY - rect.top)  / rect.height) * 100 - ds.oy, 0, 92);
     setQrCardStickers((prev) => prev.map((s, i) => i === ds.idx ? { ...s, x, y } : s));
   }
 
