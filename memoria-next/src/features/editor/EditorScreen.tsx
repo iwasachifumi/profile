@@ -9,6 +9,7 @@ import { stickerGiftsApi } from "@/api/stickerGifts";
 import { PAPER_PALETTES, getPaperThemeCssVars, resolvePaperTheme } from "@/config/paperThemes";
 import { PLAN_LIMITS } from "@/config/planLimits";
 import AuthScreen from "@/features/auth/AuthScreen";
+import ConfirmDialog from "@/features/common/ConfirmDialog";
 import TemplatePickerModal from "@/features/editor/TemplatePickerModal";
 import { useSession } from "@/store/session";
 import { useLang } from "@/store/language";
@@ -189,6 +190,14 @@ function buildDefaultProfile(name: string): Profile {
 
 type Tab = "preview" | "settings" | "qr" | "stickers" | "frame";
 type BusyKind = "load" | "create" | "save" | "delete" | null;
+type ConfirmDialogState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  danger?: boolean;
+  onConfirm: () => void | Promise<void>;
+};
 
 // モバイルフッタ用（プレビュータブを先頭に追加）
 const TABS: { id: Tab; icon: string; labelJa: string; labelEn: string }[] = [
@@ -241,6 +250,8 @@ export default function EditorScreen() {
   const [stickerDesktopPage, setStickerDesktopPage] = useState(0);
   const [stickerToast,       setStickerToast]       = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [confirmDialog,      setConfirmDialog]      = useState<ConfirmDialogState | null>(null);
+  const [confirmBusy,        setConfirmBusy]        = useState(false);
   const [openedFieldGroups,  setOpenedFieldGroups]  = useState<Set<string>>(new Set(["basic"]));
   const [pendingFocusGroupId, setPendingFocusGroupId] = useState<string | null>(null);
 
@@ -442,20 +453,39 @@ export default function EditorScreen() {
 
   async function handleDeletePattern() {
     if (!draft) return;
-    if (!confirm(t("このパターンを削除しますか？", "Delete this pattern?"))) return;
-    setBusy("delete");
-    const res = await profilesApi.remove(draft.id);
-    setBusy(null);
-    if (!res.ok) { setError(res.error); return; }
-    const remaining = profiles.filter((p) => p.id !== draft.id);
-    setProfiles(remaining);
-    const next = remaining[0] ?? null;
-    setActiveId(next?.id ?? null);
-    setDraft(next ? cloneProfile(next) : null);
+    const deletingId = draft.id;
+    openDeleteConfirm("このパターンを削除しますか？", "Delete this pattern?", async () => {
+      setBusy("delete");
+      const res = await profilesApi.remove(deletingId);
+      setBusy(null);
+      if (!res.ok) { setError(res.error); return; }
+      const remaining = profiles.filter((p) => p.id !== deletingId);
+      setProfiles(remaining);
+      const next = remaining[0] ?? null;
+      setActiveId(next?.id ?? null);
+      setDraft(next ? cloneProfile(next) : null);
+    });
   }
 
-  function confirmDelete(messageJa: string, messageEn: string): boolean {
-    return window.confirm(t(messageJa, messageEn));
+  function openDeleteConfirm(messageJa: string, messageEn: string, onConfirm: () => void | Promise<void>) {
+    setConfirmDialog({
+      title: t("削除の確認", "Confirm deletion"),
+      message: t(messageJa, messageEn),
+      confirmLabel: t("削除する", "Delete"),
+      cancelLabel: t("キャンセル", "Cancel"),
+      danger: true,
+      onConfirm,
+    });
+  }
+  async function handleConfirmDialogAccept() {
+    if (!confirmDialog) return;
+    setConfirmBusy(true);
+    try {
+      await confirmDialog.onConfirm();
+    } finally {
+      setConfirmBusy(false);
+      setConfirmDialog(null);
+    }
   }
 
   // ── Field ops ─────────────────────────────────────────────────────────────
@@ -496,15 +526,19 @@ export default function EditorScreen() {
     setDraft(next); setEditingLabelId(nf.id); scheduleAutoSave(next);
   }
   function removeField(id: string) {
-    if (!draft) return;
-    if (!confirmDelete("この項目を削除しますか？", "Delete this field?")) return;
-    applyAndSave({ ...draft, fields: draft.fields.filter((f) => f.id !== id) });
-    if (editingLabelId === id) setEditingLabelId(null);
+    openDeleteConfirm("この項目を削除しますか？", "Delete this field?", () => {
+      const current = latestDraft.current;
+      if (!current) return;
+      applyAndSave({ ...current, fields: current.fields.filter((f) => f.id !== id) });
+      if (editingLabelId === id) setEditingLabelId(null);
+    });
   }
   function removeGroup(groupId: string) {
-    if (!draft) return;
-    if (!confirmDelete("この質問グループを削除しますか？", "Delete this question group?")) return;
-    applyAndSave({ ...draft, fields: draft.fields.filter((f) => f.groupId !== groupId) });
+    openDeleteConfirm("この質問グループを削除しますか？", "Delete this question group?", () => {
+      const current = latestDraft.current;
+      if (!current) return;
+      applyAndSave({ ...current, fields: current.fields.filter((f) => f.groupId !== groupId) });
+    });
   }
 
   // ── Link ops ──────────────────────────────────────────────────────────────
@@ -520,10 +554,12 @@ export default function EditorScreen() {
     setDraft(next); setEditingLinkId(nl.id); scheduleAutoSave(next);
   }
   function removeLink(id: string) {
-    if (!draft) return;
-    if (!confirmDelete("このリンクを削除しますか？", "Delete this link?")) return;
-    applyAndSave({ ...draft, links: draft.links.filter((l) => l.id !== id) });
-    if (editingLinkId === id) setEditingLinkId(null);
+    openDeleteConfirm("このリンクを削除しますか？", "Delete this link?", () => {
+      const current = latestDraft.current;
+      if (!current) return;
+      applyAndSave({ ...current, links: current.links.filter((l) => l.id !== id) });
+      if (editingLinkId === id) setEditingLinkId(null);
+    });
   }
 
   // ── Sticker ops ───────────────────────────────────────────────────────────
@@ -536,7 +572,6 @@ export default function EditorScreen() {
     applyAndSave(next);
   }
   async function handleDeleteCustomSticker(id: string) {
-    if (!confirmDelete("このカスタムシールを削除しますか？", "Delete this custom sticker?")) return;
     const nextCustomStickers = customStickers.filter((s) => s.id !== id);
     const nextSettings: UserSettings = { ...settings, customStickers: nextCustomStickers };
     const res = await settingsApi.update(nextSettings);
@@ -675,10 +710,12 @@ export default function EditorScreen() {
     setGiftNotice(t("ギフトを辞退しました。", "Gift rejected."));
   }
   function handleDeleteSticker(idx: number) {
-    if (!draft) return;
-    if (!confirmDelete("このシールを削除しますか？", "Delete this sticker?")) return;
-    setSelectedStickerIdx(null);
-    applyAndSave({ ...draft, stickers: draft.stickers.filter((_, i) => i !== idx) });
+    openDeleteConfirm("このシールを削除しますか？", "Delete this sticker?", () => {
+      const current = latestDraft.current;
+      if (!current) return;
+      setSelectedStickerIdx(null);
+      applyAndSave({ ...current, stickers: current.stickers.filter((_, i) => i !== idx) });
+    });
   }
   function handleResizeSticker(idx: number, delta: number) {
     if (!draft) return;
@@ -809,10 +846,11 @@ export default function EditorScreen() {
   }
 
   function handleDeleteQrItem(id: string) {
-    if (!confirmDelete("このQRカード項目を削除しますか？", "Delete this QR card item?")) return;
-    const next = qrItems.filter((it) => it.id !== id);
-    setQrItems(next);
-    scheduleQrConfigSave(qrTemplateFile, next, qrCardStickers);
+    openDeleteConfirm("このQRカード項目を削除しますか？", "Delete this QR card item?", () => {
+      const next = qrItems.filter((it) => it.id !== id);
+      setQrItems(next);
+      scheduleQrConfigSave(qrTemplateFile, next, qrCardStickers);
+    });
   }
 
   function handleAddQrItemFromField(label: string, value: string) {
@@ -831,11 +869,12 @@ export default function EditorScreen() {
   }
 
   function handleDeleteQrSticker(idx: number) {
-    if (!confirmDelete("このQRカードのシールを削除しますか？", "Delete this QR card sticker?")) return;
-    const next = qrCardStickers.filter((_, i) => i !== idx);
-    setQrSelectedStickerIdx(null);
-    setQrCardStickers(next);
-    scheduleQrConfigSave(qrTemplateFile, qrItems, next);
+    openDeleteConfirm("このQRカードのシールを削除しますか？", "Delete this QR card sticker?", () => {
+      const next = qrCardStickers.filter((_, i) => i !== idx);
+      setQrSelectedStickerIdx(null);
+      setQrCardStickers(next);
+      scheduleQrConfigSave(qrTemplateFile, qrItems, next);
+    });
   }
 
   function handleResizeQrSticker(idx: number, delta: number) {
@@ -1636,9 +1675,11 @@ const dataUrl = await generateQrPng();
             type="button" className="button secondary"
             style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto", color: "var(--pink)", width: "100%" }}
             onClick={() => {
-              if (!draft) return;
-              if (!confirmDelete("シールをすべて削除しますか？", "Remove all stickers?")) return;
-              applyAndSave({ ...draft, stickers: [] });
+              openDeleteConfirm("シールをすべて削除しますか？", "Remove all stickers?", () => {
+                const current = latestDraft.current;
+                if (!current) return;
+                applyAndSave({ ...current, stickers: [] });
+              });
             }}
           >
             {t("全部はがす", "Remove all stickers")}
@@ -1661,7 +1702,10 @@ const dataUrl = await generateQrPng();
                   />
                   <button
                     type="button"
-                    onClick={() => void handleDeleteCustomSticker(sticker.id)}
+                    onClick={() =>
+                      openDeleteConfirm("このカスタムシールを削除しますか？", "Delete this custom sticker?", () =>
+                        handleDeleteCustomSticker(sticker.id))
+                    }
                     title={t("削除", "Delete")}
                     style={{
                       position: "absolute", top: "-6px", right: "-6px",
@@ -2149,8 +2193,11 @@ const dataUrl = await generateQrPng();
                         className="button secondary"
                         style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto", color: "var(--pink)" }}
                         onClick={() => {
-                          if (!confirmDelete("プロフィール画像を削除しますか？", "Remove profile photo?")) return;
-                          applyAndSave({ ...draft, avatarSrc: null });
+                          openDeleteConfirm("プロフィール画像を削除しますか？", "Remove profile photo?", () => {
+                            const current = latestDraft.current;
+                            if (!current) return;
+                            applyAndSave({ ...current, avatarSrc: null });
+                          });
                         }}
                       >
                         {t("削除", "Remove")}
@@ -2578,6 +2625,21 @@ const dataUrl = await generateQrPng();
           onAdd={addTemplateToPattern}
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title ?? ""}
+        message={confirmDialog?.message ?? ""}
+        confirmLabel={confirmDialog?.confirmLabel ?? ""}
+        cancelLabel={confirmDialog?.cancelLabel ?? ""}
+        onConfirm={() => void handleConfirmDialogAccept()}
+        onCancel={() => {
+          if (confirmBusy) return;
+          setConfirmDialog(null);
+        }}
+        busy={confirmBusy}
+        danger={confirmDialog?.danger}
+      />
     </div>
   );
 }

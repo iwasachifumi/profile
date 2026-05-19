@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { exchangesApi } from "@/api/exchanges";
 import AuthScreen from "@/features/auth/AuthScreen";
+import ConfirmDialog from "@/features/common/ConfirmDialog";
 import { useSession } from "@/store/session";
 import { useLang } from "@/store/language";
 import type { Exchange } from "@/types";
@@ -36,6 +37,7 @@ export default function BookScreen() {
   const [error,        setError]        = useState<string | null>(null);
   const [ogFailed,     setOgFailed]     = useState<Set<string>>(new Set());
   const [filter,       setFilter]       = useState<DirectionFilter>("all");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const loadExchanges = useCallback(async () => {
     setBusy("load");
@@ -60,6 +62,7 @@ export default function BookScreen() {
     setEditTarget(null);
     setDraft(null);
     setError(null);
+    setDeleteConfirmOpen(false);
   }
 
   async function handleSave(event: FormEvent) {
@@ -80,13 +83,13 @@ export default function BookScreen() {
 
   async function handleDelete() {
     if (!editTarget) return;
-    if (!window.confirm(t("この交換記録を削除しますか？", "Delete this exchange record?"))) return;
     const removingId = editTarget.id;
     setBusy("delete");
     const result = await exchangesApi.remove(removingId);
     setBusy(null);
     if (!result.ok) { setError(result.error); return; }
     setExchanges((cur) => cur.filter((e) => e.id !== removingId));
+    setDeleteConfirmOpen(false);
     handleCloseEdit();
   }
 
@@ -313,7 +316,7 @@ export default function BookScreen() {
                 <button
                   type="button"
                   className="secondary"
-                  onClick={() => void handleDelete()}
+                  onClick={() => setDeleteConfirmOpen(true)}
                   disabled={busy === "save" || busy === "delete"}
                   style={{ color: "var(--pink)" }}
                 >
@@ -324,6 +327,18 @@ export default function BookScreen() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title={t("削除の確認", "Confirm deletion")}
+        message={t("この交換記録を削除しますか？", "Delete this exchange record?")}
+        confirmLabel={t("削除する", "Delete")}
+        cancelLabel={t("キャンセル", "Cancel")}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => { if (busy !== "delete") setDeleteConfirmOpen(false); }}
+        busy={busy === "delete"}
+        danger
+      />
     </main>
   );
 }
