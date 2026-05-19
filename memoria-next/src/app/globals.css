@@ -1096,9 +1096,9 @@ textarea {
 }
 
 .sticker-picker-inline-grid {
-  max-height: 320px;
-  overflow-y: auto;
-  padding-right: 2px;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
 }
 
 @media (min-width: 768px) {
@@ -1107,6 +1107,9 @@ textarea {
   }
   .sticker-picker-desktop {
     display: block;
+  }
+  .sticker-picker-inline-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 

@@ -238,6 +238,7 @@ export default function EditorScreen() {
   const [themePickerOpen,    setThemePickerOpen]    = useState(false);
   const [stickerModalOpen,   setStickerModalOpen]   = useState(false);
   const [stickerModalPage,   setStickerModalPage]   = useState(0);
+  const [stickerDesktopPage, setStickerDesktopPage] = useState(0);
   const [stickerToast,       setStickerToast]       = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [openedFieldGroups,  setOpenedFieldGroups]  = useState<Set<string>>(new Set(["basic"]));
@@ -1546,6 +1547,7 @@ const dataUrl = await generateQrPng();
   // ── Panel: シール ─────────────────────────────────────────────────────────
 
   function renderStickerPanel() {
+    const DESKTOP_PER_PAGE = 15;
     const stickerChoices = [
       ...customStickers.map((sticker) => ({
         id: sticker.assetSrc,
@@ -1560,6 +1562,12 @@ const dataUrl = await generateQrPng();
         source: "preset" as const,
       })),
     ];
+    const desktopTotalPages = Math.max(1, Math.ceil(stickerChoices.length / DESKTOP_PER_PAGE));
+    const desktopPage = Math.min(stickerDesktopPage, desktopTotalPages - 1);
+    const desktopPageItems = stickerChoices.slice(
+      desktopPage * DESKTOP_PER_PAGE,
+      (desktopPage + 1) * DESKTOP_PER_PAGE,
+    );
     return (
       <div className="stack" style={{ gap: "10px" }}>
 
@@ -1581,7 +1589,7 @@ const dataUrl = await generateQrPng();
             {t("一覧から選んで貼れます", "Pick from the list to place stickers")}
           </p>
           <div className="sticker-grid sticker-picker-inline-grid">
-            {stickerChoices.map((sticker) => (
+            {desktopPageItems.map((sticker) => (
               <button
                 key={`${sticker.source}:${sticker.id}`}
                 type="button"
@@ -1598,6 +1606,29 @@ const dataUrl = await generateQrPng();
               </button>
             ))}
           </div>
+          {desktopTotalPages > 1 && (
+            <div className="sticker-picker-pagination" style={{ marginTop: "8px" }}>
+              <button
+                type="button"
+                className="button secondary"
+                style={{ minHeight: "auto", padding: "4px 14px" }}
+                disabled={desktopPage === 0}
+                onClick={() => setStickerDesktopPage(desktopPage - 1)}
+              >
+                ‹ {t("前へ", "Prev")}
+              </button>
+              <span className="muted small">{desktopPage + 1} / {desktopTotalPages}</span>
+              <button
+                type="button"
+                className="button secondary"
+                style={{ minHeight: "auto", padding: "4px 14px" }}
+                disabled={desktopPage >= desktopTotalPages - 1}
+                onClick={() => setStickerDesktopPage(desktopPage + 1)}
+              >
+                {t("次へ", "Next")} ›
+              </button>
+            </div>
+          )}
         </div>
 
         {stickers.length > 0 && (
