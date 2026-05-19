@@ -139,6 +139,13 @@ function readFileAsDataUrl(file: File): Promise<string> {
 function resolveStickerSrc(stickerId: string) {
   return stickerId.startsWith("data:") ? stickerId : `/stamp/${stickerId}`;
 }
+function getFieldPlaceholder(label: string, placeholder?: string) {
+  const provided = (placeholder ?? "").trim();
+  if (provided.length > 0) return provided;
+  const normalizedLabel = label.trim();
+  if (!normalizedLabel) return "例: ここに入力";
+  return `例: ${normalizedLabel}`;
+}
 
 /** QRカードのテキスト初期値をプロフィールから生成 */
 function buildDefaultCardItems(p: Profile): CardInfoItem[] {
@@ -153,8 +160,8 @@ function buildDefaultCardItems(p: Profile): CardInfoItem[] {
 
 /** 手動でパターンを追加するときのデフォルト構造 */
 function buildDefaultProfile(name: string): Profile {
-  const mf = (groupId: string, label: string, value: string): Field =>
-    ({ id: crypto.randomUUID(), groupId, label, value, visible: true });
+  const mf = (groupId: string, label: string, placeholder: string): Field =>
+    ({ id: crypto.randomUUID(), groupId, label, value: "", placeholder, visible: true });
   return {
     id: crypto.randomUUID(), publicSlug: crypto.randomUUID().replace(/-/g, "").slice(0, 12), handle: null, isPublic: true,
     patternName: name, audience: "", description: "",
@@ -228,10 +235,13 @@ export default function EditorScreen() {
   const [newPatternName,     setNewPatternName]      = useState("");
   const [frameConfirmOpen,   setFrameConfirmOpen]   = useState(false);
   const [frameConfirmData,   setFrameConfirmData]   = useState<{ themeId: string; frameId: string } | null>(null);
+  const [themePickerOpen,    setThemePickerOpen]    = useState(false);
   const [stickerModalOpen,   setStickerModalOpen]   = useState(false);
   const [stickerModalPage,   setStickerModalPage]   = useState(0);
   const [stickerToast,       setStickerToast]       = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [openedFieldGroups,  setOpenedFieldGroups]  = useState<Set<string>>(new Set(["basic"]));
+  const [pendingFocusGroupId, setPendingFocusGroupId] = useState<string | null>(null);
 
   // ── QRカードビルダー state ──────────────────────────────────────────────────
   const [qrTemplateFile,       setQrTemplateFile]       = useState(CARD_TEMPLATES[0].file);
@@ -253,6 +263,7 @@ export default function EditorScreen() {
   const autoSaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestDraft    = useRef<Profile | null>(null);  // stale-closure guard for drag
   const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fieldGroupRefs = useRef<Record<string, HTMLDetailsElement | null>>({});
   const qrCardRef      = useRef<HTMLDivElement>(null);
   // qrCardExportRef廃止 → generateQrPngは可視カード(qrCardRef)を直接キャプチャ
   const qrCardWrapRef  = useRef<HTMLDivElement>(null);
@@ -264,6 +275,19 @@ export default function EditorScreen() {
 
   // keep latestDraft in sync
   useEffect(() => { latestDraft.current = draft; }, [draft]);
+  useEffect(() => {
+    setOpenedFieldGroups(new Set(["basic"]));
+    setPendingFocusGroupId(null);
+  }, [activeId]);
+  useEffect(() => {
+    if (!pendingFocusGroupId) return;
+    const groupEl = fieldGroupRefs.current[pendingFocusGroupId];
+    if (!groupEl) return;
+    requestAnimationFrame(() => {
+      groupEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    setPendingFocusGroupId(null);
+  }, [pendingFocusGroupId, draft?.fields.length]);
 
   // QRコードURL（公開中なら実URL、未公開ならサンプル）
   const qrUrl = useMemo(() =>
@@ -441,13 +465,22 @@ export default function EditorScreen() {
   }
   function addTemplateToPattern(node: TemplateNode) {
     if (!draft) return;
+    const groupId = node.name;
     const newFields: Field[] = node.questions.map((q) => ({
       id: crypto.randomUUID(),
-      groupId: node.name,   // テンプレート名をグループIDとして使用
+      groupId,   // テンプレート名をグループIDとして使用
       label: q.label,
       value: "",
+      placeholder: getFieldPlaceholder(q.label, q.placeholder),
       visible: true,
     }));
+    setOpenedFieldGroups((prev) => {
+      const next = new Set(prev);
+      next.add(groupId);
+      return next;
+    });
+    setPendingFocusGroupId(groupId);
+    setActiveTab("settings");
     applyAndSave({ ...draft, fields: [...draft.fields, ...newFields] });
   }
 
@@ -510,7 +543,7 @@ export default function EditorScreen() {
   }
 
   async function handleCustomStickerUpload(file: File) {
-    if (!planLimits.customStickerUpload) {
+    if (settings.plan === "free" || !planLimits.customStickerUpload) {
       setError(t("カスタムシールのアップロードはProプランで使えます。", "Custom sticker upload requires Pro plan."));
       return;
     }
@@ -976,6 +1009,7 @@ const dataUrl = await generateQrPng();
     .filter((g) => (fieldsByGroup[g]?.length ?? 0) > 0);
   const hiddenGroups = GROUP_ORDER.filter((g) => !fieldsByGroup[g]?.length);
   const planLimits = PLAN_LIMITS[settings.plan];
+  const isFreePlan = settings.plan === "free";
   const customStickers: CustomSticker[] = (Array.isArray(settings.customStickers) ? settings.customStickers : [])
     .map((entry): CustomSticker | null => {
       if (!entry || typeof entry !== "object") return null;
@@ -990,7 +1024,8 @@ const dataUrl = await generateQrPng();
         assetSrc: value.assetSrc,
       };
     })
-    .filter((entry): entry is CustomSticker => entry !== null);
+    .filter((entry): entry is CustomSticker => entry !== null)
+    .filter(() => !isFreePlan);
 
   function showLimitError(kind: "patterns" | "fields") {
     if (kind === "patterns") {
@@ -1511,18 +1546,59 @@ const dataUrl = await generateQrPng();
   // ── Panel: シール ─────────────────────────────────────────────────────────
 
   function renderStickerPanel() {
+    const stickerChoices = [
+      ...customStickers.map((sticker) => ({
+        id: sticker.assetSrc,
+        label: sticker.label,
+        src: sticker.assetSrc,
+        source: "custom" as const,
+      })),
+      ...STAMP_FILES.map((file) => ({
+        id: file,
+        label: fileToLabel(file),
+        src: `/stamp/${file}`,
+        source: "preset" as const,
+      })),
+    ];
     return (
       <div className="stack" style={{ gap: "10px" }}>
 
-        {/* シールを貼るボタン → モーダルで選ぶ */}
-        <button
-          type="button"
-          className="button"
-          style={{ width: "100%", minHeight: "52px", fontSize: "15px", gap: "8px" }}
-          onClick={() => { setStickerModalPage(0); setStickerModalOpen(true); }}
-        >
-          🏷 {t("シールを貼る", "Add sticker")}
-        </button>
+        {/* スマホ: ボタン押下でモーダル */}
+        <div className="sticker-picker-mobile">
+          <button
+            type="button"
+            className="button"
+            style={{ width: "100%", minHeight: "52px", fontSize: "15px", gap: "8px" }}
+            onClick={() => { setStickerModalPage(0); setStickerModalOpen(true); }}
+          >
+            🏷 {t("シールを貼る", "Add sticker")}
+          </button>
+        </div>
+
+        {/* PC: 右パネルにシール一覧を常時表示 */}
+        <div className="sticker-picker-desktop">
+          <p className="muted small" style={{ margin: "0 0 6px" }}>
+            {t("一覧から選んで貼れます", "Pick from the list to place stickers")}
+          </p>
+          <div className="sticker-grid sticker-picker-inline-grid">
+            {stickerChoices.map((sticker) => (
+              <button
+                key={`${sticker.source}:${sticker.id}`}
+                type="button"
+                className="sticker-choice"
+                onClick={() => handleAddStickerWithToast(sticker.id)}
+                title={sticker.label}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={sticker.src} alt={sticker.label}
+                  style={{ width: "52px", height: "52px", objectFit: "contain" }} />
+                <span className="muted small" style={{ fontSize: "10px", lineHeight: 1.2 }}>
+                  {sticker.source === "custom" ? `${sticker.label}★` : sticker.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {stickers.length > 0 && (
           <button
@@ -1538,6 +1614,7 @@ const dataUrl = await generateQrPng();
           </button>
         )}
 
+        {!isFreePlan && (
         <div className="sticker-upload-box">
           <strong>{t("カスタムシール", "Custom sticker")}</strong>
           {customStickers.length > 0 && (
@@ -1589,6 +1666,7 @@ const dataUrl = await generateQrPng();
             </p>
           )}
         </div>
+        )}
         {/* シールをあげる・受け取りBOX は交換帳実装後に有効化 */}
         {false && <div className="sticker-upload-box">
           <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" }}>
@@ -1658,32 +1736,26 @@ const dataUrl = await generateQrPng();
 
   function renderFramePanel() {
     if (!draft) return null;
+    const selectedPalette = resolvePaperTheme(draft.themeId);
     return (
       <div className="stack">
         <p className="muted small" style={{ margin: "0 0 2px" }}>
           {t("選ぶとプレビューを確認できます", "Select to preview before applying")}
         </p>
         <div>
-          <p className="muted small" style={{ margin: "0 0 6px" }}>{t("テーマ（20色）", "Paper palette (20 colors)")}</p>
-          <div className="theme-grid">
-            {PAPER_PALETTES.map((palette, index) => {
-              const selectedPalette = resolvePaperTheme(draft.themeId);
-              const isActive = selectedPalette.id === palette.id;
-              return (
-                <button
-                  key={palette.id}
-                  type="button"
-                  className={`theme-choice${isActive ? " active" : ""}`}
-                  onClick={() => handlePreviewTheme(palette.id)}
-                  title={`${t("カラー", "Color")} ${index + 1}`}
-                  aria-label={`${t("カラー", "Color")} ${index + 1}`}
-                >
-                  <span className="theme-swatch" style={{ backgroundColor: palette.swatch, borderColor: palette.ink }} />
-                  <strong style={{ fontSize: "12px" }}>{index + 1}</strong>
-                </button>
-              );
-            })}
-          </div>
+          <p className="muted small" style={{ margin: "0 0 6px" }}>{t("フレーム色", "Frame color")}</p>
+          <button
+            type="button"
+            className="button secondary"
+            style={{ width: "100%", justifyContent: "space-between" }}
+            onClick={() => setThemePickerOpen(true)}
+          >
+            <span>{t("フレーム色を選ぶ", "Choose frame color")}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              <span className="theme-swatch" style={{ backgroundColor: selectedPalette.swatch, borderColor: selectedPalette.ink }} />
+              <span className="muted small">{t("現在の色", "Current color")}</span>
+            </span>
+          </button>
         </div>
         <div>
           <p className="muted small" style={{ margin: "0 0 6px" }}>{t("フレーム", "Frame")}</p>
@@ -1728,7 +1800,21 @@ const dataUrl = await generateQrPng();
               const fields = fieldsByGroup[groupId] || [];
               const [lJa, lEn] = GROUP_LABELS[groupId] ?? [groupId, groupId];
               return (
-                <details key={groupId} className="field-group" open={groupId === "basic"}>
+                <details
+                  key={groupId}
+                  className="field-group"
+                  open={openedFieldGroups.has(groupId)}
+                  ref={(el) => { fieldGroupRefs.current[groupId] = el; }}
+                  onToggle={(e) => {
+                    const isOpen = e.currentTarget.open;
+                    setOpenedFieldGroups((prev) => {
+                      const next = new Set(prev);
+                      if (isOpen) next.add(groupId);
+                      else next.delete(groupId);
+                      return next;
+                    });
+                  }}
+                >
                   <summary>
                     <span>
                       {t(lJa, lEn)}{" "}
@@ -1793,7 +1879,7 @@ const dataUrl = await generateQrPng();
                           className="field-value-input"
                           value={field.value}
                           onChange={(e) => updateField(field.id, { value: e.target.value })}
-                          placeholder={t("（未設定）", "(unset)")}
+                          placeholder={field.placeholder || t("（未設定）", "(unset)")}
                         />
                       </div>
                     ))}
@@ -2215,7 +2301,7 @@ const dataUrl = await generateQrPng();
                 </button>
               ))}
             </div>
-            {(activeTab === "settings" || activeTab === "qr" || activeTab === "stickers" || activeTab === "frame") && (
+            {activeTab === "settings" && (
               <div className="editor-panel-fixed-actions">
                 <button
                   type="button"
@@ -2294,6 +2380,42 @@ const dataUrl = await generateQrPng();
               </button>
               <button type="button" className="button secondary" onClick={() => setShowAddModal(false)}>
                 {t("キャンセル", "Cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── テーマ選択モーダル ─────────────────────────────────────────────── */}
+      {themePickerOpen && draft && (
+        <div className="modal-backdrop" onClick={() => setThemePickerOpen(false)} role="dialog" aria-modal="true">
+          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <h2>{t("フレーム色（20色）", "Frame color (20 options)")}</h2>
+            <div className="theme-grid">
+              {PAPER_PALETTES.map((palette, index) => {
+                const selectedPalette = resolvePaperTheme(draft.themeId);
+                const isActive = selectedPalette.id === palette.id;
+                return (
+                  <button
+                    key={palette.id}
+                    type="button"
+                    className={`theme-choice${isActive ? " active" : ""}`}
+                    onClick={() => {
+                      setThemePickerOpen(false);
+                      handlePreviewTheme(palette.id);
+                    }}
+                    title={`${t("カラー", "Color")} ${index + 1}`}
+                    aria-label={`${t("カラー", "Color")} ${index + 1}`}
+                  >
+                    <span className="theme-swatch" style={{ backgroundColor: palette.swatch, borderColor: palette.ink }} />
+                    <strong style={{ fontSize: "12px" }}>{t("カラー", "Color")} {index + 1}</strong>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="button secondary" onClick={() => setThemePickerOpen(false)}>
+                {t("閉じる", "Close")}
               </button>
             </div>
           </div>

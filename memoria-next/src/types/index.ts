@@ -44,6 +44,7 @@ export interface Field {
   groupId: string;
   label: string;
   value: string;
+  placeholder?: string;
   visible: boolean;
 }
 

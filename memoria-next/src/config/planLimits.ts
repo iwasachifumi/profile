@@ -17,7 +17,7 @@ export const PLAN_LIMITS: Record<PlanName, PlanLimitConfig> = {
     fieldsPerPattern: 30,
     groups: 10,
     exchanges: 100,
-    customStickerUpload: true, // TODO: Pro限定に戻す（開発中は全員有効）
+    customStickerUpload: false,
   },
   pro: {
     patterns: 20,

@@ -8,8 +8,8 @@ export const runtime = "nodejs";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://profile.ac7.co.jp";
 
-function f(groupId: string, label: string, value: string = ""): Field {
-  return { id: randomUUID(), groupId, label, value, visible: true };
+function f(groupId: string, label: string, placeholder: string = ""): Field {
+  return { id: randomUUID(), groupId, label, value: "", placeholder, visible: true };
 }
 
 function buildInitialProfile(): Profile {
