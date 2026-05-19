@@ -108,7 +108,7 @@ export default function SettingsScreen() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
         <h1 style={{ margin: 0, fontSize: "20px" }}>{t("設定", "Settings")}</h1>
         <Link href="/mine" className="button secondary" style={{ fontSize: "13px", padding: "4px 14px", minHeight: "auto" }}>
-          {t("← マイページ", "← Mine")}
+          {t("← Myプロフ", "← Back")}
         </Link>
       </div>
 

@@ -217,6 +217,7 @@ export default function EditorScreen() {
   const [selectedStickerIdx, setSelectedStickerIdx] = useState<number | null>(null);
   const [editingLabelId,     setEditingLabelId]     = useState<string | null>(null);
   const [editingLinkId,      setEditingLinkId]      = useState<string | null>(null);
+  const [inlineEditFieldId,  setInlineEditFieldId]  = useState<string | null>(null);
   const [giftToHandle,       setGiftToHandle]       = useState("");
   const [giftStickerSrc,     setGiftStickerSrc]     = useState("");
   const [giftBusy,           setGiftBusy]           = useState(false);
@@ -2015,7 +2016,7 @@ const dataUrl = await generateQrPng();
             })}
 
             {hiddenGroups.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", paddingTop: "4px" }}>
+              <div className="hidden-groups-section" style={{ display: "flex", flexWrap: "wrap", gap: "6px", paddingTop: "4px" }}>
                 <span className="muted small" style={{ width: "100%", fontSize: "11px" }}>
                   {t("非表示のグループ:", "Hidden groups:")}
                 </span>
@@ -2377,10 +2378,30 @@ const dataUrl = await generateQrPng();
                       )}
                     </div>
                   </header>
-                  {draft.fields.filter((f) => f.visible && f.value).map((f) => (
-                    <div key={f.id} className="answer">
+                  {draft.fields.filter((f) => f.visible && (f.value || inlineEditFieldId === f.id)).map((f) => (
+                    <div key={f.id} className="answer"
+                      onClick={(e) => { e.stopPropagation(); setInlineEditFieldId(f.id); }}
+                      style={{ cursor: "text" }}
+                    >
                       <span className="muted small">{f.label}</span>
-                      <strong>{f.value}</strong>
+                      {inlineEditFieldId === f.id ? (
+                        <input
+                          autoFocus
+                          value={f.value}
+                          onChange={(e) => updateField(f.id, { value: e.target.value })}
+                          onBlur={() => setInlineEditFieldId(null)}
+                          onKeyDown={(e) => { if (e.key === "Enter") setInlineEditFieldId(null); }}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            width: "100%", fontFamily: "inherit", fontWeight: 700,
+                            fontSize: "inherit", border: "none", borderBottom: "2px solid var(--green)",
+                            background: "transparent", padding: "0 0 1px", outline: "none",
+                            userSelect: "text", color: "inherit",
+                          }}
+                        />
+                      ) : (
+                        <strong>{f.value}</strong>
+                      )}
                     </div>
                   ))}
                   {draft.links.filter((l) => l.visible && l.url).map((l) => (

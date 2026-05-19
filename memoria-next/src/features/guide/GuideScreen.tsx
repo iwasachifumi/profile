@@ -58,7 +58,7 @@ export default function GuideScreen() {
           <h1>{t("使い方", "How it works")}</h1>
           <p className="muted">{t("Memoriaを使いこなすための4ステップ", "4 steps to get the most out of Memoria")}</p>
         </div>
-        <Link className="button secondary" href="/mine">{t("マイページへ", "Go to mine")}</Link>
+        <Link className="button secondary" href="/mine">{t("Myプロフへ", "Go")}</Link>
       </section>
 
       <section className="guide-grid">

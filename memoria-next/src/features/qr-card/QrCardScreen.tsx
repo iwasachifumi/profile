@@ -472,7 +472,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
       <main className="qr-card-page">
         <div className="qr-card-page-header">
           <button type="button" className="button secondary" style={{ minHeight: "auto", padding: "6px 14px" }}
-            onClick={() => router.push("/mine")}>← マイページ</button>
+            onClick={() => router.push("/mine")}>← Myプロフ</button>
           <strong>QRカードを作る</strong>
         </div>
         <p className="muted" style={{ padding: "40px", textAlign: "center" }}>読み込み中...</p>
@@ -485,7 +485,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
       <main className="qr-card-page">
         <div className="qr-card-page-header">
           <button type="button" className="button secondary" style={{ minHeight: "auto", padding: "6px 14px" }}
-            onClick={() => router.push("/mine")}>← マイページ</button>
+            onClick={() => router.push("/mine")}>← Myプロフ</button>
           <strong>QRカードを作る</strong>
         </div>
         <p className="error-text" style={{ padding: "20px" }}>{loadError ?? "プロフィールが見つかりません"}</p>
@@ -506,7 +506,7 @@ export default function QrCardScreen({ profileId }: { profileId: string }) {
           style={{ minHeight: "auto", padding: "6px 14px", fontSize: "13px" }}
           onClick={() => router.push("/mine")}
         >
-          ← マイページ
+          ← Myプロフ
         </button>
         <div style={{ flex: 1, textAlign: "center" }}>
           <strong style={{ fontSize: "15px" }}>QRカードを作る</strong>

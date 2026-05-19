@@ -76,7 +76,7 @@ export default function DesignScreen() {
           <h1>{t("デザイン", "Design")}</h1>
           <p className="muted">{t("テーマと台紙を選んでください", "Choose a theme and frame")}</p>
         </div>
-        <Link className="button secondary" href="/mine">{t("マイページへ", "Back to mine")}</Link>
+        <Link className="button secondary" href="/mine">{t("Myプロフへ", "Back")}</Link>
       </section>
 
       {/* パターンタブ */}

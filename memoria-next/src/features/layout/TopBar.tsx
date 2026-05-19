@@ -54,7 +54,7 @@ export default function TopBar() {
       {isLoggedIn && (
         <nav className="topnav" aria-label={t("ナビゲーション", "navigation")}>
           <Link href="/mine" className={pathname === "/mine" ? "active" : ""}>
-            {t("マイページ", "My page")}
+            {t("Myプロフ", "My profile")}
           </Link>
           <Link href="/book" className={pathname === "/book" ? "active" : ""}>
             {t("プロフ交換帳", "Exchange")}

@@ -77,7 +77,7 @@ export default function PreviewScreen({ id }: PreviewScreenProps) {
           <h1>{t("プレビュー", "Preview")}</h1>
           <p className="muted">{t("自分だけが見られる確認用ページです", "Only you can see this preview")}</p>
         </div>
-        <Link className="button secondary" href="/mine">{t("マイページへ", "Back to mine")}</Link>
+        <Link className="button secondary" href="/mine">{t("Myプロフへ", "Back")}</Link>
       </section>
 
       {loading && <p className="muted">{t("読み込み中...", "Loading...")}</p>}

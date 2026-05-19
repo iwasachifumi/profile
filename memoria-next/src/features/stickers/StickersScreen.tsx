@@ -178,7 +178,7 @@ export default function StickersScreen() {
           <h1>{t("シール", "Stickers")}</h1>
           <p className="muted">{t("プロフィールにシールを貼ろう", "Decorate your profile card")}</p>
         </div>
-        <Link className="button secondary" href="/mine">{t("マイページへ", "Back to mine")}</Link>
+        <Link className="button secondary" href="/mine">{t("Myプロフへ", "Back")}</Link>
       </section>
 
       {/* パターン選択 */}
