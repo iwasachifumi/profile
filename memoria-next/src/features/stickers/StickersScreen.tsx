@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { getPaperThemeCssVars } from "@/config/paperThemes";
 import { profilesApi } from "@/api/profiles";
 import AuthScreen from "@/features/auth/AuthScreen";
 import { useSession } from "@/store/session";
@@ -247,6 +248,7 @@ export default function StickersScreen() {
               onPointerUp={onPointerUp}
               style={{
                 cursor: "default", userSelect: "none",
+                ...getPaperThemeCssVars(activeProfile.themeId),
                 ...(activeProfile.frameId && activeProfile.frameId !== "none"
                   ? { "--frame-url": `url('/frame/${activeProfile.frameId}')` } as React.CSSProperties
                   : {}),

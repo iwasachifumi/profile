@@ -6,6 +6,7 @@ import { toPng } from "html-to-image";
 import { profilesApi } from "@/api/profiles";
 import { settingsApi } from "@/api/settings";
 import { stickerGiftsApi } from "@/api/stickerGifts";
+import { PAPER_PALETTES, getPaperThemeCssVars, resolvePaperTheme } from "@/config/paperThemes";
 import { PLAN_LIMITS } from "@/config/planLimits";
 import AuthScreen from "@/features/auth/AuthScreen";
 import TemplatePickerModal from "@/features/editor/TemplatePickerModal";
@@ -56,13 +57,6 @@ const FRAMES = [
   { id: "kirakiraandf116-1536x864.png",   labelJa: "キラキラ",  file: "kirakiraandf116-1536x864.png" },
   { id: "neon057-1536x864.png",           labelJa: "ネオン",    file: "neon057-1536x864.png" },
   { id: "okumonof_mangaf41-1536x864.png", labelJa: "マンガ",    file: "okumonof_mangaf41-1536x864.png" },
-];
-
-const THEMES = [
-  { id: "default",  labelJa: "ナチュラル", labelEn: "Natural"  },
-  { id: "business", labelJa: "ビジネス",   labelEn: "Business" },
-  { id: "study",    labelJa: "スタディ",   labelEn: "Study"    },
-  { id: "friends",  labelJa: "フレンズ",   labelEn: "Friends"  },
 ];
 
 const GROUP_LABELS: Record<string, [string, string]> = {
@@ -164,7 +158,7 @@ function buildDefaultProfile(name: string): Profile {
   return {
     id: crypto.randomUUID(), publicSlug: crypto.randomUUID().replace(/-/g, "").slice(0, 12), handle: null, isPublic: true,
     patternName: name, audience: "", description: "",
-    themeId: "default", frameId: "none",
+    themeId: "palette-01", frameId: "none",
     fields: [
       mf("basic",        "名前",               "まだ名前なし"),
       mf("basic",        "ニックネーム",        "まだない"),
@@ -435,6 +429,10 @@ export default function EditorScreen() {
     setDraft(next ? cloneProfile(next) : null);
   }
 
+  function confirmDelete(messageJa: string, messageEn: string): boolean {
+    return window.confirm(t(messageJa, messageEn));
+  }
+
   // ── Field ops ─────────────────────────────────────────────────────────────
 
   function updateField(id: string, patch: Partial<Field>) {
@@ -465,11 +463,13 @@ export default function EditorScreen() {
   }
   function removeField(id: string) {
     if (!draft) return;
+    if (!confirmDelete("この項目を削除しますか？", "Delete this field?")) return;
     applyAndSave({ ...draft, fields: draft.fields.filter((f) => f.id !== id) });
     if (editingLabelId === id) setEditingLabelId(null);
   }
   function removeGroup(groupId: string) {
     if (!draft) return;
+    if (!confirmDelete("この質問グループを削除しますか？", "Delete this question group?")) return;
     applyAndSave({ ...draft, fields: draft.fields.filter((f) => f.groupId !== groupId) });
   }
 
@@ -487,6 +487,7 @@ export default function EditorScreen() {
   }
   function removeLink(id: string) {
     if (!draft) return;
+    if (!confirmDelete("このリンクを削除しますか？", "Delete this link?")) return;
     applyAndSave({ ...draft, links: draft.links.filter((l) => l.id !== id) });
     if (editingLinkId === id) setEditingLinkId(null);
   }
@@ -501,6 +502,7 @@ export default function EditorScreen() {
     applyAndSave(next);
   }
   async function handleDeleteCustomSticker(id: string) {
+    if (!confirmDelete("このカスタムシールを削除しますか？", "Delete this custom sticker?")) return;
     const nextCustomStickers = customStickers.filter((s) => s.id !== id);
     const nextSettings: UserSettings = { ...settings, customStickers: nextCustomStickers };
     const res = await settingsApi.update(nextSettings);
@@ -640,6 +642,7 @@ export default function EditorScreen() {
   }
   function handleDeleteSticker(idx: number) {
     if (!draft) return;
+    if (!confirmDelete("このシールを削除しますか？", "Delete this sticker?")) return;
     setSelectedStickerIdx(null);
     applyAndSave({ ...draft, stickers: draft.stickers.filter((_, i) => i !== idx) });
   }
@@ -708,7 +711,7 @@ export default function EditorScreen() {
   }
   function handlePreviewFrame(frameId: string) {
     if (!draft) return;
-    setFrameConfirmData({ themeId: draft.themeId ?? "default", frameId });
+    setFrameConfirmData({ themeId: draft.themeId ?? "palette-01", frameId });
     setFrameConfirmOpen(true);
   }
   function handleFrameConfirm() {
@@ -772,6 +775,7 @@ export default function EditorScreen() {
   }
 
   function handleDeleteQrItem(id: string) {
+    if (!confirmDelete("このQRカード項目を削除しますか？", "Delete this QR card item?")) return;
     const next = qrItems.filter((it) => it.id !== id);
     setQrItems(next);
     scheduleQrConfigSave(qrTemplateFile, next, qrCardStickers);
@@ -793,6 +797,7 @@ export default function EditorScreen() {
   }
 
   function handleDeleteQrSticker(idx: number) {
+    if (!confirmDelete("このQRカードのシールを削除しますか？", "Delete this QR card sticker?")) return;
     const next = qrCardStickers.filter((_, i) => i !== idx);
     setQrSelectedStickerIdx(null);
     setQrCardStickers(next);
@@ -1008,10 +1013,14 @@ const dataUrl = await generateQrPng();
   // ── カードプレビュー（静的・フレーム確認モーダル用） ──────────────────────
 
   function renderCardPreview(d: Profile) {
+    const paperStyle = {
+      ...getPaperThemeCssVars(d.themeId),
+      ...(d.frameId && d.frameId !== "none" ? { "--frame-url": `url('/frame/${d.frameId}')` } : {}),
+    } as React.CSSProperties;
     return (
       <div
         className={`profile-paper theme-${d.themeId || "default"}${d.frameId && d.frameId !== "none" ? " has-image-frame" : ""}`}
-        style={d.frameId && d.frameId !== "none" ? { "--frame-url": `url('/frame/${d.frameId}')` } as React.CSSProperties : { position: "relative" }}
+        style={paperStyle}
       >
         <div className="paper-lines" />
         <div className="profile-content">
@@ -1519,7 +1528,11 @@ const dataUrl = await generateQrPng();
           <button
             type="button" className="button secondary"
             style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto", color: "var(--pink)", width: "100%" }}
-            onClick={() => draft && applyAndSave({ ...draft, stickers: [] })}
+            onClick={() => {
+              if (!draft) return;
+              if (!confirmDelete("シールをすべて削除しますか？", "Remove all stickers?")) return;
+              applyAndSave({ ...draft, stickers: [] });
+            }}
           >
             {t("全部はがす", "Remove all stickers")}
           </button>
@@ -1651,17 +1664,25 @@ const dataUrl = await generateQrPng();
           {t("選ぶとプレビューを確認できます", "Select to preview before applying")}
         </p>
         <div>
-          <p className="muted small" style={{ margin: "0 0 6px" }}>{t("テーマ（用紙の色）", "Paper theme")}</p>
+          <p className="muted small" style={{ margin: "0 0 6px" }}>{t("テーマ（20色）", "Paper palette (20 colors)")}</p>
           <div className="theme-grid">
-            {THEMES.map((th) => (
-              <button
-                key={th.id} type="button"
-                className={`theme-choice${draft.themeId === th.id ? " active" : ""}`}
-                onClick={() => handlePreviewTheme(th.id)}
-              >
-                <strong style={{ fontSize: "13px" }}>{t(th.labelJa, th.labelEn)}</strong>
-              </button>
-            ))}
+            {PAPER_PALETTES.map((palette, index) => {
+              const selectedPalette = resolvePaperTheme(draft.themeId);
+              const isActive = selectedPalette.id === palette.id;
+              return (
+                <button
+                  key={palette.id}
+                  type="button"
+                  className={`theme-choice${isActive ? " active" : ""}`}
+                  onClick={() => handlePreviewTheme(palette.id)}
+                  title={`${t("カラー", "Color")} ${index + 1}`}
+                  aria-label={`${t("カラー", "Color")} ${index + 1}`}
+                >
+                  <span className="theme-swatch" style={{ backgroundColor: palette.swatch, borderColor: palette.ink }} />
+                  <strong style={{ fontSize: "12px" }}>{index + 1}</strong>
+                </button>
+              );
+            })}
           </div>
         </div>
         <div>
@@ -1780,24 +1801,6 @@ const dataUrl = await generateQrPng();
                 </details>
               );
             })}
-
-            {/* テンプレートから質問グループを追加 */}
-            <button
-              type="button"
-              className="button"
-              style={{
-                width: "100%",
-                marginTop: "8px",
-                fontSize: "13px",
-                background: "var(--green, #4caf7d)",
-                color: "#fff",
-                border: "none",
-                gap: "6px",
-              }}
-              onClick={() => setTemplatePickerOpen(true)}
-            >
-              ✦ {t("推し・趣味の質問グループを追加", "Add interest question group")}
-            </button>
 
             {hiddenGroups.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", paddingTop: "4px" }}>
@@ -2028,7 +2031,10 @@ const dataUrl = await generateQrPng();
                         type="button"
                         className="button secondary"
                         style={{ fontSize: "12px", padding: "4px 10px", minHeight: "auto", color: "var(--pink)" }}
-                        onClick={() => applyAndSave({ ...draft, avatarSrc: null })}
+                        onClick={() => {
+                          if (!confirmDelete("プロフィール画像を削除しますか？", "Remove profile photo?")) return;
+                          applyAndSave({ ...draft, avatarSrc: null });
+                        }}
                       >
                         {t("削除", "Remove")}
                       </button>
@@ -2086,6 +2092,7 @@ const dataUrl = await generateQrPng();
                 onPointerUp={onPaperPointerUp}
                 style={{
                   cursor: "default", userSelect: "none",
+                  ...getPaperThemeCssVars(draft.themeId),
                   ...(draft.frameId && draft.frameId !== "none"
                     ? { "--frame-url": `url('/frame/${draft.frameId}')` } as React.CSSProperties
                     : {}),
@@ -2208,6 +2215,17 @@ const dataUrl = await generateQrPng();
                 </button>
               ))}
             </div>
+            {(activeTab === "settings" || activeTab === "qr" || activeTab === "stickers" || activeTab === "frame") && (
+              <div className="editor-panel-fixed-actions">
+                <button
+                  type="button"
+                  className="button editor-panel-template-button"
+                  onClick={() => setTemplatePickerOpen(true)}
+                >
+                  ✦ {t("推し・趣味の質問グループを追加", "Add interest question group")}
+                </button>
+              </div>
+            )}
             <div className="editor-panel-content">
               {/* デスクトップでプレビュータブのまま来た場合は項目を表示 */}
               {(activeTab === "stickers")                           && renderStickerPanel()}
@@ -2235,7 +2253,7 @@ const dataUrl = await generateQrPng();
       {/* ── パターン追加モーダル ─────────────────────────────────────────── */}
       {showAddModal && (
         <div className="qr-overlay" onClick={() => setShowAddModal(false)} role="dialog" aria-modal="true">
-          <div className="qr-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "360px" }}>
+          <div className="qr-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "520px" }}>
             <button type="button" className="qr-modal-close" onClick={() => setShowAddModal(false)} aria-label="閉じる">
               ×
             </button>

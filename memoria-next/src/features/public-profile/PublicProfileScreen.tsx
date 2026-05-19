@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
+import { getPaperThemeCssVars } from "@/config/paperThemes";
 import { publicApi } from "@/api/public";
 import { exchangesApi } from "@/api/exchanges";
 import { useSession } from "@/store/session";
@@ -153,9 +154,10 @@ export default function PublicProfileScreen({ slug, handle, via }: PublicProfile
   const visibleLinks  = profile.links.filter((l) => l.visible && l.url);
   const hasFrame      = Boolean(profile.frameId && profile.frameId !== "none");
 
-  const paperStyle: CSSProperties = hasFrame
-    ? { "--frame-url": `url('/frame/${profile.frameId}')` } as CSSProperties
-    : {};
+  const paperStyle: CSSProperties = {
+    ...getPaperThemeCssVars(profile.themeId),
+    ...(hasFrame ? { "--frame-url": `url('/frame/${profile.frameId}')` } : {}),
+  } as CSSProperties;
 
   return (
     <main className="pub-page">

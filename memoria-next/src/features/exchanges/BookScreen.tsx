@@ -80,6 +80,7 @@ export default function BookScreen() {
 
   async function handleDelete() {
     if (!editTarget) return;
+    if (!window.confirm(t("この交換記録を削除しますか？", "Delete this exchange record?"))) return;
     const removingId = editTarget.id;
     setBusy("delete");
     const result = await exchangesApi.remove(removingId);

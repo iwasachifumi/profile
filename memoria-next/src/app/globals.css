@@ -1004,7 +1004,21 @@ textarea {
   border-radius: 8px;
   padding: 9px;
   background: #fff;
-  text-align: left;
+  text-align: center;
+}
+
+.theme-choice {
+  display: grid;
+  gap: 6px;
+  place-items: center;
+}
+
+.theme-swatch {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 2px solid var(--line);
 }
 
 .sticker-choice {
@@ -1614,7 +1628,7 @@ textarea {
 }
 
 .modal-dialog {
-  width: min(420px, 100%);
+  width: min(560px, 100%);
   max-height: 90dvh;
   overflow-y: auto;
   border: 1px solid var(--line);
@@ -1692,6 +1706,22 @@ textarea {
   border-bottom: 1px solid var(--line);
   background: #fff;
   flex-shrink: 0;
+}
+
+.editor-panel-fixed-actions {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.editor-panel-template-button {
+  width: 100%;
+  font-size: 13px;
+  background: var(--green, #4caf7d);
+  color: #fff;
+  border: none;
+  gap: 6px;
 }
 
 .editor-panel-tab {
@@ -1908,25 +1938,35 @@ textarea {
     padding: 12px;
   }
 
-  /* シール・フレームタブ: ビューポートを上下で分割しカード・パネルを両方見せる */
+  /* シール・フレームタブ:
+     上 = コントロール固定、下 = プレビュー側をスクロール */
   .editor-workspace[data-tab="stickers"],
   .editor-workspace[data-tab="frame"] {
     height: calc(100svh - 58px - 66px);
-  }
-  .editor-workspace[data-tab="stickers"] .editor-card-area,
-  .editor-workspace[data-tab="frame"] .editor-card-area {
-    flex: 0 0 38%;
-    padding: 8px 12px;
     overflow: hidden;
   }
   .editor-workspace[data-tab="stickers"] .editor-panel-area,
   .editor-workspace[data-tab="frame"] .editor-panel-area {
-    flex: 1;
-    overflow-y: auto;
+    order: 1;
+    flex: 0 0 auto;
+    overflow: visible;
+    border-top: 0;
   }
   .editor-workspace[data-tab="stickers"] .editor-panel-content,
   .editor-workspace[data-tab="frame"] .editor-panel-content {
-    max-height: none; /* 親要素で高さ管理 */
+    max-height: none;
+    overflow: visible;
+    padding-bottom: 10px;
+  }
+  .editor-workspace[data-tab="stickers"] .editor-card-area,
+  .editor-workspace[data-tab="frame"] .editor-card-area {
+    order: 2;
+    flex: 1;
+    min-height: 0;
+    padding: 8px 12px 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    align-items: flex-start;
   }
 
   /* プレビュータブ: カードのみ全画面・パネルは非表示 */
@@ -3421,6 +3461,13 @@ body:has(.lp-root) .topnav a.active {
   position: relative;
 }
 
+@media (min-width: 640px) {
+  .qr-modal {
+    max-width: 560px;
+    padding: 32px 30px 28px;
+  }
+}
+
 .qr-modal-close {
   position: absolute;
   top: 12px;
@@ -3751,7 +3798,7 @@ body:has(.lp-root) .topnav a.active {
   .auth-prompt-sheet {
     border-radius: 16px;
     padding: 36px 32px 40px;
-    max-width: 420px;
+    max-width: 520px;
     animation: modal-in 0.22s ease;
   }
   @keyframes modal-in {
@@ -3802,7 +3849,7 @@ body:has(.lp-root) .topnav a.active {
   .frame-confirm-backdrop { align-items: center; }
   .frame-confirm-modal {
     border-radius: 16px;
-    max-width: 420px;
+    max-width: 560px;
     animation: modal-in 0.22s ease;
   }
 }
@@ -3864,7 +3911,7 @@ body:has(.lp-root) .topnav a.active {
   .sticker-picker-backdrop { align-items: center; }
   .sticker-picker-modal {
     border-radius: 16px;
-    max-width: 480px;
+    max-width: 640px;
     animation: modal-in 0.22s ease;
   }
   .sticker-picker-grid { grid-template-columns: repeat(6, 1fr); }

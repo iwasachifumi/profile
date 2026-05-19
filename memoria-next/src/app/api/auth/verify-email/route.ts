@@ -21,7 +21,7 @@ function buildInitialProfile(): Profile {
     patternName: "プロフィール",
     audience: "",
     description: "",
-    themeId: "default",
+    themeId: "palette-01",
     frameId: "none",
     avatarSrc: null,
     cardConfig: null,

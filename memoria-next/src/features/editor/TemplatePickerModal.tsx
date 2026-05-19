@@ -266,7 +266,7 @@ export default function TemplatePickerModal({ onClose, onAdd }: Props) {
         className="sticker-picker-modal"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: "480px",
+          maxWidth: "640px",
           maxHeight: "82vh",
           display: "flex",
           flexDirection: "column",

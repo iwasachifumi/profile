@@ -3,17 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { profilesApi } from "@/api/profiles";
+import { PAPER_PALETTES, resolvePaperTheme } from "@/config/paperThemes";
 import AuthScreen from "@/features/auth/AuthScreen";
 import { useSession } from "@/store/session";
 import { useLang } from "@/store/language";
 import type { Profile } from "@/types";
-
-const THEMES = [
-  { id: "default",  labelJa: "ナチュラル", labelEn: "Natural",  descJa: "温かみのある用紙",   descEn: "Warm natural paper" },
-  { id: "business", labelJa: "ビジネス",   labelEn: "Business", descJa: "清潔感のある青系",   descEn: "Clean blue tones" },
-  { id: "study",    labelJa: "スタディ",   labelEn: "Study",    descJa: "さわやかな緑系",     descEn: "Fresh green tones" },
-  { id: "friends",  labelJa: "フレンズ",   labelEn: "Friends",  descJa: "明るいピンク系",     descEn: "Bright pink tones" },
-];
 
 const FRAMES = [
   { id: "none",                           labelJa: "枠なし",    labelEn: "No frame",  file: null },
@@ -111,20 +105,26 @@ export default function DesignScreen() {
         <div className="stack">
           <section className="panel pad stack">
             {/* テーマ */}
-            <h2 style={{ margin: 0 }}>{t("テーマ（用紙の色）", "Paper theme")}</h2>
+            <h2 style={{ margin: 0 }}>{t("テーマ（20色）", "Paper palette (20 colors)")}</h2>
             <div className="theme-grid">
-              {THEMES.map((theme) => (
-                <button
-                  key={theme.id}
-                  type="button"
-                  className={`theme-choice${selected.themeId === theme.id ? " active" : ""}`}
-                  onClick={() => void handleSetTheme(theme.id)}
-                  disabled={busy}
-                >
-                  <strong>{t(theme.labelJa, theme.labelEn)}</strong>
-                  <span className="muted small">{t(theme.descJa, theme.descEn)}</span>
-                </button>
-              ))}
+              {PAPER_PALETTES.map((palette, index) => {
+                const selectedPalette = resolvePaperTheme(selected.themeId);
+                const isActive = selectedPalette.id === palette.id;
+                return (
+                  <button
+                    key={palette.id}
+                    type="button"
+                    className={`theme-choice${isActive ? " active" : ""}`}
+                    onClick={() => void handleSetTheme(palette.id)}
+                    disabled={busy}
+                    title={`${t("カラー", "Color")} ${index + 1}`}
+                    aria-label={`${t("カラー", "Color")} ${index + 1}`}
+                  >
+                    <span className="theme-swatch" style={{ backgroundColor: palette.swatch, borderColor: palette.ink }} />
+                    <strong>{t("カラー", "Color")} {index + 1}</strong>
+                  </button>
+                );
+              })}
             </div>
 
             {/* フレーム */}
