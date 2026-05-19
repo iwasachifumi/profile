@@ -27,25 +27,9 @@ import type {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const STAMP_FILES = [
-  "mikeneko.png", "kuroneko.png", "cat_black.png", "hamster.png",
-  "kyohishiba.png", "nezumi_2.png", "frog_sit.png", "tori.png",
-  "hetauma_tora2.png", "hetauma_usa8.png", "kanasi_l.png", "couple2_l.png",
-  "dancing_l.png", "yakimoti_oyako.png",
-  "apple.png", "candy.png", "candy2.png", "candy_2.png",
-  "hetauma_candy.png", "shortcake.png", "ichigo.png", "ginger-cookie.png",
-  "heart_2.png", "good.png", "star.png", "sun.png",
-  "garland.png", "garland_ribbon.png", "garland_star_right.png",
-  "sirotumeline.png", "azisai_ame_line_r.png", "hiyoko_line3.png",
-  "ribon_thin.png", "yuki_line2.png", "hasami_kiritori_hai.png",
-  "Orange_line01.png", "usa_koi3.png",
-  "1037_color.png", "1123_color.png", "9663_color.png",
-  "11656_color.png", "16366_color.png", "16441_color.png",
-  "16970_color.png", "17322_color.png", "23868_color.png",
-  "24815_color.png", "24820_color.png", "24850_color.png",
-  "24941_color.png", "25085.png", "25676_color.png",
-  "25698_color.png", "26490_color.png", "26568_color.png", "26568.png",
-];
+// ── Stamp manifest types ──────────────────────────────────────────────────────
+type ManifestSticker  = { file: string; points: number };
+type ManifestCategory = { id: string; label: string; stickers: ManifestSticker[] };
 
 const FRAMES = [
   { id: "none",                           labelJa: "枠なし",    file: null },
@@ -249,6 +233,9 @@ export default function EditorScreen() {
   const [stickerModalPage,   setStickerModalPage]   = useState(0);
   const [stickerDesktopPage, setStickerDesktopPage] = useState(0);
   const [stickerToast,       setStickerToast]       = useState(false);
+  const [stampManifest,      setStampManifest]      = useState<ManifestCategory[]>([]);
+  const [stickerCatId,       setStickerCatId]       = useState<string>("basic");
+  const [qrStickerCatId,     setQrStickerCatId]     = useState<string>("basic");
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [confirmDialog,      setConfirmDialog]      = useState<ConfirmDialogState | null>(null);
   const [confirmBusy,        setConfirmBusy]        = useState(false);
@@ -287,6 +274,14 @@ export default function EditorScreen() {
 
   // keep latestDraft in sync
   useEffect(() => { latestDraft.current = draft; }, [draft]);
+
+  // スタンプマニフェスト取得
+  useEffect(() => {
+    fetch("/stamp/manifest.json")
+      .then((r) => r.json() as Promise<{ categories: ManifestCategory[] }>)
+      .then((data) => { if (Array.isArray(data.categories)) setStampManifest(data.categories); })
+      .catch(() => {/* マニフェスト取得失敗時は空のまま */});
+  }, []);
   useEffect(() => {
     setOpenedFieldGroups(new Set(["basic"]));
     setPendingFocusGroupId(null);
@@ -1265,9 +1260,15 @@ const dataUrl = await generateQrPng();
 
   function renderQrPanel() {
     if (!draft) return null;
+    const qrActiveCat = stampManifest.find((c) => c.id === qrStickerCatId) ?? stampManifest[0];
     const stickerChoices = [
-      ...customStickers.map((s) => ({ id: s.assetSrc, src: s.assetSrc, label: s.label })),
-      ...STAMP_FILES.map((f)   => ({ id: f, src: `/stamp/${f}`, label: fileToLabel(f) })),
+      ...customStickers.map((s) => ({ id: s.assetSrc, src: s.assetSrc, label: s.label, points: 0 })),
+      ...(qrActiveCat?.stickers ?? []).map((s) => ({
+        id: s.file,
+        src: `/stamp/${s.file}`,
+        label: fileToLabel(s.file.split("/").pop() ?? s.file),
+        points: s.points,
+      })),
     ];
     return (
       <div className="stack" style={{ gap: "10px" }}>
@@ -1484,15 +1485,40 @@ const dataUrl = await generateQrPng();
                     style={{ position: "static", margin: 0 }}
                     onClick={() => setQrStickerPickerOpen(false)} aria-label="閉じる">×</button>
                 </div>
+                {stampManifest.length > 1 && (
+                  <div style={{ display: "flex", gap: "4px", padding: "6px 12px 2px", flexWrap: "wrap" }}>
+                    {stampManifest.map((cat) => (
+                      <button key={cat.id} type="button"
+                        onClick={() => { setQrStickerCatId(cat.id); setQrStickerPickerPage(0); }}
+                        style={{
+                          padding: "3px 10px", fontSize: "12px", borderRadius: "12px", border: "1px solid var(--border)",
+                          background: qrStickerCatId === cat.id ? "var(--green, #4caf7d)" : "transparent",
+                          color: qrStickerCatId === cat.id ? "#fff" : "var(--fg)",
+                          cursor: "pointer", minHeight: "auto",
+                        }}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="sticker-picker-grid">
-                  {pageItems.map((sticker) => (
-                    <button key={sticker.id} type="button" className="sticker-choice"
-                      onClick={() => handleAddQrSticker(sticker.id)} title={sticker.label}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={sticker.src} alt={sticker.label}
-                        style={{ width: "52px", height: "52px", objectFit: "contain" }} />
-                    </button>
-                  ))}
+                  {pageItems.map((sticker) => {
+                    const locked = sticker.points > 0;
+                    return (
+                      <button key={sticker.id} type="button" className="sticker-choice"
+                        onClick={() => !locked && handleAddQrSticker(sticker.id)}
+                        title={locked ? `🔒 ${sticker.points}pt` : sticker.label}
+                        disabled={locked}
+                        style={locked ? { opacity: 0.5, cursor: "default" } : {}}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={sticker.src} alt={sticker.label}
+                          style={{ width: "52px", height: "52px", objectFit: "contain", ...(locked ? { filter: "grayscale(80%)" } : {}) }} />
+                        {locked && <span style={{ fontSize: "10px" }}>🔒</span>}
+                      </button>
+                    );
+                  })}
                 </div>
                 {totalPages > 1 && (
                   <div className="sticker-picker-pagination">
@@ -1587,18 +1613,21 @@ const dataUrl = await generateQrPng();
 
   function renderStickerPanel() {
     const DESKTOP_PER_PAGE = 15;
+    const activeCat = stampManifest.find((c) => c.id === stickerCatId) ?? stampManifest[0];
     const stickerChoices = [
       ...customStickers.map((sticker) => ({
         id: sticker.assetSrc,
         label: sticker.label,
         src: sticker.assetSrc,
         source: "custom" as const,
+        points: 0,
       })),
-      ...STAMP_FILES.map((file) => ({
-        id: file,
-        label: fileToLabel(file),
-        src: `/stamp/${file}`,
+      ...(activeCat?.stickers ?? []).map((s) => ({
+        id: s.file,
+        label: fileToLabel(s.file.split("/").pop() ?? s.file),
+        src: `/stamp/${s.file}`,
         source: "preset" as const,
+        points: s.points,
       })),
     ];
     const desktopTotalPages = Math.max(1, Math.ceil(stickerChoices.length / DESKTOP_PER_PAGE));
@@ -1624,26 +1653,48 @@ const dataUrl = await generateQrPng();
 
         {/* PC: 右パネルにシール一覧を常時表示 */}
         <div className="sticker-picker-desktop">
+          {stampManifest.length > 1 && (
+            <div style={{ display: "flex", gap: "4px", marginBottom: "6px", flexWrap: "wrap" }}>
+              {stampManifest.map((cat) => (
+                <button key={cat.id} type="button"
+                  onClick={() => { setStickerCatId(cat.id); setStickerDesktopPage(0); }}
+                  style={{
+                    padding: "3px 10px", fontSize: "12px", borderRadius: "12px", border: "1px solid var(--border)",
+                    background: stickerCatId === cat.id ? "var(--green, #4caf7d)" : "transparent",
+                    color: stickerCatId === cat.id ? "#fff" : "var(--fg)",
+                    cursor: "pointer", minHeight: "auto",
+                  }}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          )}
           <p className="muted small" style={{ margin: "0 0 6px" }}>
             {t("一覧から選んで貼れます", "Pick from the list to place stickers")}
           </p>
           <div className="sticker-grid sticker-picker-inline-grid">
-            {desktopPageItems.map((sticker) => (
-              <button
-                key={`${sticker.source}:${sticker.id}`}
-                type="button"
-                className="sticker-choice"
-                onClick={() => handleAddStickerWithToast(sticker.id)}
-                title={sticker.label}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={sticker.src} alt={sticker.label}
-                  style={{ width: "52px", height: "52px", objectFit: "contain" }} />
-                <span className="muted small" style={{ fontSize: "10px", lineHeight: 1.2 }}>
-                  {sticker.source === "custom" ? `${sticker.label}★` : sticker.label}
-                </span>
-              </button>
-            ))}
+            {desktopPageItems.map((sticker) => {
+              const locked = sticker.points > 0;
+              return (
+                <button
+                  key={`${sticker.source}:${sticker.id}`}
+                  type="button"
+                  className="sticker-choice"
+                  onClick={() => !locked && handleAddStickerWithToast(sticker.id)}
+                  title={locked ? `🔒 ${sticker.points}pt` : sticker.label}
+                  disabled={locked}
+                  style={locked ? { opacity: 0.5, cursor: "default", position: "relative" } : {}}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={sticker.src} alt={sticker.label}
+                    style={{ width: "52px", height: "52px", objectFit: "contain", ...(locked ? { filter: "grayscale(80%)" } : {}) }} />
+                  <span className="muted small" style={{ fontSize: "10px", lineHeight: 1.2 }}>
+                    {locked ? `🔒 ${sticker.points}pt` : sticker.source === "custom" ? `${sticker.label}★` : sticker.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
           {desktopTotalPages > 1 && (
             <div className="sticker-picker-pagination" style={{ marginTop: "8px" }}>
@@ -2530,24 +2581,27 @@ const dataUrl = await generateQrPng();
 
       {/* ── シール選択モーダル ────────────────────────────────────────────── */}
       {stickerModalOpen && (() => {
-        const stickerChoices = [
+        const modalActiveCat = stampManifest.find((c) => c.id === stickerCatId) ?? stampManifest[0];
+        const modalChoices = [
           ...customStickers.map((sticker) => ({
             id: sticker.assetSrc,
             label: sticker.label,
             src: sticker.assetSrc,
             source: "custom" as const,
+            points: 0,
           })),
-          ...STAMP_FILES.map((file) => ({
-            id: file,
-            label: fileToLabel(file),
-            src: `/stamp/${file}`,
+          ...(modalActiveCat?.stickers ?? []).map((s) => ({
+            id: s.file,
+            label: fileToLabel(s.file.split("/").pop() ?? s.file),
+            src: `/stamp/${s.file}`,
             source: "preset" as const,
+            points: s.points,
           })),
         ];
         const PER_PAGE   = 16;
-        const totalPages = Math.ceil(stickerChoices.length / PER_PAGE);
+        const totalPages = Math.ceil(modalChoices.length / PER_PAGE);
         const page       = Math.min(stickerModalPage, totalPages - 1);
-        const pageItems  = stickerChoices.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+        const pageItems  = modalChoices.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
         return (
           <div className="sticker-picker-backdrop" onClick={() => setStickerModalOpen(false)} role="dialog" aria-modal="true">
             <div className="sticker-picker-modal" onClick={(e) => e.stopPropagation()}>
@@ -2563,23 +2617,45 @@ const dataUrl = await generateQrPng();
                   ×
                 </button>
               </div>
+              {stampManifest.length > 1 && (
+                <div style={{ display: "flex", gap: "4px", padding: "6px 12px 2px", flexWrap: "wrap" }}>
+                  {stampManifest.map((cat) => (
+                    <button key={cat.id} type="button"
+                      onClick={() => { setStickerCatId(cat.id); setStickerModalPage(0); }}
+                      style={{
+                        padding: "3px 10px", fontSize: "12px", borderRadius: "12px", border: "1px solid var(--border)",
+                        background: stickerCatId === cat.id ? "var(--green, #4caf7d)" : "transparent",
+                        color: stickerCatId === cat.id ? "#fff" : "var(--fg)",
+                        cursor: "pointer", minHeight: "auto",
+                      }}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="sticker-picker-grid">
-                {pageItems.map((sticker) => (
-                  <button
-                    key={`${sticker.source}:${sticker.id}`}
-                    type="button"
-                    className="sticker-choice"
-                    onClick={() => handleAddStickerWithToast(sticker.id)}
-                    title={sticker.label}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sticker.src} alt={sticker.label}
-                      style={{ width: "52px", height: "52px", objectFit: "contain" }} />
-                    <span className="muted small" style={{ fontSize: "10px", lineHeight: 1.2 }}>
-                      {sticker.source === "custom" ? `${sticker.label}★` : sticker.label}
-                    </span>
-                  </button>
-                ))}
+                {pageItems.map((sticker) => {
+                  const locked = sticker.points > 0;
+                  return (
+                    <button
+                      key={`${sticker.source}:${sticker.id}`}
+                      type="button"
+                      className="sticker-choice"
+                      onClick={() => !locked && handleAddStickerWithToast(sticker.id)}
+                      title={locked ? `🔒 ${sticker.points}pt` : sticker.label}
+                      disabled={locked}
+                      style={locked ? { opacity: 0.5, cursor: "default" } : {}}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={sticker.src} alt={sticker.label}
+                        style={{ width: "52px", height: "52px", objectFit: "contain", ...(locked ? { filter: "grayscale(80%)" } : {}) }} />
+                      <span className="muted small" style={{ fontSize: "10px", lineHeight: 1.2 }}>
+                        {locked ? `🔒 ${sticker.points}pt` : sticker.source === "custom" ? `${sticker.label}★` : sticker.label}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
               {totalPages > 1 && (
                 <div className="sticker-picker-pagination">
